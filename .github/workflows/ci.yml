@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    name: Swift build and tests
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Show Swift version
+        run: swift --version
+      - name: Test package
+        run: swift test
+
+  mcp:
+    name: MCP build, tests, and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mcp-server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+      - run: npm ci
+      - run: npm run license:check
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Verify bundled data parity
+        working-directory: .
+        run: |
+          cmp mcp-server/data/headphone-profiles.json Sources/AuralinkCore/Resources/data/headphone-profiles.json
+          cmp mcp-server/data/target-curves.json Sources/AuralinkCore/Resources/data/target-curves.json
+          cmp mcp-server/data/safety-rules.json Sources/AuralinkCore/Resources/data/safety-rules.json

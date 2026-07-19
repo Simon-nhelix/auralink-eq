@@ -1,0 +1,10 @@
+{
+  "gainMinDb": -18,
+  "gainMaxDb": 18,
+  "qMin": 0.1,
+  "qMax": 10,
+  "maxBoostDb": 6,
+  "maxAggregateBoostDb": 9,
+  "targetHeadroomDb": 1.0,
+  "autoPreampEnabled": true
+}

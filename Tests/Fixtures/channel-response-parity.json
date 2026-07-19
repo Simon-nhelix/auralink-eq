@@ -1,0 +1,48 @@
+{
+  "sampleRate": 48000,
+  "centerHz": 1000,
+  "toleranceDb": 0.0005,
+  "preset": {
+    "id": "fixture_channel_response_parity",
+    "name": "Channel Response Parity Fixture",
+    "preampDb": 0,
+    "safety": {
+      "autoGainEnabled": false,
+      "clippingRisk": "low"
+    },
+    "createdBy": "ai",
+    "version": 1,
+    "tags": [
+      "fixture"
+    ],
+    "createdAt": "1970-01-01T00:00:00Z",
+    "updatedAt": "1970-01-01T00:00:00Z",
+    "bands": [
+      {
+        "index": 10,
+        "type": "bell",
+        "frequencyHz": 1000,
+        "gainDb": 12,
+        "q": 1,
+        "channel": "left",
+        "enabled": true
+      },
+      {
+        "index": 11,
+        "type": "bell",
+        "frequencyHz": 1000,
+        "gainDb": -12,
+        "q": 1,
+        "channel": "right",
+        "enabled": true
+      }
+    ]
+  },
+  "expected": {
+    "leftDb": 12,
+    "rightDb": -12,
+    "legacyFoldedDb": 0,
+    "validatorPeakDb": 12,
+    "suggestedPreampDb": -13
+  }
+}

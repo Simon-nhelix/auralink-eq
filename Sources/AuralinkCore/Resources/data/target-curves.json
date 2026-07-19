@@ -1,0 +1,96 @@
+[
+  {
+    "id": "rock",
+    "name": "Rock",
+    "category": "genre",
+    "description": "Punchy low end for kick and bass, slightly tamed low-mid mud, and a clear presence region so guitars and vocals cut through a dense mix.",
+    "hints": [
+      { "type": "low_shelf", "frequencyHz": 80, "gainDb": 3.0, "q": 0.7, "rationale": "Add weight and punch to kick drum and bass guitar." },
+      { "type": "bell", "frequencyHz": 250, "gainDb": -2.0, "q": 1.0, "rationale": "Reduce low-mid congestion so the wall of guitars stays clean." },
+      { "type": "bell", "frequencyHz": 1800, "gainDb": 1.5, "q": 1.2, "rationale": "Bring guitar and vocal body forward in the mix." },
+      { "type": "bell", "frequencyHz": 4000, "gainDb": 2.0, "q": 1.5, "rationale": "Add bite and edge to electric guitars and snare crack." },
+      { "type": "high_shelf", "frequencyHz": 10000, "gainDb": 1.5, "q": 0.7, "rationale": "A little air and sparkle for cymbals." }
+    ]
+  },
+  {
+    "id": "vocal-focus",
+    "name": "Vocal Focus",
+    "category": "purpose",
+    "description": "Pushes the vocal forward and intelligible while trimming masking energy below and harshness above the voice.",
+    "hints": [
+      { "type": "bell", "frequencyHz": 200, "gainDb": -2.0, "q": 1.0, "rationale": "Clear boxy low-mid energy that masks the voice." },
+      { "type": "bell", "frequencyHz": 1000, "gainDb": 1.5, "q": 1.0, "rationale": "Add fundamental body and presence to the vocal." },
+      { "type": "bell", "frequencyHz": 3000, "gainDb": 2.5, "q": 1.2, "rationale": "Lift the presence region for intelligibility and forwardness." },
+      { "type": "bell", "frequencyHz": 6500, "gainDb": -1.5, "q": 2.0, "rationale": "Tame sibilance so the boosted presence stays comfortable." }
+    ]
+  },
+  {
+    "id": "fps-footstep",
+    "name": "FPS Footsteps",
+    "category": "purpose",
+    "description": "Competitive-gaming tuning that exaggerates footstep and reload cues in the upper-mids while cutting masking bass rumble.",
+    "hints": [
+      { "type": "low_shelf", "frequencyHz": 90, "gainDb": -3.0, "q": 0.7, "rationale": "Reduce explosion and music rumble that masks small cues." },
+      { "type": "bell", "frequencyHz": 400, "gainDb": -1.5, "q": 1.0, "rationale": "Pull down low-mid clutter for a cleaner soundstage." },
+      { "type": "bell", "frequencyHz": 3500, "gainDb": 3.0, "q": 1.5, "rationale": "Emphasize footstep and reload transients for positional clarity." },
+      { "type": "bell", "frequencyHz": 6000, "gainDb": 2.0, "q": 2.0, "rationale": "Sharpen high-frequency detail of distant steps." }
+    ]
+  },
+  {
+    "id": "late-night",
+    "name": "Late Night",
+    "category": "purpose",
+    "description": "Low-fatigue listening at quiet volumes: a touch more bass and reduced harsh treble so detail survives without sharpness.",
+    "hints": [
+      { "type": "low_shelf", "frequencyHz": 100, "gainDb": 2.5, "q": 0.7, "rationale": "Restore perceived bass that is lost at low volume (equal-loudness)." },
+      { "type": "bell", "frequencyHz": 3000, "gainDb": -1.5, "q": 1.2, "rationale": "Soften forward presence for relaxed listening." },
+      { "type": "bell", "frequencyHz": 7000, "gainDb": -3.0, "q": 1.5, "rationale": "Cut harsh upper treble that fatigues over long sessions." },
+      { "type": "high_shelf", "frequencyHz": 12000, "gainDb": -1.5, "q": 0.7, "rationale": "Gently roll off the very top end for smoothness." }
+    ]
+  },
+  {
+    "id": "bass-boost",
+    "name": "Bass Boost",
+    "category": "purpose",
+    "description": "Clean low-end emphasis for electronic and hip-hop: deep sub weight without smearing the mids.",
+    "hints": [
+      { "type": "low_shelf", "frequencyHz": 60, "gainDb": 5.0, "q": 0.7, "rationale": "Deliver sub-bass rumble and slam." },
+      { "type": "bell", "frequencyHz": 110, "gainDb": 2.0, "q": 1.0, "rationale": "Reinforce mid-bass punch for kick body." },
+      { "type": "bell", "frequencyHz": 300, "gainDb": -2.0, "q": 1.0, "rationale": "Keep the boosted bass from muddying the lower mids." }
+    ]
+  },
+  {
+    "id": "podcast",
+    "name": "Podcast / Speech",
+    "category": "purpose",
+    "description": "Maximizes spoken-word clarity and consistency: trimmed lows, lifted presence, and controlled sibilance.",
+    "hints": [
+      { "type": "high_pass", "frequencyHz": 80, "gainDb": 0.0, "q": 0.7, "rationale": "Remove rumble and plosive energy below the voice." },
+      { "type": "bell", "frequencyHz": 250, "gainDb": -2.0, "q": 1.0, "rationale": "Reduce muddiness for a clear, articulate tone." },
+      { "type": "bell", "frequencyHz": 2500, "gainDb": 2.5, "q": 1.0, "rationale": "Boost intelligibility of consonants and presence." },
+      { "type": "bell", "frequencyHz": 6500, "gainDb": -2.0, "q": 2.0, "rationale": "Control sibilance and ess sounds." }
+    ]
+  },
+  {
+    "id": "harman-neutral",
+    "name": "Harman Neutral",
+    "category": "reference",
+    "description": "A reference-style balanced target with a gentle bass shelf and natural presence — a safe, accurate baseline for most headphones.",
+    "hints": [
+      { "type": "low_shelf", "frequencyHz": 105, "gainDb": 2.0, "q": 0.7, "rationale": "The Harman bass shelf adds perceived naturalness and warmth." },
+      { "type": "bell", "frequencyHz": 200, "gainDb": -1.0, "q": 1.0, "rationale": "Slight low-mid relief keeps the balance clean." },
+      { "type": "bell", "frequencyHz": 3000, "gainDb": 1.0, "q": 1.0, "rationale": "Gentle ear-gain presence for natural vocal placement." },
+      { "type": "high_shelf", "frequencyHz": 10000, "gainDb": 1.0, "q": 0.7, "rationale": "A touch of air for openness without harshness." }
+    ]
+  },
+  {
+    "id": "crinacle-ief-2025",
+    "name": "Crinacle IEF Preference 2025",
+    "category": "reference",
+    "description": "Crinacle's 2025 In-Ear Fidelity preference target: JM-1/IEF-style reference voicing with strong sub-bass weight and a relaxed treble shelf. For IEMs this follows the IEC 711 article parameters; for headphones use it as a preference direction, not literal compensation.",
+    "hints": [
+      { "type": "low_shelf", "frequencyHz": 105, "gainDb": 8.0, "q": 0.71, "rationale": "IEC 711 IEF Preference 2025 uses the standard 105 Hz bass shelf at about +8 dB for strong low-end preference weight." },
+      { "type": "high_shelf", "frequencyHz": 2500, "gainDb": -4.0, "q": 0.4, "rationale": "Crinacle's 2025 preference target pairs the bass shelf with a -4 dB treble adjustment rather than a full-spectrum tilt." }
+    ]
+  }
+]

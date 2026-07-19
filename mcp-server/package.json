@@ -1,0 +1,33 @@
+{
+  "name": "auralink-mcp",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Local MCP server for Auralink EQ — read state and generate/validate/apply per-headphone EQ tunings.",
+  "type": "module",
+  "bin": {
+    "auralink-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "license:check": "node scripts/check-licenses.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "start": "node dist/index.js",
+    "dev": "tsc -w"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "overrides": {
+    "hono": "4.12.31"
+  }
+}

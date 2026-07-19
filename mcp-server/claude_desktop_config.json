@@ -1,0 +1,9 @@
+{
+  "//": "Example Claude Desktop MCP client config. Merge the 'auralink' entry into your real config and replace /ABSOLUTE/PATH/TO/auralink-eq with this repository's absolute path. The app creates the local control token automatically on first launch.",
+  "mcpServers": {
+    "auralink": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/auralink-eq/mcp-server/dist/index.js"]
+    }
+  }
+}

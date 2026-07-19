@@ -1,0 +1,95 @@
+{
+  "sampleRate": 48000,
+  "toleranceDb": 0.0005,
+  "preset": {
+    "id": "fixture_response_parity",
+    "name": "Response Parity Fixture",
+    "preampDb": -2,
+    "safety": {
+      "autoGainEnabled": false,
+      "clippingRisk": "low"
+    },
+    "createdBy": "ai",
+    "version": 1,
+    "tags": [
+      "fixture"
+    ],
+    "createdAt": "1970-01-01T00:00:00Z",
+    "updatedAt": "1970-01-01T00:00:00Z",
+    "bands": [
+      {
+        "index": 2,
+        "type": "low_shelf",
+        "frequencyHz": 120,
+        "gainDb": 2.5,
+        "q": 0.707,
+        "channel": "stereo",
+        "enabled": true
+      },
+      {
+        "index": 8,
+        "type": "bell",
+        "frequencyHz": 750,
+        "gainDb": -2.25,
+        "q": 1.2,
+        "channel": "stereo",
+        "enabled": true
+      },
+      {
+        "index": 12,
+        "type": "bell",
+        "frequencyHz": 2400,
+        "gainDb": 3,
+        "q": 1.1,
+        "channel": "stereo",
+        "enabled": true
+      },
+      {
+        "index": 16,
+        "type": "notch",
+        "frequencyHz": 6200,
+        "gainDb": 0,
+        "q": 5,
+        "channel": "stereo",
+        "enabled": true
+      },
+      {
+        "index": 18,
+        "type": "high_shelf",
+        "frequencyHz": 9500,
+        "gainDb": 1.75,
+        "q": 0.707,
+        "channel": "stereo",
+        "enabled": true
+      }
+    ]
+  },
+  "frequenciesHz": [
+    31.5,
+    63,
+    125,
+    250,
+    500,
+    1000,
+    2000,
+    4000,
+    6200,
+    8000,
+    12000,
+    16000
+  ],
+  "expectedDb": [
+    0.48561,
+    0.311851,
+    -0.889806,
+    -2.046835,
+    -3.003025,
+    -2.991431,
+    0.285351,
+    -0.97961,
+    -181.422441,
+    -1.743032,
+    -0.602967,
+    -0.29225
+  ]
+}

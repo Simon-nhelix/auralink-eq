@@ -1,0 +1,186 @@
+[
+  {
+    "id": "sennheiser-hd600",
+    "brand": "Sennheiser",
+    "model": "HD600",
+    "type": "open_back",
+    "signature": "Reference-neutral, slightly mid-forward, polite treble with a mild upper-mid lift; bass is fast but rolls off in the sub region.",
+    "correctionNotes": [
+      "Sub-bass below ~40 Hz rolls off; a gentle low shelf restores weight without bloat.",
+      "Mild presence bump around 3 kHz can sound forward on bright tracks; a small dip tames it.",
+      "Treble is well controlled, so boosts above 8 kHz are usually unnecessary."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 2800, "highHz": 3600 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (Crinacle, Oratory1990 style targets)",
+    "credibility": "measured"
+  },
+  {
+    "id": "sennheiser-hd650",
+    "brand": "Sennheiser",
+    "model": "HD650",
+    "type": "open_back",
+    "signature": "Warm-neutral, smooth and relaxed; the classic 'veil' is a gentle upper-mid/lower-treble dip with a touch more mid-bass than the HD600.",
+    "correctionNotes": [
+      "Lower treble (5–7 kHz) is recessed, so a small lift adds clarity and air.",
+      "Sub-bass roll-off below ~40 Hz benefits from a modest low shelf.",
+      "Already warm — avoid stacking extra mid-bass or it turns muddy."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 5500, "highHz": 7000 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (Oratory1990 style targets)",
+    "credibility": "measured"
+  },
+  {
+    "id": "beyerdynamic-dt770",
+    "brand": "Beyerdynamic",
+    "model": "DT770 Pro 80",
+    "type": "closed_back",
+    "signature": "V-shaped: elevated sub/mid-bass and a sharp treble peak around 8–9 kHz that reads as detailed but can be sibilant ('Beyer peak').",
+    "correctionNotes": [
+      "Pronounced 8–9 kHz peak is fatiguing; a targeted cut here is the single most useful move.",
+      "Upper-mids around 250 Hz can sound slightly hollow; small bell lift improves vocal body.",
+      "Bass is already strong, so prefer cutting harsh treble over boosting bass."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 7500, "highHz": 9500 },
+      { "lowHz": 5500, "highHz": 6500 }
+    ],
+    "suggestedTargetCurveId": "late-night",
+    "source": "Aggregated measurement consensus (rtings / Oratory1990)",
+    "credibility": "measured"
+  },
+  {
+    "id": "beyerdynamic-dt990",
+    "brand": "Beyerdynamic",
+    "model": "DT990 Pro",
+    "type": "open_back",
+    "signature": "Aggressive V-shape: big sub-bass and a very prominent treble peak near 8 kHz, giving an airy but often harsh presentation.",
+    "correctionNotes": [
+      "Strong 8 kHz peak is the defining flaw; cut it firmly to remove sibilance and listening fatigue.",
+      "A secondary 6 kHz region can also read as sharp on vocals.",
+      "Mids are slightly scooped; a gentle 1–2 kHz lift restores presence."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 7000, "highHz": 9000 },
+      { "lowHz": 5500, "highHz": 6500 }
+    ],
+    "suggestedTargetCurveId": "late-night",
+    "source": "Aggregated measurement consensus (rtings / Oratory1990)",
+    "credibility": "measured"
+  },
+  {
+    "id": "apple-airpods-max",
+    "brand": "Apple",
+    "model": "AirPods Max",
+    "type": "closed_back",
+    "signature": "Near-Harman tuning out of the box: clean elevated bass, neutral mids, smooth treble; very balanced with mild upper-mid energy.",
+    "correctionNotes": [
+      "Already close to neutral, so corrections should be small and surgical.",
+      "A slight 3 kHz forwardness can be tamed for long sessions.",
+      "Sub-bass is solid; only add a touch if the listener wants extra rumble."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 2800, "highHz": 3500 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (rtings)",
+    "credibility": "measured"
+  },
+  {
+    "id": "sony-wh-1000xm5",
+    "brand": "Sony",
+    "model": "WH-1000XM5",
+    "type": "closed_back",
+    "signature": "Consumer-warm with elevated bass and a smooth, slightly relaxed treble; mids are clean but bass can dominate at default.",
+    "correctionNotes": [
+      "Mid-bass can mask lower mids; a small dip around 150–200 Hz cleans up muddiness.",
+      "Upper treble above 10 kHz is gently rolled off; a light high shelf adds air.",
+      "Default DSP already shapes the sound, so keep EQ moves modest."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 6000, "highHz": 7500 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (rtings)",
+    "credibility": "measured"
+  },
+  {
+    "id": "hifiman-sundara",
+    "brand": "HIFIMAN",
+    "model": "Sundara",
+    "type": "open_back",
+    "signature": "Planar-clean and neutral-bright; fast tight bass, transparent mids, and an energetic treble with a mild peak around 5–6 kHz.",
+    "correctionNotes": [
+      "Treble around 5–6 kHz can edge into harshness on bright recordings; a small cut smooths it.",
+      "Sub-bass extends well but is slightly light in quantity; a gentle low shelf adds body.",
+      "Mids are accurate, so avoid large mid-range moves."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 5000, "highHz": 6500 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (Crinacle / Oratory1990)",
+    "credibility": "measured"
+  },
+  {
+    "id": "audeze-lcd-x",
+    "brand": "Audeze",
+    "model": "LCD-X",
+    "type": "open_back",
+    "signature": "Planar with deep, authoritative bass and rich lower mids; treble is smooth but can feel slightly recessed in the upper presence region.",
+    "correctionNotes": [
+      "Upper mids around 2–4 kHz are slightly polite; a small lift improves vocal intelligibility.",
+      "Lower mids can sound thick on warm recordings; a gentle dip near 200 Hz adds clarity.",
+      "Bass is already substantial, so additional sub-bass is rarely needed."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 5000, "highHz": 6000 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (Oratory1990)",
+    "credibility": "measured"
+  },
+  {
+    "id": "apple-airpods-pro-2",
+    "brand": "Apple",
+    "model": "AirPods Pro 2",
+    "type": "true_wireless",
+    "signature": "Adaptive in-ear with a Harman-leaning tuning: clean elevated bass, neutral mids, and a slightly forward presence region; treble is smooth.",
+    "correctionNotes": [
+      "Presence around 3 kHz can be a touch forward for long listening; a small dip helps.",
+      "Adaptive EQ already compensates for seal, so only modest corrections are appropriate.",
+      "Sub-bass is full thanks to in-ear seal; add very little extra low end."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 2800, "highHz": 3600 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Aggregated measurement consensus (rtings)",
+    "credibility": "measured"
+  },
+  {
+    "id": "aune-ac45",
+    "brand": "Aune",
+    "model": "AC45",
+    "type": "on_ear",
+    "signature": "Open-back clip-on with a clean, fast mid-bass punch, flat neutral mids, and a bright/energetic upper range with a prominent 3.5 kHz peak and 8 kHz treble presence.",
+    "correctionNotes": [
+      "Low-bass rolls off below 100 Hz due to open clip-on seal; avoid heavy sub-bass boosts to prevent distortion and preserve the fast, punchy bass.",
+      "Upper midrange ear-gain peak around 3.5 kHz is energetic; a small cut smooths out shoutiness while maintaining clarity.",
+      "Treble peak around 8 kHz can be slightly sharp; a moderate cut reduces sibilance.",
+      "Lower mids (200-400 Hz) are clean but can benefit from a gentle body lift to add vocal warmth."
+    ],
+    "harshRegionsHz": [
+      { "lowHz": 3000, "highHz": 4000 },
+      { "lowHz": 7500, "highHz": 9000 }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "Official manufacturer frequency response and THD graphs from Aune.",
+    "credibility": "manufacturer"
+  }
+]
