@@ -145,7 +145,7 @@ export class LuxsinClient {
   /** POST {peqChange:{...}} — upsert a headphone entry by name. */
   async peqChange(payload: X8PeqChange): Promise<{ ok: true }> {
     await this.ensureReachable();
-    const body = "data=" + luxsinEncode(JSON.stringify({ peqChange: payload }));
+    const body = encodeFormBody({ peqChange: payload });
     await this.request({ method: "POST", path: "", body });
     return { ok: true };
   }
@@ -153,7 +153,7 @@ export class LuxsinClient {
   /** POST {peqRemove:[name]} — delete a headphone entry by name. */
   async peqRemove(name: string): Promise<{ ok: true }> {
     await this.ensureReachable();
-    const body = "data=" + luxsinEncode(JSON.stringify({ peqRemove: [name] }));
+    const body = encodeFormBody({ peqRemove: [name] });
     await this.request({ method: "POST", path: "", body });
     return { ok: true };
   }
@@ -256,6 +256,18 @@ export async function discoverLuxsinX8BaseUrl(options: LuxsinDiscoveryOptions = 
     }
   }
   return undefined;
+}
+
+/**
+ * Build the `data=<payload>` form body for a write.
+ *
+ * The scrambled-base64 alphabet includes `+`, which in an
+ * `application/x-www-form-urlencoded` body means a literal space. Without
+ * percent-encoding the device decodes a corrupted payload and silently ignores
+ * the write while still answering HTTP 200 "Settings updated".
+ */
+export function encodeFormBody(payload: unknown): string {
+  return "data=" + encodeURIComponent(luxsinEncode(JSON.stringify(payload)));
 }
 
 async function discoveryCandidates(options: LuxsinDiscoveryOptions): Promise<string[]> {
