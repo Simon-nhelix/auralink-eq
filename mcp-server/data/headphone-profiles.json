@@ -89,6 +89,34 @@
     "credibility": "manufacturer"
   },
   {
+    "id": "austrian-audio-hi-x65",
+    "brand": "Austrian Audio",
+    "model": "Hi-X65",
+    "type": "open_back",
+    "signature": "Open-back reference/studio tuning: extended but slightly lean bass vs Harman, mild low-mid thickness around 200-600 Hz, a noticeable 1.5-2 kHz presence dip, smooth forward upper mids, and an elevated 5-10 kHz treble that reads bright.",
+    "correctionNotes": [
+      "Needs a ~+5.4 dB bass shelf at 105 Hz (Q0.7) plus ~+6 dB below 40 Hz to reach the Harman over-ear 2018 bass level; the driver extends cleanly to sub-bass (5 Hz spec, good measured extension).",
+      "Cut ~2.4 dB wide at 236 Hz (Q0.53) and ~1.5 dB at 592 Hz to clear low-mid boxiness.",
+      "The 1.5-2 kHz presence dip is the biggest midrange correction: ~+6.9 dB at 1659 Hz (Q1.76).",
+      "Small surgical fixes around the ear-gain region: -1.9 dB @ 2858 Hz (Q5.45), +2.9 dB @ 3426 Hz (Q5.91), -1.5 dB @ 4145 Hz (Q6).",
+      "Tame brightness with -4 dB at 5982 Hz (Q3.16) and a -1.5 dB high shelf at 10 kHz; Sonarworks measured a ~10 dB boost near 10 kHz vs neutral.",
+      "AutoEq preamp -6.5 dB covers the +6.9 dB peak; add more preamp when stacking a sub-bass preference shelf."
+    ],
+    "harshRegionsHz": [
+      {
+        "lowHz": 5000,
+        "highHz": 7000
+      },
+      {
+        "lowHz": 9000,
+        "highHz": 12000
+      }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "AutoEq oratory1990 over-ear measurement (https://github.com/jaakkopasanen/AutoEq results/oratory1990/over-ear/Austrian Audio Hi-X65); corroborated by Sonarworks GRAS review (neutral bass/low-mids, high-mid dip, ~10 dB treble lift near 10 kHz) and Sound On Sound (bright above ~5 kHz, even but unemphasized bass, slight low-mid thickness).",
+    "credibility": "measured"
+  },
+  {
     "id": "beyerdynamic-dt770",
     "brand": "Beyerdynamic",
     "model": "DT770 Pro 80",
