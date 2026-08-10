@@ -48,3 +48,22 @@ jobs:
           cmp mcp-server/data/headphone-profiles.json Sources/AuralinkCore/Resources/data/headphone-profiles.json
           cmp mcp-server/data/target-curves.json Sources/AuralinkCore/Resources/data/target-curves.json
           cmp mcp-server/data/safety-rules.json Sources/AuralinkCore/Resources/data/safety-rules.json
+
+  release-app:
+    name: Build Auralink EQ.app artifact
+    runs-on: macos-15
+    timeout-minutes: 40
+    needs: [swift, mcp]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Show Swift version
+        run: swift --version
+      - name: Bundle release app
+        run: ./scripts/bundle-app.sh
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Auralink-EQ-app
+          path: build/Auralink EQ.app
+          if-no-files-found: error
+          retention-days: 7
