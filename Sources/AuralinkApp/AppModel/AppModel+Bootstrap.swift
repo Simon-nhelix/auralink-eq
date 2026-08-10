@@ -7,7 +7,15 @@ extension AppModel {
     func bootstrap() {
         // Publish the bundled knowledge data to a stable on-disk location so the
         // external MCP server can read the same profiles/curves/rules the app uses.
-        knowledge.seedDataDirectory(AuralinkPaths.dataDirectory)
+        knowledge.seedDataDirectory(
+            AuralinkPaths.dataDirectory,
+            libraryHeadphonesDirectory: AuralinkPaths.libraryHeadphonesDirectory
+        )
+        // Expand aggregate → per-file library on first run / empty library.
+        knowledge.seedLibraryHeadphonesIfEmpty(
+            AuralinkPaths.libraryHeadphonesDirectory,
+            aggregateDirectory: AuralinkPaths.dataDirectory
+        )
         startFileWatchers()
         loadPresets()
         refreshDevices()
@@ -46,11 +54,15 @@ extension AppModel {
     func startFileWatchers() {
         presetsWatcher?.cancel()
         knowledgeWatcher?.cancel()
+        libraryWatcher?.cancel()
 
         presetsWatcher = makeDirectoryWatcher(url: AuralinkPaths.presetsDirectory) { [weak self] in
             Task { @MainActor in self?.schedulePresetReloadFromDisk() }
         }
         knowledgeWatcher = makeDirectoryWatcher(url: AuralinkPaths.dataDirectory) { [weak self] in
+            Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
+        }
+        libraryWatcher = makeDirectoryWatcher(url: AuralinkPaths.libraryHeadphonesDirectory) { [weak self] in
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
     }
@@ -103,7 +115,10 @@ extension AppModel {
 
     @discardableResult
     func reloadKnowledge() -> (profileCount: Int, targetCurveCount: Int) {
-        let kb = KnowledgeBase(dataDirectory: AuralinkPaths.dataDirectory)
+        let kb = KnowledgeBase(
+            dataDirectory: AuralinkPaths.dataDirectory,
+            libraryHeadphonesDirectory: AuralinkPaths.libraryHeadphonesDirectory
+        )
         let val = PresetValidator(rules: kb.safetyRules)
         self.knowledge = kb
         self.validator = val

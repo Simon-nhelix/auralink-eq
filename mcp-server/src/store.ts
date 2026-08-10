@@ -105,6 +105,31 @@ export function libraryDir(): string {
   return path.resolve(moduleDir, "..", "..", "library");
 }
 
+/**
+ * Runtime mirror of the shared library under Application Support so the
+ * installed app (which cannot see the git checkout) still loads per-file
+ * profiles. Override with `AURALINK_RUNTIME_LIBRARY_DIR`.
+ */
+export function runtimeLibraryDir(): string {
+  const override = process.env.AURALINK_RUNTIME_LIBRARY_DIR;
+  if (override && override.trim().length > 0) return override.trim();
+  return path.join(
+    os.homedir(),
+    "Library",
+    "Application Support",
+    "Auralink",
+    "library"
+  );
+}
+
+export function runtimeLibraryHeadphonesDir(): string {
+  return path.join(runtimeLibraryDir(), "headphones");
+}
+
+export function runtimeLibraryPresetsDir(): string {
+  return path.join(runtimeLibraryDir(), "presets");
+}
+
 export function libraryHeadphonesDir(): string {
   return path.join(libraryDir(), "headphones");
 }
@@ -136,8 +161,16 @@ export function isSharedLibraryPreset(preset: EQPreset): boolean {
 }
 
 async function writeLibraryHeadphone(profile: HeadphoneProfile): Promise<void> {
+  const payload = stableStringify(profile);
   await ensureDir(libraryHeadphonesDir());
-  await fs.writeFile(libraryHeadphonePath(profile.id), stableStringify(profile), "utf8");
+  await fs.writeFile(libraryHeadphonePath(profile.id), payload, "utf8");
+  // Runtime mirror for the installed app.
+  await ensureDir(runtimeLibraryHeadphonesDir());
+  await fs.writeFile(
+    path.join(runtimeLibraryHeadphonesDir(), `${sanitizeId(profile.id)}.json`),
+    payload,
+    "utf8"
+  );
 }
 
 async function removeLibraryHeadphone(id: string): Promise<void> {
@@ -146,12 +179,24 @@ async function removeLibraryHeadphone(id: string): Promise<void> {
   } catch {
     /* ignore missing */
   }
+  try {
+    await fs.unlink(path.join(runtimeLibraryHeadphonesDir(), `${sanitizeId(id)}.json`));
+  } catch {
+    /* ignore missing */
+  }
 }
 
 async function writeLibraryPreset(preset: EQPreset): Promise<void> {
   if (!isSharedLibraryPreset(preset)) return;
+  const payload = stableStringify(preset);
   await ensureDir(libraryPresetsDir());
-  await fs.writeFile(libraryPresetPath(preset.id), stableStringify(preset), "utf8");
+  await fs.writeFile(libraryPresetPath(preset.id), payload, "utf8");
+  await ensureDir(runtimeLibraryPresetsDir());
+  await fs.writeFile(
+    path.join(runtimeLibraryPresetsDir(), `${sanitizeId(preset.id)}.json`),
+    payload,
+    "utf8"
+  );
 }
 
 async function removeLibraryPreset(id: string): Promise<void> {
@@ -160,10 +205,14 @@ async function removeLibraryPreset(id: string): Promise<void> {
   } catch {
     /* ignore missing */
   }
+  try {
+    await fs.unlink(path.join(runtimeLibraryPresetsDir(), `${sanitizeId(id)}.json`));
+  } catch {
+    /* ignore missing */
+  }
 }
 
-async function loadHeadphoneProfilesFromLibrary(): Promise<HeadphoneProfile[]> {
-  const dir = libraryHeadphonesDir();
+async function loadHeadphoneProfilesFromLibraryDir(dir: string): Promise<HeadphoneProfile[]> {
   let entries: string[];
   try {
     entries = await fs.readdir(dir);
@@ -179,6 +228,10 @@ async function loadHeadphoneProfilesFromLibrary(): Promise<HeadphoneProfile[]> {
     }
   }
   return out;
+}
+
+async function loadHeadphoneProfilesFromLibrary(): Promise<HeadphoneProfile[]> {
+  return loadHeadphoneProfilesFromLibraryDir(libraryHeadphonesDir());
 }
 
 /** Rebuild bundled aggregate seed files from library/headphones (best-effort). */
@@ -505,10 +558,22 @@ export async function loadHeadphoneProfiles(): Promise<HeadphoneProfile[]> {
   const byId = new Map<string, HeadphoneProfile>();
   const deletedIds = await loadDeletedHeadphoneProfileIds();
   // Order: bundled defaults → git library → user runtime (later wins).
-  for (const dir of uniqueDirs([dataDir(), libraryHeadphonesDir(), userDataDir()])) {
-    // libraryHeadphonesDir is a folder of per-file profiles, not a single JSON.
-    if (path.resolve(dir) === path.resolve(libraryHeadphonesDir())) {
-      for (const profile of await loadHeadphoneProfilesFromLibrary()) {
+  for (const dir of uniqueDirs([
+    dataDir(),
+    libraryHeadphonesDir(),
+    runtimeLibraryHeadphonesDir(),
+    userDataDir(),
+  ])) {
+    // library dirs are folders of per-file profiles, not a single JSON.
+    if (
+      path.resolve(dir) === path.resolve(libraryHeadphonesDir()) ||
+      path.resolve(dir) === path.resolve(runtimeLibraryHeadphonesDir())
+    ) {
+      const profiles =
+        path.resolve(dir) === path.resolve(libraryHeadphonesDir())
+          ? await loadHeadphoneProfilesFromLibrary()
+          : await loadHeadphoneProfilesFromLibraryDir(dir);
+      for (const profile of profiles) {
         const normalized = normalizeProfile(profile);
         if (normalized.id.length > 0) byId.set(normalized.id, normalized);
       }
