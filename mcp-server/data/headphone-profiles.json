@@ -89,6 +89,34 @@
     "credibility": "manufacturer"
   },
   {
+    "id": "austrian-audio-hi-x60",
+    "brand": "Austrian Audio",
+    "model": "Hi-X60",
+    "type": "closed_back",
+    "signature": "Closed-back studio reference: deep-extending but not warm bass with a mid-bass hump around 60-100 Hz, fairly neutral lower mids, a 1-1.2 kHz dip, a 1.9-2 kHz presence lift need, and upper-mid/lower-treble energy (around 2.5-6 kHz) that can sound sharp; high treble rolls off above 10 kHz.",
+    "correctionNotes": [
+      "AutoEq/oratory1990 Harman OE 2018 correction uses a compound bass shape: low shelf @105 Hz -9.8 dB plus a very wide +18 dB peaking @81 Hz (Q0.36) and a -14.9 dB peaking @138 Hz (Q0.6) to convert the mid-bass hump into a Harman shelf. Net peak after this group is only ~4.5 dB.",
+      "Cut ~2.1 dB @1025 Hz (Q2.33) for the mild upper-bass/lower-mid dip region relative to target.",
+      "Boost ~+4.6 dB @1919 Hz (Q3.37) for the presence dip; cut -3.1 dB @2676 Hz (Q5.21) and -3.6 dB @5733 Hz (Q5.64) to tame sharp upper-mid/lower-treble.",
+      "Small +1.6 dB @3637 Hz (Q1.17) and +2.5 dB @9712 Hz (Q2.24); high shelf @10 kHz -3.2 dB for air/extension balance.",
+      "User preference on top of Harman: +3.0 dB low shelf @40 Hz for moderate sub-bass reinforcement (seal-dependent on closed-backs).",
+      "AutoEq preamp is -4.7 dB; with the sub-bass preference shelf use about -6 dB headroom."
+    ],
+    "harshRegionsHz": [
+      {
+        "lowHz": 2500,
+        "highHz": 3500
+      },
+      {
+        "lowHz": 5000,
+        "highHz": 7000
+      }
+    ],
+    "suggestedTargetCurveId": "harman-neutral",
+    "source": "AutoEq oratory1990 over-ear measurement (https://github.com/jaakkopasanen/AutoEq results/oratory1990/over-ear/Austrian Audio Hi-X60); dense GraphicEQ max +4.5 dB @~2 kHz. Corroborated by DIY-Audio-Heaven (deep bass extension with perfect seal, elevated upper mids/lower treble needing taming), Headphones.com DMS B&K 4128 (Harman-esque bass, treble glare above ~5 kHz), and ASR (bass peak ~100 Hz, peaking above 3 kHz).",
+    "credibility": "measured"
+  },
+  {
     "id": "austrian-audio-hi-x65",
     "brand": "Austrian Audio",
     "model": "Hi-X65",
