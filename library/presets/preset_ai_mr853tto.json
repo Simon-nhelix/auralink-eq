@@ -1,0 +1,227 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 34,
+      "gainDb": -2,
+      "index": 1,
+      "q": 0.9,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 64,
+      "gainDb": -6.5,
+      "index": 2,
+      "q": 0.53,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": 8.1,
+      "index": 3,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 1321,
+      "gainDb": -8.8,
+      "index": 4,
+      "q": 1.76,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2202,
+      "gainDb": 0.7,
+      "index": 5,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2685,
+      "gainDb": 7,
+      "index": 6,
+      "q": 1.38,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3929,
+      "gainDb": 2.3,
+      "index": 7,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 4523,
+      "gainDb": -3.2,
+      "index": 8,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 7161,
+      "gainDb": 1.2,
+      "index": 9,
+      "q": 4.1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": -4,
+      "index": 10,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "baselinePresetId": "preset_ai_mr7vh5jj",
+    "correctionStrength": 1,
+    "preferenceBandIndexes": [
+      1,
+      3,
+      9
+    ],
+    "role": "combined",
+    "source": "Baseline from AutoEq Kuulokenurkka Yamaha YH-5000SE (leather earpads); direction revised from Simon's feedback that the first tuning was more correct and later bass-cleanup/high-pass revisions caused sibilance on Austrian Audio Full Score One TTT",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-05T18:43:59.308Z",
+  "createdBy": "ai",
+  "goal": "Direction correction after Simon found the first YH-5000SE leather-pad tuning more correct and later Dirty Work/Deep Drop cleanup revisions introduced sibilance on the Austrian Audio Full Score One TTT chain. Return to the first tuning's tonal balance and timing, remove the high-pass approach, keep only a gentle deep-sub bell cleanup, and slightly ease the 7 kHz area.",
+  "headphone": "Yamaha YH-5000SE",
+  "id": "preset_ai_mr853tto",
+  "name": "Yamaha YH-5000SE Leather - First Balance TTT X8",
+  "preampDb": -7.5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "preference",
+    "luxsin-x8",
+    "yamaha-yh-5000se",
+    "leather-pads",
+    "ttt-chain",
+    "first-balance",
+    "avoid-high-pass",
+    "sibilance-fix",
+    "dirty-work-fix",
+    "crinacle-reference",
+    "harman-neutral",
+    "kuulokenurkka",
+    "measured"
+  ],
+  "updatedAt": "2026-07-05T18:43:59.308Z",
+  "version": 1
+}

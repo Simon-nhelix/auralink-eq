@@ -1,0 +1,28 @@
+{
+  "brand": "DITA",
+  "correctionNotes": [
+    "W-shaped tuning: elevated sub/mid-bass (+7-8 dB at 20-100 Hz), forward upper mids (~+14 dB pinna gain at 2.5 kHz), and a secondary treble peak (~+12 dB at 10 kHz).",
+    "Mid-bass emphasis (100-200 Hz) is the defining character; trim modestly toward the IEF target but preserve some warmth to keep the musical intent.",
+    "The 5-5.5 kHz presence peak can read as forward or slightly hard on vocals; a gentle cut here smooths the transition between upper mids and treble.",
+    "The 9-10 kHz treble peak adds sparkle and air but may cause sibilance on bright recordings; a moderate cut tames this without killing the extension.",
+    "The 7 kHz dip is a typical IEM coupler feature; do not chase it with EQ.",
+    "Lower mids (300-600 Hz) are slightly pulled back relative to the bass and upper mids; a small lift can restore vocal body if needed."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 6000,
+      "lowHz": 5000
+    },
+    {
+      "highHz": 10500,
+      "lowHz": 9000
+    }
+  ],
+  "id": "dita-project-m2",
+  "model": "Project M2",
+  "signature": "W-shaped single-DD tuning: well-extended, punchy bass with mid-bass emphasis; forward, emotional upper mids and vocals; smooth treble with extra sparkle near 10 kHz. Described as a 'neutral+' everyday IEM with natural coherence and musicality.",
+  "source": "Bloom Audio squig.link measurement (IEC 711 clone), July 2026. Corroborated by Bloom Audio written review, Head-Fi review (Pseudonym031), and eddie0817 WordPress impressions.",
+  "suggestedTargetCurveId": "crinacle-ief-2025",
+  "type": "iem"
+}

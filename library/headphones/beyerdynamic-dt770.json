@@ -1,0 +1,25 @@
+{
+  "brand": "Beyerdynamic",
+  "correctionNotes": [
+    "Pronounced 8–9 kHz peak is fatiguing; a targeted cut here is the single most useful move.",
+    "Upper-mids around 250 Hz can sound slightly hollow; small bell lift improves vocal body.",
+    "Bass is already strong, so prefer cutting harsh treble over boosting bass."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 9500,
+      "lowHz": 7500
+    },
+    {
+      "highHz": 6500,
+      "lowHz": 5500
+    }
+  ],
+  "id": "beyerdynamic-dt770",
+  "model": "DT770 Pro 80",
+  "signature": "V-shaped: elevated sub/mid-bass and a sharp treble peak around 8–9 kHz that reads as detailed but can be sibilant ('Beyer peak').",
+  "source": "Aggregated measurement consensus (rtings / Oratory1990)",
+  "suggestedTargetCurveId": "late-night",
+  "type": "closed_back"
+}

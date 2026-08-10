@@ -1,0 +1,17 @@
+{
+  "brand": "NiceHCK",
+  "correctionNotes": [
+    "No exact AutoEq/public measurement match was found for EBX25Ti; do not treat prose-derived EQ as exact correction.",
+    "Assume stock full foams and a stable fit. Add only a gentle low shelf plus a small mid-bass reinforcement; avoid trying to force sealed-IEM sub-bass from an open flathead.",
+    "Keep the naturally clear/forward upper mids largely intact; use only a mild broad trim around 3 kHz.",
+    "Foam and fit dominate the result: ring/no-foam use may need slightly more bass, while a tight full-foam fit may need less. Re-tune by ear in 0.5-1 dB steps."
+  ],
+  "credibility": "estimated",
+  "harshRegionsHz": [],
+  "id": "nicehck-ebx25ti",
+  "model": "EBX25Ti",
+  "signature": "Fit/foam-dependent semi-open flathead: clear, forward upper mids and wide presentation; clean bass with modest impact but useful extension when full foams achieve a stable fit; generally smooth, non-fatiguing treble. Review tonal descriptions vary from neutral-bright to warm, so treat this as an estimated baseline.",
+  "source": "Estimated from text reviews; no EBX25Ti AutoEq match. Prime Audio: https://primeaudio.org/nicehck-ebx25ti-review/ ; Hi End Portable: https://hiendportable.com/nicehck-ebx25ti-english-review/ ; manufacturer overview: https://www.nicehck.com/blogs/guides/flathead-flagship-redefined-in-depth-review-of-the-nicehck-ebx25ti-2",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "earbud"
+}

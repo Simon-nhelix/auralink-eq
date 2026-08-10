@@ -1,0 +1,740 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": -9.8,
+      "index": 1,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 81,
+      "gainDb": 18,
+      "index": 2,
+      "q": 0.36,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 138,
+      "gainDb": -14.9,
+      "index": 3,
+      "q": 0.6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 1025,
+      "gainDb": -2.1,
+      "index": 4,
+      "q": 2.33,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 1919,
+      "gainDb": 4.6,
+      "index": 5,
+      "q": 3.37,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2676,
+      "gainDb": -3.1,
+      "index": 6,
+      "q": 5.21,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3637,
+      "gainDb": 1.6,
+      "index": 7,
+      "q": 1.17,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 5733,
+      "gainDb": -3.6,
+      "index": 8,
+      "q": 5.64,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 9712,
+      "gainDb": 2.5,
+      "index": 9,
+      "q": 2.24,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": -3.2,
+      "index": 10,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 40,
+      "gainDb": 3,
+      "index": 11,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 1,
+    "measuredCorrection": {
+      "channel": "stereo",
+      "contentHash": "a53f959e7c7a43d1e14afa7ed64d65a6f11513938bc666b887d0420ac6146788",
+      "measurementId": "autoeq-5b92c109f5c5a1c2",
+      "phaseData": "magnitude_only",
+      "points": [
+        {
+          "frequencyHz": 20,
+          "gainDb": -3.7
+        },
+        {
+          "frequencyHz": 21,
+          "gainDb": -3.3999999999999995
+        },
+        {
+          "frequencyHz": 22,
+          "gainDb": -3.0999999999999996
+        },
+        {
+          "frequencyHz": 23,
+          "gainDb": -3
+        },
+        {
+          "frequencyHz": 24,
+          "gainDb": -2.7
+        },
+        {
+          "frequencyHz": 26,
+          "gainDb": -2.3
+        },
+        {
+          "frequencyHz": 27,
+          "gainDb": -2.0999999999999996
+        },
+        {
+          "frequencyHz": 29,
+          "gainDb": -1.7000000000000002
+        },
+        {
+          "frequencyHz": 30,
+          "gainDb": -1.5
+        },
+        {
+          "frequencyHz": 32,
+          "gainDb": -1.0999999999999996
+        },
+        {
+          "frequencyHz": 34,
+          "gainDb": -0.7999999999999998
+        },
+        {
+          "frequencyHz": 36,
+          "gainDb": -0.5
+        },
+        {
+          "frequencyHz": 38,
+          "gainDb": -0.2999999999999998
+        },
+        {
+          "frequencyHz": 40,
+          "gainDb": -0.09999999999999964
+        },
+        {
+          "frequencyHz": 43,
+          "gainDb": 0.2999999999999998
+        },
+        {
+          "frequencyHz": 45,
+          "gainDb": 0.5
+        },
+        {
+          "frequencyHz": 48,
+          "gainDb": 0.8000000000000003
+        },
+        {
+          "frequencyHz": 50,
+          "gainDb": 1
+        },
+        {
+          "frequencyHz": 53,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 56,
+          "gainDb": 1.5
+        },
+        {
+          "frequencyHz": 59,
+          "gainDb": 1.7000000000000002
+        },
+        {
+          "frequencyHz": 63,
+          "gainDb": 1.9000000000000004
+        },
+        {
+          "frequencyHz": 66,
+          "gainDb": 2.1
+        },
+        {
+          "frequencyHz": 70,
+          "gainDb": 2.2
+        },
+        {
+          "frequencyHz": 74,
+          "gainDb": 2.2
+        },
+        {
+          "frequencyHz": 78,
+          "gainDb": 2.1
+        },
+        {
+          "frequencyHz": 83,
+          "gainDb": 1.9000000000000004
+        },
+        {
+          "frequencyHz": 87,
+          "gainDb": 1.5
+        },
+        {
+          "frequencyHz": 92,
+          "gainDb": 0.9000000000000004
+        },
+        {
+          "frequencyHz": 97,
+          "gainDb": 0.20000000000000018
+        },
+        {
+          "frequencyHz": 103,
+          "gainDb": -0.5
+        },
+        {
+          "frequencyHz": 109,
+          "gainDb": -1.0999999999999996
+        },
+        {
+          "frequencyHz": 115,
+          "gainDb": -1.5999999999999996
+        },
+        {
+          "frequencyHz": 121,
+          "gainDb": -2
+        },
+        {
+          "frequencyHz": 128,
+          "gainDb": -2.0999999999999996
+        },
+        {
+          "frequencyHz": 136,
+          "gainDb": -2.0999999999999996
+        },
+        {
+          "frequencyHz": 143,
+          "gainDb": -2.2
+        },
+        {
+          "frequencyHz": 151,
+          "gainDb": -2.3999999999999995
+        },
+        {
+          "frequencyHz": 160,
+          "gainDb": -2.3999999999999995
+        },
+        {
+          "frequencyHz": 169,
+          "gainDb": -2.2
+        },
+        {
+          "frequencyHz": 178,
+          "gainDb": -2
+        },
+        {
+          "frequencyHz": 188,
+          "gainDb": -1.7999999999999998
+        },
+        {
+          "frequencyHz": 199,
+          "gainDb": -1.5
+        },
+        {
+          "frequencyHz": 210,
+          "gainDb": -1.2999999999999998
+        },
+        {
+          "frequencyHz": 222,
+          "gainDb": -1.0999999999999996
+        },
+        {
+          "frequencyHz": 235,
+          "gainDb": -0.8999999999999995
+        },
+        {
+          "frequencyHz": 248,
+          "gainDb": -0.5
+        },
+        {
+          "frequencyHz": 262,
+          "gainDb": -0.2999999999999998
+        },
+        {
+          "frequencyHz": 277,
+          "gainDb": 0
+        },
+        {
+          "frequencyHz": 292,
+          "gainDb": 0.2999999999999998
+        },
+        {
+          "frequencyHz": 309,
+          "gainDb": 0.6000000000000005
+        },
+        {
+          "frequencyHz": 326,
+          "gainDb": 0.8000000000000003
+        },
+        {
+          "frequencyHz": 345,
+          "gainDb": 1
+        },
+        {
+          "frequencyHz": 364,
+          "gainDb": 1.1
+        },
+        {
+          "frequencyHz": 385,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 406,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 429,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 453,
+          "gainDb": 1.1
+        },
+        {
+          "frequencyHz": 479,
+          "gainDb": 1
+        },
+        {
+          "frequencyHz": 506,
+          "gainDb": 0.9000000000000004
+        },
+        {
+          "frequencyHz": 534,
+          "gainDb": 0.8000000000000003
+        },
+        {
+          "frequencyHz": 565,
+          "gainDb": 0.7000000000000002
+        },
+        {
+          "frequencyHz": 596,
+          "gainDb": 0.6000000000000005
+        },
+        {
+          "frequencyHz": 630,
+          "gainDb": 0.5
+        },
+        {
+          "frequencyHz": 665,
+          "gainDb": 0.2999999999999998
+        },
+        {
+          "frequencyHz": 703,
+          "gainDb": 0.20000000000000018
+        },
+        {
+          "frequencyHz": 743,
+          "gainDb": 0
+        },
+        {
+          "frequencyHz": 784,
+          "gainDb": -0.20000000000000018
+        },
+        {
+          "frequencyHz": 829,
+          "gainDb": -0.39999999999999947
+        },
+        {
+          "frequencyHz": 875,
+          "gainDb": -0.5999999999999996
+        },
+        {
+          "frequencyHz": 924,
+          "gainDb": -0.7999999999999998
+        },
+        {
+          "frequencyHz": 977,
+          "gainDb": -1
+        },
+        {
+          "frequencyHz": 1032,
+          "gainDb": -1.0999999999999996
+        },
+        {
+          "frequencyHz": 1090,
+          "gainDb": -1.0999999999999996
+        },
+        {
+          "frequencyHz": 1151,
+          "gainDb": -0.8999999999999995
+        },
+        {
+          "frequencyHz": 1216,
+          "gainDb": -0.5999999999999996
+        },
+        {
+          "frequencyHz": 1284,
+          "gainDb": -0.09999999999999964
+        },
+        {
+          "frequencyHz": 1357,
+          "gainDb": 0.40000000000000036
+        },
+        {
+          "frequencyHz": 1433,
+          "gainDb": 1
+        },
+        {
+          "frequencyHz": 1514,
+          "gainDb": 1.7000000000000002
+        },
+        {
+          "frequencyHz": 1599,
+          "gainDb": 2.4000000000000004
+        },
+        {
+          "frequencyHz": 1689,
+          "gainDb": 3.1
+        },
+        {
+          "frequencyHz": 1784,
+          "gainDb": 3.7
+        },
+        {
+          "frequencyHz": 1885,
+          "gainDb": 4.2
+        },
+        {
+          "frequencyHz": 1991,
+          "gainDb": 4.5
+        },
+        {
+          "frequencyHz": 2103,
+          "gainDb": 4.3
+        },
+        {
+          "frequencyHz": 2221,
+          "gainDb": 3.5
+        },
+        {
+          "frequencyHz": 2347,
+          "gainDb": 1.7000000000000002
+        },
+        {
+          "frequencyHz": 2479,
+          "gainDb": -0.20000000000000018
+        },
+        {
+          "frequencyHz": 2618,
+          "gainDb": -1
+        },
+        {
+          "frequencyHz": 2766,
+          "gainDb": -0.7000000000000002
+        },
+        {
+          "frequencyHz": 2921,
+          "gainDb": 0
+        },
+        {
+          "frequencyHz": 3086,
+          "gainDb": 0.9000000000000004
+        },
+        {
+          "frequencyHz": 3260,
+          "gainDb": 1.7000000000000002
+        },
+        {
+          "frequencyHz": 3443,
+          "gainDb": 1.9000000000000004
+        },
+        {
+          "frequencyHz": 3637,
+          "gainDb": 1.7000000000000002
+        },
+        {
+          "frequencyHz": 3842,
+          "gainDb": 1.5
+        },
+        {
+          "frequencyHz": 4058,
+          "gainDb": 1.5
+        },
+        {
+          "frequencyHz": 4287,
+          "gainDb": 1.5
+        },
+        {
+          "frequencyHz": 4528,
+          "gainDb": 1.4000000000000004
+        },
+        {
+          "frequencyHz": 4783,
+          "gainDb": 1.1
+        },
+        {
+          "frequencyHz": 5052,
+          "gainDb": 0.40000000000000036
+        },
+        {
+          "frequencyHz": 5337,
+          "gainDb": -1.2000000000000002
+        },
+        {
+          "frequencyHz": 5637,
+          "gainDb": -2.3999999999999995
+        },
+        {
+          "frequencyHz": 5955,
+          "gainDb": -2
+        },
+        {
+          "frequencyHz": 6290,
+          "gainDb": -0.8999999999999995
+        },
+        {
+          "frequencyHz": 6644,
+          "gainDb": -0.20000000000000018
+        },
+        {
+          "frequencyHz": 7018,
+          "gainDb": 0.10000000000000053
+        },
+        {
+          "frequencyHz": 7414,
+          "gainDb": 0.2999999999999998
+        },
+        {
+          "frequencyHz": 7831,
+          "gainDb": 0.6000000000000005
+        },
+        {
+          "frequencyHz": 8272,
+          "gainDb": 0.9000000000000004
+        },
+        {
+          "frequencyHz": 8738,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 9230,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 9749,
+          "gainDb": 1.2000000000000002
+        },
+        {
+          "frequencyHz": 10298,
+          "gainDb": 1.1
+        },
+        {
+          "frequencyHz": 10878,
+          "gainDb": 0.8000000000000003
+        },
+        {
+          "frequencyHz": 11490,
+          "gainDb": 0.5
+        },
+        {
+          "frequencyHz": 12137,
+          "gainDb": 0.10000000000000053
+        },
+        {
+          "frequencyHz": 12821,
+          "gainDb": -0.39999999999999947
+        },
+        {
+          "frequencyHz": 13543,
+          "gainDb": -0.8999999999999995
+        },
+        {
+          "frequencyHz": 14305,
+          "gainDb": -1.5
+        },
+        {
+          "frequencyHz": 15110,
+          "gainDb": -2.2
+        },
+        {
+          "frequencyHz": 15961,
+          "gainDb": -3
+        },
+        {
+          "frequencyHz": 16860,
+          "gainDb": -3.8999999999999995
+        },
+        {
+          "frequencyHz": 17809,
+          "gainDb": -4.8
+        },
+        {
+          "frequencyHz": 18812,
+          "gainDb": -5.8
+        },
+        {
+          "frequencyHz": 19871,
+          "gainDb": -6.8999999999999995
+        }
+      ],
+      "provenanceURL": "https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/oratory1990/over-ear/Austrian%20Audio%20Hi-X60/Austrian%20Audio%20Hi-X60%20GraphicEQ.txt",
+      "schemaVersion": 1,
+      "source": "oratory1990",
+      "sourceFormat": "autoeq_graphic_eq",
+      "sourcePreampDb": -4.7,
+      "usableHighHz": 10000,
+      "usableLowHz": 40
+    },
+    "preferenceBandIndexes": [
+      11
+    ],
+    "role": "combined",
+    "source": "autoeq-oratory1990",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-08-10T12:35:21.502Z",
+  "createdBy": "ai",
+  "goal": "Apply the latest Harman over-ear 2018 target to the Austrian Audio Hi-X60 from AutoEq/oratory1990 measured correction: reshape the mid-bass hump into a Harman shelf, fill the ~2 kHz presence dip, and tame sharp 2.5-6 kHz energy. Adds a user-requested moderate sub-bass preference shelf (+3 dB @ 40 Hz) on top.",
+  "headphone": "Austrian Audio Hi-X60",
+  "id": "ai_austrian-audio-hi-x60_harman-neutral",
+  "name": "Austrian Audio Hi-X60 – Harman Neutral (Sub-Bass+)",
+  "preampDb": -6,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "harman-neutral",
+    "austrian-audio-hi-x60",
+    "autoeq",
+    "oratory1990",
+    "measured-fir",
+    "sub-bass-boost"
+  ],
+  "updatedAt": "2026-08-10T12:35:21.502Z",
+  "version": 1
+}

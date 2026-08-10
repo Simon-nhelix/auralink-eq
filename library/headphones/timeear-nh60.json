@@ -1,0 +1,23 @@
+{
+  "brand": "TimeEar",
+  "correctionNotes": [
+    "Treat this as an open-earbud baseline: add only light bass/body support, not heavy sealed-IEM sub-bass correction.",
+    "Do not try to force extreme sub-bass; the open fit leaks low frequencies and too much low-shelf boost can erase the NH60's fast, airy character.",
+    "Keep mids mostly intact; review impressions emphasize clear, natural, warm vocals and spacious separation without muddiness.",
+    "Use a small 7-9 kHz cut when the user wants smoother treble or less metallic glare, while preserving some upper-air sparkle.",
+    "Because no measurement graph / AutoEq match was found, describe presets as estimated preference baselines rather than exact correction."
+  ],
+  "credibility": "estimated",
+  "harshRegionsHz": [
+    {
+      "highHz": 9000,
+      "lowHz": 7000
+    }
+  ],
+  "id": "timeear-nh60",
+  "model": "NH60",
+  "signature": "Open-air/flathead earbud with clear natural mids, fast tight bass that has scale but does not truly extend like a sealed IEM, and delicate extended treble with a mild metallic brilliance that may need light glare smoothing.",
+  "source": "Official/product and community sources: TimeEar NH60 official product page https://timeear.com/products/nh60-titanium-alloy-flagship-earbuds ; Flatheads news/specs https://flatheads.net/flathead-news/timeear-introduces-its-titanium-flatheads-nh60-nh80/ (14.2 mm dynamic driver, titanium alloy shell, 60 ohm / 109 dB @1 kHz, 20 Hz–20 kHz); Sekiyoxu Nishino note.com review https://note.com/sekixyo/n/n807477859dd6?hl=en (open-air earbud, tight responsive low range that does not crawl into sub-bass, clear natural mids, extended delicate treble with mild metallic brilliance). AutoEq lookup on 2026-07-06 found no exact match.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "earbud"
+}

@@ -1,0 +1,30 @@
+{
+  "brand": "Yamaha",
+  "correctionNotes": [
+    "Use the leather-pad measured correction as the primary baseline for Simon's current pad setup; Kuulokenurkka AutoEq has a dedicated 'Yamaha YH-5000SE (leather earpads)' result.",
+    "Chord Alto drive headroom should not be the bottleneck, but digital headroom still matters because the correction uses large +8 dB bass and +7 dB upper-presence boosts; keep a negative preamp around -7.5 dB for X8.",
+    "Reduce the 1.3 kHz excess substantially to avoid honk/forwardness, then restore the 2.6–4 kHz presence recession carefully for Crinacle/Harman-like clarity without making the headphone shouty.",
+    "Treat >7 kHz cautiously: pad seal, ear position, and measurement rig variance are large, so use only the measured broad shelf/limited resonance shaping rather than chasing narrow ultra-treble notches."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 1550,
+      "lowHz": 1150
+    },
+    {
+      "highHz": 4800,
+      "lowHz": 4300
+    },
+    {
+      "highHz": 10000,
+      "lowHz": 7000
+    }
+  ],
+  "id": "yamaha-yh-5000se",
+  "model": "YH-5000SE",
+  "signature": "Open-back orthodynamic/planar flagship. Leather-pad measurements show a large bass/sub-bass deficit relative to Harman/Crinacle-style over-ear targets, a strong 1.2–1.4 kHz forward/honk region, recessed 2.5–4 kHz presence/attack, and fit/fixture-sensitive treble above ~7 kHz.",
+  "source": "Primary for current setup: AutoEq Kuulokenurkka measured leather-pad result, Yamaha YH-5000SE (leather earpads), https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/Kuulokenurkka/over-ear/Yamaha%20YH-5000SE%20%28leather%20earpads%29/Yamaha%20YH-5000SE%20%28leather%20earpads%29%20ParametricEQ.txt . Cross-check: AutoEq/oratory1990 Yamaha YH-5000SE Harman baseline, https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/oratory1990/over-ear/Yamaha%20YH-5000SE/Yamaha%20YH-5000SE%20ParametricEQ.txt . Official Yamaha specs: open-back over-ear orthodynamic, 34 ohm, 98 dB/mW, 5 Hz–70 kHz, 320 g, leather pad material sheep-skin/PU plus suede option. No exact Crinacle YH-5000SE measurement was found via AutoEq/source lookup in this session; X8 preset therefore uses leather-pad measured correction shaped as a Crinacle/Harman-style reference, not a claimed Crinacle raw measurement.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "open_back"
+}

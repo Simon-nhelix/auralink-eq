@@ -1,0 +1,215 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 210,
+      "gainDb": 3.3,
+      "index": 1,
+      "q": 0.45,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 110,
+      "gainDb": 1.05,
+      "index": 2,
+      "q": 1.2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 450,
+      "gainDb": 0.4,
+      "index": 3,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 4400,
+      "gainDb": 2.9,
+      "index": 4,
+      "q": 1.35,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 12700,
+      "gainDb": 4.9,
+      "index": 5,
+      "q": 2.2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 14800,
+      "gainDb": -3.15,
+      "index": 6,
+      "q": 1.8,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 7,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 8,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 1,
+    "preferenceBandIndexes": [],
+    "role": "preference",
+    "source": "ATechReviews squig.link same-rig measurement difference: Annihilator 2023 (REW 2024-11-29) minus Annihilator 2026 standard fit (REW 2026-02-12), L/R averaged, 1 kHz normalized",
+    "sourceConfidence": "measured",
+    "targetBlend": 1
+  },
+  "createdAt": "2026-07-28T17:01:52.794Z",
+  "createdBy": "ai",
+  "goal": "Make the Annihilator 2026 sound like the Annihilator 2023. Built from a same-rig (ATechReviews squig.link, REW/TOPPING Pro) measured difference curve, 2023 minus 2026, L/R averaged and 1 kHz normalized: +3.3 dB bass shelf below ~100 Hz tapering to 0 at 1 kHz (the 2023's bigger low-end weight), +2.9 dB broad presence peak at 4.4 kHz (more forward/energetic upper mids), and a +3.6 dB net air peak at 12.7 kHz with a small 14.8 kHz trim (more EST-tweeter sparkle). Fit below 10 kHz is within ±0.4 dB of the measured difference; the 12-15 kHz region is real but insertion-depth sensitive, so results may vary slightly with tip/fit.",
+  "headphone": "Elysian Acoustic Labs Annihilator 2026",
+  "id": "preset_ai_ms4wl3x3",
+  "name": "Elysian Annihilator 2026 - 2023 Emulation",
+  "preampDb": -5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "preference",
+    "emulation",
+    "annihilator-2023-target",
+    "atechreviews",
+    "squiglink",
+    "measured",
+    "elysian-annihilator-2026"
+  ],
+  "updatedAt": "2026-07-28T17:02:09.735Z",
+  "version": 2
+}

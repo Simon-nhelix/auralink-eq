@@ -1,0 +1,229 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 34,
+      "gainDb": -2,
+      "index": 1,
+      "q": 0.9,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 64,
+      "gainDb": -6.5,
+      "index": 2,
+      "q": 0.53,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": 8.1,
+      "index": 3,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 1321,
+      "gainDb": -8.8,
+      "index": 4,
+      "q": 1.76,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2202,
+      "gainDb": 0.7,
+      "index": 5,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2685,
+      "gainDb": 7,
+      "index": 6,
+      "q": 1.38,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3929,
+      "gainDb": 2.3,
+      "index": 7,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 4523,
+      "gainDb": -3.2,
+      "index": 8,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 7161,
+      "gainDb": -0.7,
+      "index": 9,
+      "q": 4.1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": -4,
+      "index": 10,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "baselinePresetId": "preset_ai_mr7vh5jj",
+    "correctionStrength": 1,
+    "preferenceBandIndexes": [
+      1,
+      3,
+      9
+    ],
+    "role": "combined",
+    "source": "Baseline from AutoEq Kuulokenurkka Yamaha YH-5000SE (leather earpads); minimal 7.1 kHz follow-up based on Simon's female-vocal-tail roughness feedback on aespa Dirty Work with Full Score One TTT chain",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-05T18:52:43.057Z",
+  "createdBy": "ai",
+  "goal": "Very small follow-up to SSS Clean TTT after Simon heard only slight roughness at the end of female vocal phrases on aespa Dirty Work and warned not to overcorrect because the track itself may exaggerate it. Preserve the First Balance/SSS Clean tonal balance and change only the 7.1 kHz sibilance band by -0.5 dB more.",
+  "headphone": "Yamaha YH-5000SE",
+  "id": "preset_ai_mr85f1yj",
+  "name": "Yamaha YH-5000SE Leather - Vocal Tail Clean TTT X8",
+  "preampDb": -7.5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "preference",
+    "luxsin-x8",
+    "yamaha-yh-5000se",
+    "leather-pads",
+    "ttt-chain",
+    "first-balance",
+    "vocal-tail-cleanup",
+    "sibilance-fix",
+    "dirty-work-fix",
+    "minimal-change",
+    "do-not-overcorrect",
+    "crinacle-reference",
+    "harman-neutral",
+    "kuulokenurkka",
+    "measured"
+  ],
+  "updatedAt": "2026-07-05T18:52:43.057Z",
+  "version": 1
+}

@@ -1,0 +1,220 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 70,
+      "gainDb": 7,
+      "index": 1,
+      "q": 0.75,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 220,
+      "gainDb": -2.5,
+      "index": 2,
+      "q": 1.1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 4400,
+      "gainDb": 2,
+      "index": 3,
+      "q": 2.2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 7300,
+      "gainDb": 1.5,
+      "index": 4,
+      "q": 3,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 11500,
+      "gainDb": 1,
+      "index": 5,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 240,
+      "gainDb": 0,
+      "index": 6,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 7,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 8,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 1,
+    "preferenceBandIndexes": [
+      1
+    ],
+    "role": "combined",
+    "source": "Kuulokenurkka (Headphone Corner) HEDDphone D1 measurement, clone IEC-60318-4 + KB501X pinnae, Harman 2018 reference; AutoEq has no D1 entry",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-17T04:41:08.108Z",
+  "createdBy": "ai",
+  "goal": "Harman 2018 baseline with extra sub-bass (~+2.5 dB over Harman below 60 Hz) for games/movies all-round use; clean low-mids, presence fill at 4.4 kHz for dialogue/footstep clarity, gentle 7.3 kHz fill and +1 dB air; calm non-fatiguing treble preserved",
+  "headphone": "HEDDphone D1",
+  "id": "preset_ai_mroga4ue",
+  "name": "HEDDphone D1 – Harman Bass+ All-Round",
+  "preampDb": -7.5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "medium"
+  },
+  "tags": [
+    "ai",
+    "baseline",
+    "hedd-heddphone-d1",
+    "measured",
+    "kuulokenurkka",
+    "harman-neutral",
+    "bass-boost",
+    "all-round",
+    "games",
+    "movies"
+  ],
+  "updatedAt": "2026-07-17T04:41:08.108Z",
+  "version": 1
+}

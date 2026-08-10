@@ -1,0 +1,219 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 64,
+      "gainDb": -6.5,
+      "index": 1,
+      "q": 0.53,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": 8.3,
+      "index": 2,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 393,
+      "gainDb": -0.4,
+      "index": 3,
+      "q": 1.69,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 1321,
+      "gainDb": -8.8,
+      "index": 4,
+      "q": 1.76,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2202,
+      "gainDb": 0.7,
+      "index": 5,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2685,
+      "gainDb": 7,
+      "index": 6,
+      "q": 1.38,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3929,
+      "gainDb": 2.3,
+      "index": 7,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 4523,
+      "gainDb": -3.2,
+      "index": 8,
+      "q": 6,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 7161,
+      "gainDb": 1.5,
+      "index": 9,
+      "q": 4.1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": -4,
+      "index": 10,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 1,
+    "preferenceBandIndexes": [],
+    "role": "baseline",
+    "source": "AutoEq Kuulokenurkka Yamaha YH-5000SE (leather earpads) measured correction; Crinacle/Harman-style over-ear reference target, exact Crinacle YH-5000SE raw measurement not found",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-05T14:14:24.851Z",
+  "createdBy": "ai",
+  "goal": "Luxsin X8 hardware PEQ for Simon's Yamaha YH-5000SE with leather pads. Uses the dedicated AutoEq Kuulokenurkka leather-pad measurement as the primary correction, voiced as a Crinacle/Harman-style over-ear reference because no exact Crinacle YH-5000SE measurement was found. Chord Alto has drive headroom, but digital preamp is kept at -7.5 dB for clean headroom with the large bass/presence correction.",
+  "headphone": "Yamaha YH-5000SE",
+  "id": "preset_ai_mr7vh5jj",
+  "name": "Yamaha YH-5000SE Leather - Crinacle Ref X8",
+  "preampDb": -7.5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "baseline",
+    "luxsin-x8",
+    "yamaha-yh-5000se",
+    "leather-pads",
+    "crinacle-reference",
+    "harman-neutral",
+    "autoeq",
+    "kuulokenurkka",
+    "measured",
+    "chord-alto"
+  ],
+  "updatedAt": "2026-07-05T14:14:24.851Z",
+  "version": 1
+}

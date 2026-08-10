@@ -1,0 +1,215 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": 4.8,
+      "index": 1,
+      "q": 0.71,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 180,
+      "gainDb": -1.2,
+      "index": 2,
+      "q": 0.9,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 650,
+      "gainDb": -0.6,
+      "index": 3,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 1500,
+      "gainDb": -0.8,
+      "index": 4,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3000,
+      "gainDb": 0.8,
+      "index": 5,
+      "q": 1.1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2500,
+      "gainDb": -2.4,
+      "index": 6,
+      "q": 0.4,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 7,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 8,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 0.6,
+    "preferenceBandIndexes": [],
+    "role": "baseline",
+    "source": "Crinacle IEF Preference 2025 article + official final specs + Headfonics/TrustedReviews text impressions; AutoEq exact measurement not found",
+    "sourceConfidence": "estimated",
+    "targetBlend": 0.6,
+    "targetCurveId": "crinacle-ief-2025"
+  },
+  "createdAt": "2026-07-06T14:05:07.232Z",
+  "createdBy": "ai",
+  "goal": "Estimated baseline for final DX3000 CL using Crinacle IEF Preference 2025 as the requested target. AutoEq has no exact DX3000 CL measurement, so this is a conservative headphone adaptation: 60% of the IEF 2025 711 bass/treble target (+8 dB 105 Hz low shelf and -4 dB 2.5 kHz high shelf), with low-mid cleanup and light vocal-presence preservation because reviews describe DX3000 CL as already bass-prominent, slightly warm, and smooth up top.",
+  "headphone": "final DX3000 CL",
+  "id": "preset_final_dx3000_cl_crinacle_ief_2025",
+  "name": "final DX3000 CL – Crinacle IEF 2025",
+  "preampDb": -6,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "baseline",
+    "estimated",
+    "final-dx3000-cl",
+    "crinacle-ief-2025",
+    "crinacle-target",
+    "luxsin-x8"
+  ],
+  "updatedAt": "2026-07-06T14:05:07.232Z",
+  "version": 1
+}

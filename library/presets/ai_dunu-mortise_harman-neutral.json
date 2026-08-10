@@ -1,0 +1,202 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": 2,
+      "index": 1,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 200,
+      "gainDb": -1,
+      "index": 2,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3000,
+      "gainDb": 1,
+      "index": 3,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 6371.812928829597,
+      "gainDb": -2,
+      "index": 4,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 8717.797887081348,
+      "gainDb": -2,
+      "index": 5,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": 1,
+      "index": 6,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 7,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 8,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "createdAt": "2026-06-11T18:17:20Z",
+  "createdBy": "ai",
+  "goal": "Apply the Harman Neutral target: A reference-style balanced target with a gentle bass shelf and natural presence — a safe, accurate baseline for most headphones. Adapted to DUNU Mortise: Warm-neutral IEM per DUNU's official graph: mild linear bass lift (~+2-3 dB) holding flat to 20 Hz with no mid-bass hump, clean lower mids, moderate 2.5-3 kHz pinna gain (~+11 dB over the mids), a ~5 kHz dip followed by modest 6.5 and 8-9 kHz peaks, and relaxed upper treble above 10 kHz. Marketed as 'natural soundstage with a warm, organic tonality'. Avoided Mortise's known harsh regions. Honored your preference: Correct the headphone's known tonal issues while keeping a natural balance.",
+  "headphone": "DUNU Mortise",
+  "id": "ai_dunu-mortise_harman-neutral",
+  "name": "DUNU Mortise – Harman Neutral",
+  "preampDb": 0,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "high"
+  },
+  "tags": [
+    "ai",
+    "harman-neutral",
+    "dunu-mortise"
+  ],
+  "updatedAt": "2026-06-11T18:17:20Z",
+  "version": 1
+}

@@ -1,0 +1,22 @@
+{
+  "brand": "Austrian Audio",
+  "correctionNotes": [
+    "Broad cut centered ~180 Hz is the single most valuable move (clears the 100-300 Hz thickness).",
+    "Fill the 1-1.5 kHz scoop to bring vocals/instruments forward.",
+    "Small narrow cut near 5.5 kHz tames glare on bright tracks.",
+    "Do not correct above 8 kHz from this graph - KB501X pinna artifacts dominate there."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 6000,
+      "lowHz": 5000
+    }
+  ],
+  "id": "austrian-audio-the-arranger",
+  "model": "The Arranger",
+  "signature": "Warm-thick low end (+4-5 dB over Harman through 100-300 Hz), recessed 1-1.5 kHz (vocals sit back), presence region near target with a +3 dB peak around 5.5 kHz; treble above 8 kHz shows deep rig-dependent notches.",
+  "source": "Kuulokenurkka squig.link FR graph vs Harman 2018 target, measured with KB501X pinna (user-provided screenshot, 2026-06-10). Form factor unverified from the graph alone.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "open_back"
+}

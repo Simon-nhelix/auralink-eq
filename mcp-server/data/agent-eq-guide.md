@@ -6,7 +6,7 @@ Auralink is the local audio engine, preset store, validator, and live apply endp
 
 1. Read `get_agent_eq_guide` and `get_current_audio_state` before changing sound.
 2. **Measured data first.** When the user names a model, call `get_autoeq_correction` before designing anything. A hit returns the AutoEq parametric correction computed from real measurements (oratory1990, crinacle, …) — use those exact bands and AutoEq's preamp as the baseline, record the source in tags (e.g. `autoeq`, `oratory1990`). Only design bands from prose when no measurement exists.
-3. If the user provides headphone or earphone data and says to add it, create or update a headphone profile, then create a saved baseline preset for that model.
+3. If the user provides headphone or earphone data and says to add it, prefer `register_headphone_baseline` for measured AutoEq models (writes profile + shared baseline into Application Support and git-tracked `library/`). Otherwise create or update a headphone profile, then create a saved baseline preset for that model.
 4. Use Harman Neutral as the default baseline target unless the user, evidence, or measurement source clearly says otherwise.
 5. **Verify before audition.** After designing or editing bands, call `get_response_curve` and check the combined curve matches the stated intent (shelf where intended, no accidental ripple, sane preamp headroom).
 6. For later preference changes, audition first. Do not save every experiment. Save only when the user says it is good, wants to keep it, or asks to save.

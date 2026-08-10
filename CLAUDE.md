@@ -61,6 +61,14 @@ Use the MCP tool **`upsert_headphone_profile`** (or edit the data file, below, t
 `autoeq-cache/`. The app watches presets/knowledge files and also exposes the
 reload endpoints.
 
+### Shared git library
+`library/headphones/*.json` and `library/presets/*.json` are the shared source of
+truth for measured profiles and baseline presets. MCP dual-writes here. Prefer
+committing those files over re-syncing the monolithic seed by hand. Regenerate
+bundled seed with `rebuildSeed` on `register_headphone_baseline` or
+`node scripts/sync-library-from-runtime.mjs`.
+
+
 ### Debug a pop/glitch report
 1. `GET /debug` → `recentAudioEvents` (underrun / resync / capture-gap / overload /
    recovery / repin, timestamped). Empty trail + clean counters ⇒ the app path was

@@ -1,0 +1,25 @@
+{
+  "brand": "DUNU",
+  "correctionNotes": [
+    "Use the Crinacle 711 AutoEq measured correction for DUNU SA6 (default mode) as the base measurement-derived compensation.",
+    "For Crinacle IEF Preference 2025 on IEC 711, add the preference direction of a strong 105 Hz bass shelf and a broad -4 dB high shelf around 2500 Hz, while keeping enough preamp headroom.",
+    "Treat 5-8 kHz detail/resonance adjustments carefully because 711 IEM treble is coupler- and insertion-dependent."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 7000,
+      "lowHz": 4500
+    },
+    {
+      "highHz": 8500,
+      "lowHz": 7000
+    }
+  ],
+  "id": "dunu-sa6",
+  "model": "SA6",
+  "signature": "Balanced all-BA IEM profile registered from Crinacle 711/AutoEq measurement; tuned here toward Crinacle IEF Preference 2025 with strong sub-bass weight and relaxed upper treble.",
+  "source": "AutoEq result from crinacle/711 in-ear: DUNU SA6 (default mode), plus Crinacle/In-Ear Fidelity article 'The New 2025 IEF Target' for IEF Preference 2025 IEC 711 target parameters.",
+  "suggestedTargetCurveId": "crinacle-ief-2025",
+  "type": "iem"
+}

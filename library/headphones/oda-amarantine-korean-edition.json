@@ -1,0 +1,26 @@
+{
+  "brand": "ODA",
+  "correctionNotes": [
+    "Preserve the 1–3 kHz vocal core: its forward, natural and organic midrange is the defining strength, so avoid generic presence boosts or broad mid cuts.",
+    "Sub-bass is quality-first and track-dependent while mid-bass is already punchy and textured; use only a very small deep-bass lift and keep upper-bass cleanup subtle.",
+    "Treble is extended and energetic but generally smooth; use sub-1 dB edge/sibilance trimming only, retaining air above 10 kHz.",
+    "At 8 ohms / 116 dB this IEM is source-sensitive; use a low-output-impedance X8 headphone path and keep gain/volume conservative."
+  ],
+  "credibility": "manufacturer",
+  "harshRegionsHz": [
+    {
+      "highHz": 6500,
+      "lowHz": 4500
+    },
+    {
+      "highHz": 9000,
+      "lowHz": 7000
+    }
+  ],
+  "id": "oda-amarantine-korean-edition",
+  "model": "Amarantine (Korean Edition)",
+  "signature": "Natural warm-neutral/W-shaped 5-BA wood IEM with an intimate, organic vocal-led midrange, textured fast bass, realistic note body, and lively but controlled airy treble.",
+  "source": "Official Korean retailer (natural CNC wood shell, 5 BA, Korea-exclusive tuning, vocal-centered natural mids): https://usound.co.kr/product/detail.html?product_no=372 ; ODA product page: https://onedotaudio.com/products/amarantine-wood-edition ; manufacturer FR graph and 2026 community review: https://mobileaudiophile.com/in-ear-earphones-iem-iems-reviews/oda-amarantine-a500-wood-edition-review/ ; corroborating review/specs: https://sonicmantra.org/product-review/oda-amarantine-a500-wood-edition-review-arifgraphy/ . AutoEq exact match not found on 2026-07-16; tuning is a conservative manufacturer-graph/review-derived estimate, not independent lab compensation.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "iem"
+}

@@ -1,0 +1,222 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 35,
+      "gainDb": 3.7,
+      "index": 1,
+      "q": 1.15,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 80,
+      "gainDb": -7.2,
+      "index": 2,
+      "q": 0.36,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 105,
+      "gainDb": 5.8,
+      "index": 3,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 574,
+      "gainDb": 1.2,
+      "index": 4,
+      "q": 1.73,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2041,
+      "gainDb": -1.9,
+      "index": 5,
+      "q": 2.22,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2918,
+      "gainDb": 0.9,
+      "index": 6,
+      "q": 5.03,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 3763,
+      "gainDb": 4.9,
+      "index": 7,
+      "q": 3.9,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 5441,
+      "gainDb": -6.8,
+      "index": 8,
+      "q": 4.73,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 7279,
+      "gainDb": 3.5,
+      "index": 9,
+      "q": 1.02,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": 2.4,
+      "index": 10,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "baselinePresetId": "",
+    "correctionStrength": 0.95,
+    "preferenceBandIndexes": [
+      3,
+      8,
+      9,
+      10
+    ],
+    "role": "combined",
+    "source": "AutoEq/crinacle GRAS 43AG-7 Koss KPH40; Yaxi pad adjustment from user fit/pad notes, not Yaxi-specific measurement",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-05T09:05:21.585Z",
+  "createdBy": "ai",
+  "goal": "Luxsin X8 baseline for Koss KPH40 with Yaxi pads. Based on AutoEq/Crinacle GRAS 43AG-7 KPH40 Harman correction, adjusted conservatively for Yaxi pads by slightly reducing the stock bass shelf and upper-treble lift while keeping the 5.4 kHz glare cut. ASCII-safe name for X8.",
+  "headphone": "Koss KPH40 Yaxi Pad",
+  "id": "preset_koss_kph40_yaxi_crinacle_harman_x8",
+  "name": "Koss KPH40 Yaxi - Crinacle Harman X8",
+  "preampDb": -6.5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "baseline",
+    "autoeq",
+    "crinacle",
+    "measured",
+    "harman-neutral",
+    "koss-kph40-yaxi",
+    "luxsin-x8"
+  ],
+  "updatedAt": "2026-07-05T09:05:21.585Z",
+  "version": 1
+}

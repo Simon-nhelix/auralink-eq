@@ -1,0 +1,216 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 120,
+      "gainDb": 1.6,
+      "index": 1,
+      "q": 0.8,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 250,
+      "gainDb": -0.7,
+      "index": 2,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2700,
+      "gainDb": 0.8,
+      "index": 3,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 7800,
+      "gainDb": -1.6,
+      "index": 4,
+      "q": 2.2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 12000,
+      "gainDb": 0.6,
+      "index": 5,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 240,
+      "gainDb": 0,
+      "index": 6,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 7,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 8,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 0.7,
+    "preferenceBandIndexes": [],
+    "role": "baseline",
+    "source": "TimeEar official product page + Flatheads specs + Sekiyoxu Nishino note.com review; AutoEq exact measurement not found",
+    "sourceConfidence": "estimated",
+    "targetBlend": 0.35,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-06T14:30:02.734Z",
+  "createdBy": "ai",
+  "goal": "Conservative Luxsin X8 baseline for TimeEar NH60 open-air earbud. Preserve the NH60's fast, airy open-earbud character: add only light 120 Hz bass-body support instead of aggressive sub-bass/low-shelf forcing, keep mids natural, smooth the possible 7-9 kHz metallic glare, and retain a little upper-air sparkle. Estimated from official/community specs and text review; no AutoEq/measurement match found.",
+  "headphone": "TimeEar NH60",
+  "id": "preset_timeear_nh60_open_earbud_natural_x8",
+  "name": "TimeEar NH60 – Open Earbud Natural X8",
+  "preampDb": -2.5,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "baseline",
+    "estimated",
+    "timeear-nh60",
+    "earbud",
+    "open-earbud",
+    "conservative-bass",
+    "luxsin-x8"
+  ],
+  "updatedAt": "2026-07-06T14:30:02.734Z",
+  "version": 1
+}

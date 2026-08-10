@@ -1,0 +1,216 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 60,
+      "gainDb": 4,
+      "index": 1,
+      "q": 0.7,
+      "type": "low_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 120,
+      "gainDb": 2.5,
+      "index": 2,
+      "q": 0.8,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 280,
+      "gainDb": -1,
+      "index": 3,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 10000,
+      "gainDb": 1.5,
+      "index": 4,
+      "q": 0.7,
+      "type": "high_shelf"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 30,
+      "gainDb": 0,
+      "index": 5,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 240,
+      "gainDb": 0,
+      "index": 6,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 7,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 8,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 9000,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 13000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 16000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 19000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 0.7,
+    "preferenceBandIndexes": [],
+    "role": "baseline",
+    "source": "Head-Fi mt877 owner-measured L+R raw FR graph (https://cdn.head-fi.org/a/13068385.jpg) + review text; AutoEq exact measurement not found",
+    "sourceConfidence": "community",
+    "targetBlend": 0.4,
+    "targetCurveId": "harman-neutral"
+  },
+  "createdAt": "2026-07-25T11:03:39Z",
+  "createdBy": "ai",
+  "goal": "Harman-target baseline with appropriately enhanced bass for the TimeEar NH80 open flathead earbud: +4 dB 60 Hz low shelf and +2.5 dB 120 Hz bell restore weight and mid-bass punch against the open-fit rolloff (measured -9 dB @60 Hz, -13 dB @40 Hz vs mids) without forcing sealed-IEM sub-bass; -1 dB @280 Hz keeps low mids clean; mids left intact per smooth measurements/reviews; +1.5 dB 10 kHz high shelf restores the slightly subdued air. Based on community measurement (informal rig, single unit); treat as a well-grounded starting point, not exact correction.",
+  "headphone": "TimeEar NH80",
+  "id": "ai_timeear-nh80_harman-neutral",
+  "name": "TimeEar NH80 – Harman Bass+ Baseline",
+  "preampDb": -4,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "baseline",
+    "community",
+    "timeear-nh80",
+    "earbud",
+    "open-earbud",
+    "harman-neutral",
+    "bass-plus"
+  ],
+  "updatedAt": "2026-07-25T11:03:39Z",
+  "version": 1
+}

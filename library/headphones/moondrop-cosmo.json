@@ -1,0 +1,31 @@
+{
+  "brand": "Moondrop",
+  "correctionNotes": [
+    "Sub-bass rolls off slightly below 40 Hz; a gentle low shelf lift below 30 Hz restores the very lowest octave.",
+    "Tame the +2 dB protrusion around 400 Hz to clean up the transition from lower-mids to mid-bass.",
+    "Fill the broad 1.5–2.5 kHz presence scoop (centered near 2.1 kHz) to bring vocals and acoustic instrument overtones forward to the Harman target.",
+    "Smooth the narrow peaks at 9 kHz and 11 kHz, and the high-treble peak at 16 kHz to remove glare and metallic timbre.",
+    "Do not attempt to EQ the deep notch at 9.8 kHz — it is highly likely a coupler reflection/resonance artifact."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 9500,
+      "lowHz": 8500
+    },
+    {
+      "highHz": 11500,
+      "lowHz": 10500
+    },
+    {
+      "highHz": 17000,
+      "lowHz": 15000
+    }
+  ],
+  "id": "moondrop-cosmo",
+  "model": "Cosmo",
+  "signature": "Neutral-leaning planar with linear bass matching Harman target down to 40 Hz, elevated mid-bass/lower-mids near 400 Hz, relaxed presence region (1.5-2.5 kHz dip), and energetic treble featuring peaks at 9 kHz, 11 kHz, and 16 kHz.",
+  "source": "GRAS 43AG-4 measurement by unheardlab.com, user-provided compensated frequency response graph vs Harman OE 2018 Linear Target (screenshot, 2026-06-15).",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "open_back"
+}

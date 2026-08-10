@@ -1,0 +1,26 @@
+{
+  "brand": "Focal",
+  "correctionNotes": [
+    "AutoEq (oratory1990) measured correction toward the Harman over-ear target applies: broad low-shelf lift at 105 Hz paired with a 53 Hz cut — this concentrates bass correction in the mid-bass an open-back dynamic can actually deliver instead of forcing sub-bass it cannot reproduce cleanly.",
+    "Cut around 3.5 kHz (-3.5 dB) tames the Focal upper-mid glare; small boosts at 2.4 kHz and 5 kHz restore presence and edge.",
+    "As an open-back, do not chase deep 20-40 Hz sub-bass with big boosts; the measured correction's shape already respects the driver's physical limits.",
+    "No Crinacle (GRAS 43AG) measurement exists for this model; oratory1990's GRAS measurement toward Harman over-ear 2018 is the closest Crinacle-style over-ear reference target."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 4200,
+      "lowHz": 3200
+    },
+    {
+      "highHz": 6500,
+      "lowHz": 5800
+    }
+  ],
+  "id": "focal-hadenys",
+  "model": "Hadenys",
+  "signature": "Open-back dynamic with Focal's warm-neutral house sound: rolled sub-bass typical of open designs, full but controlled mid-bass, natural slightly set-back mids, a presence lift around 2.4 kHz, a 3.5-4 kHz dip, and mild lower-treble unevenness around 5-6 kHz.",
+  "source": "AutoEq oratory1990 (GRAS 43AG) measured parametric + graphic EQ correction, https://github.com/jaakkopasanen/AutoEq/tree/master/results/oratory1990/over-ear/Focal%20Hadenys; Crinacle has not measured the Hadenys — oratory1990/Harman over-ear 2018 used as the Crinacle-style over-ear reference.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "open_back"
+}

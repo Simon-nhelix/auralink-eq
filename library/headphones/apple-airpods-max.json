@@ -1,0 +1,21 @@
+{
+  "brand": "Apple",
+  "correctionNotes": [
+    "Already close to neutral, so corrections should be small and surgical.",
+    "A slight 3 kHz forwardness can be tamed for long sessions.",
+    "Sub-bass is solid; only add a touch if the listener wants extra rumble."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 3500,
+      "lowHz": 2800
+    }
+  ],
+  "id": "apple-airpods-max",
+  "model": "AirPods Max",
+  "signature": "Near-Harman tuning out of the box: clean elevated bass, neutral mids, smooth treble; very balanced with mild upper-mid energy.",
+  "source": "Aggregated measurement consensus (rtings)",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "closed_back"
+}
