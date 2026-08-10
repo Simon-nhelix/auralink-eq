@@ -11,11 +11,14 @@ const dist = path.resolve(here, "..", "dist");
 async function withTempEnv(fn) {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "auralink-library-"));
   const library = path.join(tmp, "library");
+  const runtimeLibrary = path.join(tmp, "runtime-library");
   const userData = path.join(tmp, "user-data");
   const presets = path.join(tmp, "presets");
   const data = path.join(tmp, "bundled-data");
   await fs.mkdir(path.join(library, "headphones"), { recursive: true });
   await fs.mkdir(path.join(library, "presets"), { recursive: true });
+  await fs.mkdir(path.join(runtimeLibrary, "headphones"), { recursive: true });
+  await fs.mkdir(path.join(runtimeLibrary, "presets"), { recursive: true });
   await fs.mkdir(userData, { recursive: true });
   await fs.mkdir(presets, { recursive: true });
   await fs.mkdir(data, { recursive: true });
@@ -23,6 +26,7 @@ async function withTempEnv(fn) {
 
   const prev = { ...process.env };
   process.env.AURALINK_LIBRARY_DIR = library;
+  process.env.AURALINK_RUNTIME_LIBRARY_DIR = runtimeLibrary;
   process.env.AURALINK_USER_DATA_DIR = userData;
   process.env.AURALINK_PRESETS_DIR = presets;
   process.env.AURALINK_DATA_DIR = data;
@@ -30,7 +34,7 @@ async function withTempEnv(fn) {
   try {
     // Dynamic import after env is set (store resolves dirs at call time).
     const store = await import(path.join(dist, "store.js"));
-    await fn(store, { tmp, library, userData, presets, data });
+    await fn(store, { tmp, library, runtimeLibrary, userData, presets, data });
   } finally {
     process.env = prev;
     await fs.rm(tmp, { recursive: true, force: true });
@@ -38,7 +42,7 @@ async function withTempEnv(fn) {
 }
 
 test("saveHeadphoneProfile dual-writes per-file library entry", async () => {
-  await withTempEnv(async (store, { library, userData }) => {
+  await withTempEnv(async (store, { library, runtimeLibrary, userData }) => {
     const saved = await store.saveHeadphoneProfile({
       id: "test-can-one",
       brand: "Test",
@@ -54,10 +58,13 @@ test("saveHeadphoneProfile dual-writes per-file library entry", async () => {
     assert.equal(saved.id, "test-can-one");
 
     const libFile = path.join(library, "headphones", "test-can-one.json");
+    const runtimeFile = path.join(runtimeLibrary, "headphones", "test-can-one.json");
     const userFile = path.join(userData, "headphone-profiles.json");
     const libRaw = JSON.parse(await fs.readFile(libFile, "utf8"));
+    const runtimeRaw = JSON.parse(await fs.readFile(runtimeFile, "utf8"));
     const userRaw = JSON.parse(await fs.readFile(userFile, "utf8"));
     assert.equal(libRaw.id, "test-can-one");
+    assert.equal(runtimeRaw.id, "test-can-one");
     assert.equal(userRaw.length, 1);
     assert.equal(userRaw[0].id, "test-can-one");
 

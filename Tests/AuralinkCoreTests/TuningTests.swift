@@ -79,6 +79,47 @@ final class TuningTests: XCTestCase {
         XCTAssertNil(kb.targetCurve(id: "no-such-curve"))
     }
 
+    func testKnowledgeBaseLoadsLibraryDirectory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("auralink-lib-\(UUID().uuidString)", isDirectory: true)
+        let dataDir = root.appendingPathComponent("data", isDirectory: true)
+        let libDir = root.appendingPathComponent("library/headphones", isDirectory: true)
+        try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: libDir, withIntermediateDirectories: true)
+
+        // Aggregate has one profile
+        let aggregate = [
+            HeadphoneProfile(
+                id: "from-aggregate",
+                brand: "Agg",
+                model: "One",
+                type: .openBack,
+                signature: "agg",
+                source: "test",
+                credibility: .estimated
+            )
+        ]
+        try JSONEncoder().encode(aggregate).write(to: dataDir.appendingPathComponent("headphone-profiles.json"))
+
+        // Library overrides / adds
+        let libraryProfile = HeadphoneProfile(
+            id: "from-library",
+            brand: "Lib",
+            model: "Two",
+            type: .closedBack,
+            signature: "lib",
+            source: "test",
+            credibility: .measured
+        )
+        try JSONEncoder().encode(libraryProfile).write(to: libDir.appendingPathComponent("from-library.json"))
+
+        let kb = KnowledgeBase(dataDirectory: dataDir, libraryHeadphonesDirectory: libDir)
+        XCTAssertNotNil(kb.profile(id: "from-aggregate"))
+        XCTAssertNotNil(kb.profile(id: "from-library"))
+        XCTAssertEqual(kb.profile(id: "from-library")?.credibility, .measured)
+        try? FileManager.default.removeItem(at: root)
+    }
+
     // MARK: Tuning generation
 
     func testMakeTuningHD600Rock() {

@@ -2,19 +2,18 @@ import Foundation
 
 /// The read-only knowledge layer behind every tuning decision.
 ///
-/// `KnowledgeBase` loads the three shipped JSON files — headphone profiles,
-/// target curves, and the safety rules — and decodes them into the canonical
-/// `Models` types. Two sources are tried, in order:
+/// `KnowledgeBase` loads headphone profiles, target curves, and safety rules.
+/// Headphone profiles are merged from, in ascending override order:
 ///
-/// 1. A caller-supplied `dataDirectory` (e.g. `AuralinkPaths.dataDirectory`,
-///    which the app seeds on first run and which the MCP server points at). This
-///    lets the data be edited on disk without rebuilding the app.
-/// 2. The canonical app copy under `Contents/Resources` for installed builds,
-///    then `Bundle.module/data` for SwiftPM development and tests.
+/// 1. Bundled `data/headphone-profiles.json` (factory seed)
+/// 2. Caller `dataDirectory/headphone-profiles.json` (Application Support aggregate)
+/// 3. Per-file `libraryHeadphonesDirectory/{id}.json` (shared library — preferred)
 ///
-/// If a file is missing or fails to decode at *both* locations, a safe empty
-/// (or default) value is used instead of crashing — the app degrades to "no
-/// profiles" rather than failing to launch.
+/// Target curves and safety rules still use the aggregate JSON path
+/// (`dataDirectory` then bundle).
+///
+/// If a source is missing or fails to decode, it is skipped rather than crashing —
+/// the app degrades to "no profiles" rather than failing to launch.
 public final class KnowledgeBase {
 
     // MARK: Stored knowledge
@@ -25,17 +24,23 @@ public final class KnowledgeBase {
 
     // MARK: Init
 
-    /// Loads the knowledge base, preferring `dataDirectory` and falling back to
-    /// the resource bundle. Pass `nil` to load from the bundle only.
-    public init(dataDirectory: URL?) {
+    /// Loads the knowledge base.
+    /// - Parameters:
+    ///   - dataDirectory: aggregate JSON directory (typically `AuralinkPaths.dataDirectory`)
+    ///   - libraryHeadphonesDirectory: per-file profile directory (typically
+    ///     `AuralinkPaths.libraryHeadphonesDirectory`). Pass `nil` to skip.
+    public init(dataDirectory: URL?, libraryHeadphonesDirectory: URL? = nil) {
         let decoder = JSONDecoder()
 
-        self.profiles = KnowledgeBase.load(
-            [HeadphoneProfile].self,
-            file: "headphone-profiles",
+        self.profiles = KnowledgeBase.loadProfiles(
             dataDirectory: dataDirectory,
+            libraryHeadphonesDirectory: libraryHeadphonesDirectory ?? dataDirectory.map {
+                $0.deletingLastPathComponent()
+                    .appendingPathComponent("library", isDirectory: true)
+                    .appendingPathComponent("headphones", isDirectory: true)
+            },
             decoder: decoder
-        ) ?? []
+        )
 
         self.curves = KnowledgeBase.load(
             [TargetCurve].self,
@@ -75,14 +80,12 @@ public final class KnowledgeBase {
         let lower = query.lowercased()
         let squashed = KnowledgeBase.alphanumeric(lower)
 
-        // 1. Exact id or display name.
         if let exact = profiles.first(where: {
             $0.id.lowercased() == lower || $0.displayName.lowercased() == lower
         }) {
             return exact
         }
 
-        // 2. Substring / squashed-substring match.
         for p in profiles {
             let haystacks = [
                 p.id.lowercased(),
@@ -114,9 +117,10 @@ public final class KnowledgeBase {
 
     /// Copies the bundled JSON files into `dir` for any file that is missing, so
     /// an external process (the MCP server) can read the same knowledge data
-    /// from a stable on-disk location. Existing files are never overwritten, so
-    /// user edits survive. Failures are ignored — this is best-effort seeding.
-    public func seedDataDirectory(_ dir: URL) {
+    /// from a stable on-disk location. Existing files are never overwritten.
+    /// Also expands the bundled headphone aggregate into per-file library
+    /// entries when the library directory is empty.
+    public func seedDataDirectory(_ dir: URL, libraryHeadphonesDirectory: URL? = nil) {
         let fm = FileManager.default
         if !fm.fileExists(atPath: dir.path) {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -127,9 +131,105 @@ public final class KnowledgeBase {
             guard let source = KnowledgeBase.bundledURL(for: file) else { continue }
             try? fm.copyItem(at: source, to: destination)
         }
+
+        // Seed per-file library from the aggregate when the library is empty.
+        let libDir = libraryHeadphonesDirectory
+            ?? dir.deletingLastPathComponent()
+                .appendingPathComponent("library", isDirectory: true)
+                .appendingPathComponent("headphones", isDirectory: true)
+        seedLibraryHeadphonesIfEmpty(libDir, aggregateDirectory: dir)
+    }
+
+    /// Writes one profile per file under `libraryHeadphonesDirectory` when that
+    /// directory has no `*.json` files yet. Uses the already-merged profile list
+    /// when available, otherwise decodes the aggregate seed.
+    public func seedLibraryHeadphonesIfEmpty(_ libraryDir: URL, aggregateDirectory: URL?) {
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: libraryDir.path) {
+            try? fm.createDirectory(at: libraryDir, withIntermediateDirectories: true)
+        }
+        let existing = (try? fm.contentsOfDirectory(atPath: libraryDir.path))?
+            .filter { $0.lowercased().hasSuffix(".json") } ?? []
+        guard existing.isEmpty else { return }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        var sourceProfiles = profiles
+        if sourceProfiles.isEmpty {
+            let decoder = JSONDecoder()
+            sourceProfiles = KnowledgeBase.load(
+                [HeadphoneProfile].self,
+                file: "headphone-profiles",
+                dataDirectory: aggregateDirectory,
+                decoder: decoder
+            ) ?? []
+        }
+        for profile in sourceProfiles {
+            let id = profile.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty else { continue }
+            let url = libraryDir.appendingPathComponent("\(id).json")
+            guard let data = try? encoder.encode(profile) else { continue }
+            try? data.write(to: url, options: .atomic)
+        }
     }
 
     // MARK: - Loading helpers
+
+    private static func loadProfiles(
+        dataDirectory: URL?,
+        libraryHeadphonesDirectory: URL?,
+        decoder: JSONDecoder
+    ) -> [HeadphoneProfile] {
+        var byId: [String: HeadphoneProfile] = [:]
+
+        // 1. Bundled aggregate
+        if let url = bundledURL(for: "headphone-profiles"),
+           let bundled = decode([HeadphoneProfile].self, at: url, decoder: decoder) {
+            for p in bundled where !p.id.isEmpty {
+                byId[p.id] = p
+            }
+        }
+
+        // 2. Application Support aggregate (may include user-only entries)
+        if let dir = dataDirectory {
+            let url = dir.appendingPathComponent("headphone-profiles.json")
+            if let disk = decode([HeadphoneProfile].self, at: url, decoder: decoder) {
+                for p in disk where !p.id.isEmpty {
+                    byId[p.id] = p
+                }
+            }
+        }
+
+        // 3. Per-file library (preferred shared source of truth)
+        if let libDir = libraryHeadphonesDirectory {
+            for p in loadProfilesFromLibraryDirectory(libDir, decoder: decoder) where !p.id.isEmpty {
+                byId[p.id] = p
+            }
+        }
+
+        return byId.values.sorted {
+            "\($0.brand) \($0.model)".localizedCaseInsensitiveCompare("\($1.brand) \($1.model)") == .orderedAscending
+        }
+    }
+
+    private static func loadProfilesFromLibraryDirectory(
+        _ directory: URL,
+        decoder: JSONDecoder
+    ) -> [HeadphoneProfile] {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(atPath: directory.path) else {
+            return []
+        }
+        var out: [HeadphoneProfile] = []
+        for entry in entries where entry.lowercased().hasSuffix(".json") {
+            let url = directory.appendingPathComponent(entry)
+            if let profile = decode(HeadphoneProfile.self, at: url, decoder: decoder) {
+                out.append(profile)
+            }
+        }
+        return out
+    }
 
     /// Attempts to decode `T` from `<dataDirectory>/<file>.json`, then from the
     /// bundled `<file>.json`. Returns `nil` if neither source decodes.
@@ -139,29 +239,23 @@ public final class KnowledgeBase {
         dataDirectory: URL?,
         decoder: JSONDecoder
     ) -> T? {
-        // 1. Caller-supplied directory.
         if let dir = dataDirectory {
             let url = dir.appendingPathComponent("\(file).json")
             if let value = decode(type, at: url, decoder: decoder) {
                 return value
             }
         }
-        // 2. Bundled fallback.
         if let url = bundledURL(for: file) {
             return decode(type, at: url, decoder: decoder)
         }
         return nil
     }
 
-    /// Decodes `T` from a file URL, returning `nil` if the file is absent or the
-    /// contents do not match the schema (rather than throwing).
     private static func decode<T: Decodable>(_ type: T.Type, at url: URL, decoder: JSONDecoder) -> T? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? decoder.decode(type, from: data)
     }
 
-    /// URL of a bundled JSON resource. The data folder is copied verbatim into
-    /// the resource bundle as `data/`, so the file lives in that subdirectory.
     private static func bundledURL(for file: String) -> URL? {
         if let resources = Bundle.main.resourceURL {
             let packagedURL = resources
@@ -175,7 +269,6 @@ public final class KnowledgeBase {
         return Bundle.module.url(forResource: file, withExtension: "json", subdirectory: "data")
     }
 
-    /// Lowercased alphanumeric squash used for spacing-insensitive matching.
     private static func alphanumeric(_ s: String) -> String {
         String(s.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
     }

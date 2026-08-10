@@ -29,6 +29,23 @@ public enum AuralinkPaths {
         supportDirectory.appendingPathComponent("data", isDirectory: true)
     }
 
+    /// Shared per-file library root (git-tracked mirror + runtime dual-write).
+    /// Layout: `library/headphones/{id}.json`, `library/presets/{id}.json`.
+    public static var libraryDirectory: URL {
+        supportDirectory.appendingPathComponent("library", isDirectory: true)
+    }
+
+    /// Per-model headphone profiles (`{id}.json`). Preferred over the aggregate
+    /// `data/headphone-profiles.json` when present.
+    public static var libraryHeadphonesDirectory: URL {
+        libraryDirectory.appendingPathComponent("headphones", isDirectory: true)
+    }
+
+    /// Shared baseline presets mirrored from the git library.
+    public static var libraryPresetsDirectory: URL {
+        libraryDirectory.appendingPathComponent("presets", isDirectory: true)
+    }
+
     /// Shared bearer token used by the loopback ControlServer and local MCP
     /// process. The file is created with user-only permissions on first launch.
     public static var controlTokenFile: URL {
@@ -38,7 +55,8 @@ public enum AuralinkPaths {
     /// Creates the directory tree if needed.
     public static func ensureDirectories() throws {
         let fm = FileManager.default
-        for dir in [supportDirectory, presetsDirectory, revisionsDirectory, dataDirectory] {
+        for dir in [supportDirectory, presetsDirectory, revisionsDirectory, dataDirectory,
+                    libraryDirectory, libraryHeadphonesDirectory, libraryPresetsDirectory] {
             if !fm.fileExists(atPath: dir.path) {
                 try fm.createDirectory(at: dir, withIntermediateDirectories: true)
             }

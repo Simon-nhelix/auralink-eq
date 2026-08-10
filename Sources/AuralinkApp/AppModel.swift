@@ -157,6 +157,7 @@ final class AppModel: ObservableObject {
     let fileWatchQueue = DispatchQueue(label: "com.auralink.eq.file-watch")
     var presetsWatcher: DispatchSourceFileSystemObject?
     var knowledgeWatcher: DispatchSourceFileSystemObject?
+    var libraryWatcher: DispatchSourceFileSystemObject?
     var pendingPresetReload: Task<Void, Never>?
     var pendingKnowledgeReload: Task<Void, Never>?
     var recomputeTask: Task<Void, Never>?
@@ -371,7 +372,7 @@ final class AppModel: ObservableObject {
         } catch {
             NSLog("Auralink: could not create data directories: \(error.localizedDescription)")
         }
-        let kb = KnowledgeBase(dataDirectory: AuralinkPaths.dataDirectory)
+        let kb = KnowledgeBase(dataDirectory: AuralinkPaths.dataDirectory, libraryHeadphonesDirectory: AuralinkPaths.libraryHeadphonesDirectory)
         let val = PresetValidator(rules: kb.safetyRules)
         self.knowledge = kb
         self.validator = val
@@ -388,6 +389,7 @@ final class AppModel: ObservableObject {
     deinit {
         presetsWatcher?.cancel()
         knowledgeWatcher?.cancel()
+        libraryWatcher?.cancel()
         recomputeTask?.cancel()
         pendingEngineApplyTask?.cancel()
         pendingPresetReload?.cancel()
