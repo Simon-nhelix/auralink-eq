@@ -41,6 +41,9 @@ import {
   PERCEIVED_ISSUES,
   type PerceivedIssue,
   type TuningFeedbackEntry,
+  rebuildBundledHeadphoneSeed,
+  libraryDir,
+  isSharedLibraryPreset,
 } from "./store.js";
 import {
   getState,
@@ -320,7 +323,12 @@ async function x8ApplyRequestFromPreset(preset: EQPreset): Promise<ApplyTuningRe
   };
 }
 
-async function applyPresetToX8(preset: EQPreset, confirmed: boolean): Promise<Record<string, unknown>> {
+async function applyPresetToX8(
+  preset: EQPreset,
+  confirmed: boolean,
+  options: { select?: boolean } = {}
+): Promise<Record<string, unknown>> {
+  const selectAfterWrite = options.select !== false; // default true for backward compatibility
   const target = createX8Target();
   const request = await x8ApplyRequestFromPreset(preset);
   const write = await target.applyTuning(request, confirmed);
@@ -343,7 +351,7 @@ async function applyPresetToX8(preset: EQPreset, confirmed: boolean): Promise<Re
 
   const body = write.data;
   let select: unknown = { selected: false, skipped: true };
-  if (confirmed && body.ok === true && body.ref) {
+  if (confirmed && body.ok === true && body.ref && selectAfterWrite) {
     const selected = await target.selectHeadphone(String(body.ref));
     select = selected.online
       ? {
@@ -352,6 +360,12 @@ async function applyPresetToX8(preset: EQPreset, confirmed: boolean): Promise<Re
           message: selected.data?.ok === true ? `Selected '${body.ref}' on the X8.` : (selected.error ?? "The X8 did not select the entry."),
         }
       : { selected: false, online: false, message: selected.error };
+  } else if (confirmed && body.ok === true && !selectAfterWrite) {
+    select = {
+      selected: false,
+      skipped: true,
+      message: "Import-only: left the previous X8 entry selected (applyTuning restores active entry by name).",
+    };
   }
 
   return {
@@ -1931,6 +1945,349 @@ server.registerTool(
 );
 
 // get_autoeq_correction — measured parametric correction from AutoEq (read).
+
+// register_headphone_baseline — one-shot measured baseline into library + runtime (+ optional X8).
+server.registerTool(
+  "register_headphone_baseline",
+  {
+    title: "Register headphone baseline into git library",
+    description:
+      "One-shot: look up AutoEq measured correction, upsert a headphone profile, save a shared baseline " +
+      "preset (dual-written to Application Support and the git-tracked library/), optionally import the " +
+      "same PEQ into the Luxsin X8 without changing the active entry, and rebuild bundled seed aggregates. " +
+      "Use this instead of hand-editing seed JSON. Preference bands (e.g. sub-bass shelf) are layered on " +
+      "top of the measured AutoEq bands and tagged via preferenceBandIndexes.",
+    inputSchema: {
+      headphone: z
+        .string()
+        .min(1)
+        .describe("Model to register, e.g. 'Austrian Audio Hi-X60' or 'HD600'."),
+      brand: z.string().optional().describe("Optional brand override when AutoEq name is ambiguous."),
+      model: z.string().optional().describe("Optional model override."),
+      type: z
+        .enum(HEADPHONE_TYPES as [string, ...string[]])
+        .optional()
+        .describe("Form factor override. Inferred from AutoEq path/source when omitted."),
+      source: z
+        .string()
+        .optional()
+        .describe("Preferred AutoEq measurement source, e.g. 'oratory1990' or 'crinacle'."),
+      targetCurveId: z
+        .string()
+        .default("harman-neutral")
+        .describe("Target curve id stored on the profile/preset. Default harman-neutral."),
+      preferenceBands: z
+        .array(bandSpecSchema)
+        .default([])
+        .describe("Optional subjective bands layered after the measured AutoEq bands (e.g. sub-bass shelf)."),
+      preferenceLabel: z
+        .string()
+        .optional()
+        .describe("Short label for preference layer, e.g. 'Sub-Bass+'. Used in preset name."),
+      preampDb: z
+        .number()
+        .min(PREAMP_MIN)
+        .max(PREAMP_MAX)
+        .optional()
+        .describe("Override AutoEq preamp. When omitted, uses AutoEq preamp (or slightly deeper when preference boosts exist)."),
+      targets: z
+        .array(z.enum(["auralink", "luxsin-x8"]))
+        .default(["auralink"])
+        .describe("Where to register. auralink always saves profile+preset; luxsin-x8 also imports PEQ import-only."),
+      x8Select: z
+        .boolean()
+        .default(false)
+        .describe("When writing Luxsin X8, also select the new entry (changes live audio). Default false = import-only."),
+      signature: z.string().optional().describe("Optional one-line tonal signature override."),
+      correctionNotes: z.array(z.string()).optional().describe("Optional correction notes override/extension."),
+      harshRegionsHz: z.array(frequencyRangeSchema).optional(),
+      refreshAutoEq: z.boolean().default(false).describe("Force re-download of AutoEq correction."),
+      rebuildSeed: z
+        .boolean()
+        .default(true)
+        .describe("Rebuild bundled headphone-profiles.json seed files from library/headphones."),
+      confirmed: z
+        .boolean()
+        .default(false)
+        .describe("Required true to write the Luxsin X8. Profile/preset disk writes do not need this."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  },
+  async ({
+    headphone,
+    brand,
+    model,
+    type,
+    source,
+    targetCurveId,
+    preferenceBands,
+    preferenceLabel,
+    preampDb,
+    targets,
+    x8Select,
+    signature,
+    correctionNotes,
+    harshRegionsHz,
+    refreshAutoEq,
+    rebuildSeed,
+    confirmed,
+  }) => {
+    try {
+      const lookup = await getAutoEqCorrection({ headphone, source, refresh: refreshAutoEq });
+      if (!lookup.found || !lookup.correction) {
+        return jsonResult({
+          ok: false,
+          reason: "autoeq_not_found",
+          headphone,
+          suggestions: lookup.suggestions,
+          hint:
+            lookup.suggestions.length > 0
+              ? "Retry with one of the AutoEq suggestions, or pass brand/model/type and build a non-measured profile separately."
+              : "No AutoEq match. Use upsert_headphone_profile + create_eq_preset with estimated credibility instead.",
+        });
+      }
+
+      const c = lookup.correction;
+      const displayName = c.name;
+      const knownMultiWordBrands = [
+        "Austrian Audio",
+        "Audio-Technica",
+        "Harmonic Empire",
+        "Elysian Acoustic Labs",
+        "Final Audio",
+        "7Hz",
+        "Moondrop",
+        "Super Review",
+      ];
+      let inferredBrand = brand?.trim() || "";
+      let inferredModel = model?.trim() || "";
+      if (!inferredBrand || !inferredModel) {
+        const hit = knownMultiWordBrands.find((b) =>
+          displayName.toLowerCase().startsWith(b.toLowerCase() + " ")
+        );
+        if (hit) {
+          inferredBrand = inferredBrand || hit;
+          inferredModel = inferredModel || displayName.slice(hit.length).trim();
+        } else {
+          const parts = displayName.split(/\s+/);
+          inferredBrand = inferredBrand || parts[0] || "Unknown";
+          inferredModel =
+            inferredModel || (parts.length > 1 ? parts.slice(1).join(" ") : displayName);
+        }
+      }
+      const profileId = slugify(`${inferredBrand}-${inferredModel}`);
+
+      // Infer form factor lightly from AutoEq path / name.
+      const pathLower = (c.url ?? "").toLowerCase();
+      let inferredType = type as HeadphoneProfile["type"] | undefined;
+      if (!inferredType) {
+        if (pathLower.includes("/in-ear/") || /iem|earbud/.test(displayName.toLowerCase())) {
+          inferredType = /earbud|open ear|open-ear/.test(displayName.toLowerCase()) ? "earbud" : "iem";
+        } else if (/true wireless|tw[s]?/.test(displayName.toLowerCase())) {
+          inferredType = "true_wireless";
+        } else if (/on-ear|on ear/.test(displayName.toLowerCase())) {
+          inferredType = "on_ear";
+        } else if (/closed/.test(displayName.toLowerCase())) {
+          inferredType = "closed_back";
+        } else {
+          inferredType = "open_back";
+        }
+      }
+
+      const autoNotes = [
+        `AutoEq/${c.source} measured correction toward the Harman target (preamp ${c.preampDb} dB, ${c.bands.length} bands).`,
+        c.rig ? `Measurement rig: ${c.rig}.` : "Measurement rig not listed in the AutoEq index.",
+        `Provenance: ${c.url}`,
+      ];
+      if (c.conversionNotes?.length) {
+        autoNotes.push(`Conversion notes: ${c.conversionNotes.join(" ")}`);
+      }
+
+      const profile = await saveHeadphoneProfile({
+        id: profileId,
+        brand: inferredBrand,
+        model: inferredModel,
+        type: inferredType,
+        signature:
+          signature?.trim() ||
+          `Measured ${inferredType.replace(/_/g, " ")} profile from AutoEq/${c.source}; baseline target ${targetCurveId}.`,
+        correctionNotes: [
+          ...autoNotes,
+          ...(correctionNotes ?? []),
+        ],
+        harshRegionsHz: harshRegionsHz ?? [],
+        suggestedTargetCurveId: targetCurveId,
+        source: `AutoEq/${c.source}${c.rig ? ` (${c.rig})` : ""} — ${c.url}`,
+        credibility: "measured",
+      });
+
+      const appKnowledge = await reloadKnowledge();
+
+      // Build bands: AutoEq measured first, then preference specs.
+      const measuredSpecs = c.bands.map((b) => ({
+        type: b.type,
+        frequencyHz: b.frequencyHz,
+        gainDb: b.gainDb,
+        q: b.q,
+      }));
+      const prefSpecs = (preferenceBands ?? []).map((b) => ({
+        index: b.index,
+        type: b.type as EQPreset["bands"][number]["type"],
+        frequencyHz: b.frequencyHz,
+        gainDb: b.gainDb,
+        q: b.q,
+        channel: b.channel as EQPreset["bands"][number]["channel"],
+        enabled: b.enabled,
+      }));
+      const builtBands = bandsFromSpecs([...measuredSpecs, ...prefSpecs]);
+
+      // preferenceBandIndexes = enabled slots that came from preferenceSpecs.
+      // bandsFromSpecs assigns sequential free slots for specs without index.
+      const enabledIndexes = builtBands.filter((b) => b.enabled).map((b) => b.index);
+      const preferenceBandIndexes = enabledIndexes.slice(measuredSpecs.length);
+
+      const prefTag = preferenceLabel?.trim();
+      // Cleaner name for harman-neutral
+      const niceTarget =
+        targetCurveId === "harman-neutral"
+          ? "Harman Neutral"
+          : targetCurveId === "crinacle-ief-2025"
+            ? "Crinacle IEF Preference 2025"
+            : targetCurveId;
+      const finalName = prefTag
+        ? `${displayName} – ${niceTarget} (${prefTag})`
+        : `${displayName} – ${niceTarget}`;
+
+      const maxMeasuredBoost = Math.max(0, ...c.bands.map((b) => b.gainDb));
+      const maxPrefBoost = Math.max(0, ...(preferenceBands ?? []).map((b) => b.gainDb ?? 0));
+      const autoPre =
+        preampDb !== undefined
+          ? preampDb
+          : preferenceBands && preferenceBands.length > 0
+            ? Math.min(c.preampDb, -(maxMeasuredBoost + Math.min(maxPrefBoost, 3)) - 0.5)
+            : c.preampDb;
+      // keep within legal preamp range (already validated later)
+      const chosenPreamp = Math.max(PREAMP_MIN, Math.min(PREAMP_MAX, Number(autoPre.toFixed(1))));
+
+      const presetId = `ai_${profileId}_${slugify(targetCurveId)}${prefTag ? `_${slugify(prefTag)}` : ""}`;
+      const tags = [
+        "ai",
+        "baseline",
+        "library",
+        targetCurveId,
+        profileId,
+        "autoeq",
+        c.source.toLowerCase().replace(/\s+/g, "-"),
+        "measured-fir",
+      ];
+      if (prefTag) tags.push(slugify(prefTag));
+
+      const draft: EQPreset = normalizePreset({
+        id: presetId,
+        name: finalName,
+        headphone: displayName,
+        goal:
+          `AutoEq/${c.source} measured correction toward ${niceTarget}` +
+          (prefTag ? `, plus preference layer (${prefTag}).` : "."),
+        preampDb: chosenPreamp,
+        bands: builtBands,
+        safety: { autoGainEnabled: false, clippingRisk: "low" },
+        createdBy: "ai",
+        version: 1,
+        tags,
+        createdAt: "",
+        updatedAt: "",
+        correction: {
+          role: preferenceBandIndexes.length > 0 ? "combined" : "baseline",
+          source: `autoeq-${c.source.toLowerCase().replace(/\s+/g, "-")}`,
+          sourceConfidence: "measured",
+          correctionStrength: 1,
+          targetCurveId,
+          targetBlend: 1,
+          preferenceBandIndexes,
+          measuredCorrection: c.measuredCorrection,
+        },
+      });
+
+      const rules = await loadSafetyRules();
+      const validation = validatePreset(draft, rules, 48_000, "all");
+      if (!validation.ok) {
+        return jsonResult({
+          ok: false,
+          reason: "validation_failed",
+          profile,
+          validation,
+        });
+      }
+      const finalPreset: EQPreset = {
+        ...draft,
+        preampDb: chosenPreamp,
+        safety: { autoGainEnabled: false, clippingRisk: validation.clippingRisk },
+      };
+      const saved = await savePreset(finalPreset);
+      const appPresetSync = await reloadPresets();
+
+      const wantX8 = (targets ?? ["auralink"]).includes("luxsin-x8");
+      let x8: unknown = { skipped: true };
+      if (wantX8) {
+        if (!confirmed) {
+          x8 = {
+            applied: false,
+            needsConfirm: true,
+            message: "Pass confirmed:true to write the Luxsin X8 entry (import-only unless x8Select:true).",
+          };
+        } else {
+          x8 = await applyPresetToX8(saved, true, { select: x8Select === true });
+        }
+      }
+
+      let seed: unknown = { skipped: true };
+      if (rebuildSeed) {
+        seed = await rebuildBundledHeadphoneSeed();
+      }
+
+      return jsonResult({
+        ok: true,
+        libraryDir: libraryDir(),
+        profile,
+        preset: {
+          id: saved.id,
+          name: saved.name,
+          preampDb: saved.preampDb,
+          preferenceBandIndexes,
+          tags: saved.tags,
+          sharedLibrary: isSharedLibraryPreset(saved),
+        },
+        validation,
+        appKnowledge: appKnowledge.online
+          ? { online: true, reloaded: appKnowledge.data?.ok === true, message: appKnowledge.data?.message }
+          : { online: false, message: appKnowledge.error },
+        appPresetSync: appPresetSync.online
+          ? { online: true, reloaded: appPresetSync.data?.ok === true, presetCount: appPresetSync.data?.presetCount }
+          : { online: false, message: appPresetSync.error },
+        x8,
+        seed,
+        autoeq: {
+          name: c.name,
+          source: c.source,
+          rig: c.rig ?? null,
+          preampDb: c.preampDb,
+          bandCount: c.bands.length,
+          measuredFIRAvailable: c.measuredCorrection !== undefined,
+          provenance: c.url,
+        },
+        note:
+          "Profile + shared preset dual-written to Application Support and library/. " +
+          "Commit library/headphones and library/presets (and regenerated seed JSON if rebuildSeed) to persist in git.",
+      });
+    } catch (err) {
+      return errorResult(
+        `register_headphone_baseline failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+);
+
 server.registerTool(
   "get_autoeq_correction",
   {

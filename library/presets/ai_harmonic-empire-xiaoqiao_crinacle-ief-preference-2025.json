@@ -1,0 +1,211 @@
+{
+  "bands": [
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 21,
+      "gainDb": -1.2,
+      "index": 1,
+      "q": 1.7,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 160,
+      "gainDb": -2.6,
+      "index": 2,
+      "q": 0.7,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 400,
+      "gainDb": 2.2,
+      "index": 3,
+      "q": 1.8,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 750,
+      "gainDb": 0.7,
+      "index": 4,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 2800,
+      "gainDb": 3.5,
+      "index": 5,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 4600,
+      "gainDb": -3.7,
+      "index": 6,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 8100,
+      "gainDb": -2.5,
+      "index": 7,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": true,
+      "frequencyHz": 9600,
+      "gainDb": 3,
+      "index": 8,
+      "q": 2,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 160,
+      "gainDb": 0,
+      "index": 9,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 240,
+      "gainDb": 0,
+      "index": 10,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 350,
+      "gainDb": 0,
+      "index": 11,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 520,
+      "gainDb": 0,
+      "index": 12,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 760,
+      "gainDb": 0,
+      "index": 13,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1100,
+      "gainDb": 0,
+      "index": 14,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 1600,
+      "gainDb": 0,
+      "index": 15,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 2400,
+      "gainDb": 0,
+      "index": 16,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 3500,
+      "gainDb": 0,
+      "index": 17,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 5000,
+      "gainDb": 0,
+      "index": 18,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 7000,
+      "gainDb": 0,
+      "index": 19,
+      "q": 1,
+      "type": "bell"
+    },
+    {
+      "channel": "stereo",
+      "enabled": false,
+      "frequencyHz": 11000,
+      "gainDb": 0,
+      "index": 20,
+      "q": 1,
+      "type": "bell"
+    }
+  ],
+  "correction": {
+    "correctionStrength": 1,
+    "preferenceBandIndexes": [],
+    "role": "baseline",
+    "source": "Crinacle B&K Type 5128 measurement via hangout.audio. AutoEQ PEQ computed in-browser toward IEF Preference 2025 (B&K 5128) target (20-15000 Hz, gain +/-12 dB, Q 0.5-2.0). 8 kHz band reduced from -3.7 to -2.5 dB and 9.6 kHz band reduced from +4.3 to +3.0 dB for rig-dependent region conservatism. 13 kHz band removed (ultra-treble unreliable on 5128).",
+    "sourceConfidence": "measured",
+    "targetBlend": 1,
+    "targetCurveId": "crinacle-ief-2025"
+  },
+  "createdAt": "2026-07-30T00:00:00Z",
+  "createdBy": "ai",
+  "goal": "Apply the Crinacle IEF Preference 2025 target to the Harmonic Empire XiaoQiao: correct the V-shaped stock tuning by reducing mid-bass bloat, filling the recessed lower mids and 2-3 kHz upper-mid transition, taming the 4-5 kHz presence peak, and smoothing the 8-10 kHz treble irregularity. Preserves the XiaoQiao's detailed female vocal character and airy treble while bringing tonal balance closer to the IEF 2025 reference.",
+  "headphone": "Harmonic Empire XiaoQiao",
+  "id": "ai_harmonic-empire-xiaoqiao_crinacle-ief-preference-2025",
+  "name": "Harmonic Empire XiaoQiao – Crinacle IEF Preference 2025",
+  "preampDb": -2.8,
+  "safety": {
+    "autoGainEnabled": false,
+    "clippingRisk": "low"
+  },
+  "tags": [
+    "ai",
+    "crinacle-ief-2025",
+    "harmonic-empire-xiaoqiao"
+  ],
+  "updatedAt": "2026-07-30T00:00:00Z",
+  "version": 1
+}

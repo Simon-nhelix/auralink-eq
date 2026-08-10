@@ -1,0 +1,21 @@
+{
+  "brand": "HIFIMAN",
+  "correctionNotes": [
+    "Treble around 5–6 kHz can edge into harshness on bright recordings; a small cut smooths it.",
+    "Sub-bass extends well but is slightly light in quantity; a gentle low shelf adds body.",
+    "Mids are accurate, so avoid large mid-range moves."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 6500,
+      "lowHz": 5000
+    }
+  ],
+  "id": "hifiman-sundara",
+  "model": "Sundara",
+  "signature": "Planar-clean and neutral-bright; fast tight bass, transparent mids, and an energetic treble with a mild peak around 5–6 kHz.",
+  "source": "Aggregated measurement consensus (Crinacle / Oratory1990)",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "open_back"
+}

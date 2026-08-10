@@ -1,99 +1,95 @@
 [
   {
-    "id": "apple-airpods-max",
     "brand": "Apple",
-    "model": "AirPods Max",
-    "type": "closed_back",
-    "signature": "Near-Harman tuning out of the box: clean elevated bass, neutral mids, smooth treble; very balanced with mild upper-mid energy.",
     "correctionNotes": [
       "Already close to neutral, so corrections should be small and surgical.",
       "A slight 3 kHz forwardness can be tamed for long sessions.",
       "Sub-bass is solid; only add a touch if the listener wants extra rumble."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 2800,
-        "highHz": 3500
+        "highHz": 3500,
+        "lowHz": 2800
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "apple-airpods-max",
+    "model": "AirPods Max",
+    "signature": "Near-Harman tuning out of the box: clean elevated bass, neutral mids, smooth treble; very balanced with mild upper-mid energy.",
     "source": "Aggregated measurement consensus (rtings)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "closed_back"
   },
   {
-    "id": "apple-airpods-pro-2",
     "brand": "Apple",
-    "model": "AirPods Pro 2",
-    "type": "true_wireless",
-    "signature": "Adaptive in-ear with a Harman-leaning tuning: clean elevated bass, neutral mids, and a slightly forward presence region; treble is smooth.",
     "correctionNotes": [
       "Presence around 3 kHz can be a touch forward for long listening; a small dip helps.",
       "Adaptive EQ already compensates for seal, so only modest corrections are appropriate.",
       "Sub-bass is full thanks to in-ear seal; add very little extra low end."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 2800,
-        "highHz": 3600
+        "highHz": 3600,
+        "lowHz": 2800
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "apple-airpods-pro-2",
+    "model": "AirPods Pro 2",
+    "signature": "Adaptive in-ear with a Harman-leaning tuning: clean elevated bass, neutral mids, and a slightly forward presence region; treble is smooth.",
     "source": "Aggregated measurement consensus (rtings)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "true_wireless"
   },
   {
-    "id": "audeze-lcd-x",
     "brand": "Audeze",
-    "model": "LCD-X",
-    "type": "open_back",
-    "signature": "Planar with deep, authoritative bass and rich lower mids; treble is smooth but can feel slightly recessed in the upper presence region.",
     "correctionNotes": [
       "Upper mids around 2–4 kHz are slightly polite; a small lift improves vocal intelligibility.",
       "Lower mids can sound thick on warm recordings; a gentle dip near 200 Hz adds clarity.",
       "Bass is already substantial, so additional sub-bass is rarely needed."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 5000,
-        "highHz": 6000
+        "highHz": 6000,
+        "lowHz": 5000
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "audeze-lcd-x",
+    "model": "LCD-X",
+    "signature": "Planar with deep, authoritative bass and rich lower mids; treble is smooth but can feel slightly recessed in the upper presence region.",
     "source": "Aggregated measurement consensus (Oratory1990)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
   },
   {
-    "id": "aune-ac45",
     "brand": "Aune",
-    "model": "AC45",
-    "type": "on_ear",
-    "signature": "Open-back clip-on with a clean, fast mid-bass punch, flat neutral mids, and a bright/energetic upper range with a prominent 3.5 kHz peak and 8 kHz treble presence.",
     "correctionNotes": [
       "Low-bass rolls off below 100 Hz due to open clip-on seal; avoid heavy sub-bass boosts to prevent distortion and preserve the fast, punchy bass.",
       "Upper midrange ear-gain peak around 3.5 kHz is energetic; a small cut smooths out shoutiness while maintaining clarity.",
       "Treble peak around 8 kHz can be slightly sharp; a moderate cut reduces sibilance.",
       "Lower mids (200-400 Hz) are clean but can benefit from a gentle body lift to add vocal warmth."
     ],
+    "credibility": "manufacturer",
     "harshRegionsHz": [
       {
-        "lowHz": 3000,
-        "highHz": 4000
+        "highHz": 4000,
+        "lowHz": 3000
       },
       {
-        "lowHz": 7500,
-        "highHz": 9000
+        "highHz": 9000,
+        "lowHz": 7500
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "aune-ac45",
+    "model": "AC45",
+    "signature": "Open-back clip-on with a clean, fast mid-bass punch, flat neutral mids, and a bright/energetic upper range with a prominent 3.5 kHz peak and 8 kHz treble presence.",
     "source": "Official manufacturer frequency response and THD graphs from Aune.",
-    "credibility": "manufacturer"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "on_ear"
   },
   {
-    "id": "austrian-audio-hi-x60",
     "brand": "Austrian Audio",
-    "model": "Hi-X60",
-    "type": "closed_back",
-    "signature": "Closed-back studio reference: deep-extending but not warm bass with a mid-bass hump around 60-100 Hz, fairly neutral lower mids, a 1-1.2 kHz dip, a 1.9-2 kHz presence lift need, and upper-mid/lower-treble energy (around 2.5-6 kHz) that can sound sharp; high treble rolls off above 10 kHz.",
     "correctionNotes": [
       "AutoEq/oratory1990 Harman OE 2018 correction uses a compound bass shape: low shelf @105 Hz -9.8 dB plus a very wide +18 dB peaking @81 Hz (Q0.36) and a -14.9 dB peaking @138 Hz (Q0.6) to convert the mid-bass hump into a Harman shelf. Net peak after this group is only ~4.5 dB.",
       "Cut ~2.1 dB @1025 Hz (Q2.33) for the mild upper-bass/lower-mid dip region relative to target.",
@@ -102,26 +98,26 @@
       "User preference on top of Harman: +3.0 dB low shelf @40 Hz for moderate sub-bass reinforcement (seal-dependent on closed-backs).",
       "AutoEq preamp is -4.7 dB; with the sub-bass preference shelf use about -6 dB headroom."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 2500,
-        "highHz": 3500
+        "highHz": 3500,
+        "lowHz": 2500
       },
       {
-        "lowHz": 5000,
-        "highHz": 7000
+        "highHz": 7000,
+        "lowHz": 5000
       }
     ],
+    "id": "austrian-audio-hi-x60",
+    "model": "Hi-X60",
+    "signature": "Closed-back studio reference: deep-extending but not warm bass with a mid-bass hump around 60-100 Hz, fairly neutral lower mids, a 1-1.2 kHz dip, a 1.9-2 kHz presence lift need, and upper-mid/lower-treble energy (around 2.5-6 kHz) that can sound sharp; high treble rolls off above 10 kHz.",
+    "source": "AutoEq oratory1990 over-ear measurement (https://github.com/jaakkopasanen/AutoEq results/oratory1990/over-ear/Austrian Audio Hi-X60); dense GraphicEQ max +4.5 dB @~2 kHz. Corroborated by DIY-Audio-Heaven, Headphones.com DMS B&K 4128, and ASR.",
     "suggestedTargetCurveId": "harman-neutral",
-    "source": "AutoEq oratory1990 over-ear measurement (https://github.com/jaakkopasanen/AutoEq results/oratory1990/over-ear/Austrian Audio Hi-X60); dense GraphicEQ max +4.5 dB @~2 kHz. Corroborated by DIY-Audio-Heaven (deep bass extension with perfect seal, elevated upper mids/lower treble needing taming), Headphones.com DMS B&K 4128 (Harman-esque bass, treble glare above ~5 kHz), and ASR (bass peak ~100 Hz, peaking above 3 kHz).",
-    "credibility": "measured"
+    "type": "closed_back"
   },
   {
-    "id": "austrian-audio-hi-x65",
     "brand": "Austrian Audio",
-    "model": "Hi-X65",
-    "type": "open_back",
-    "signature": "Open-back reference/studio tuning: extended but slightly lean bass vs Harman, mild low-mid thickness around 200-600 Hz, a noticeable 1.5-2 kHz presence dip, smooth forward upper mids, and an elevated 5-10 kHz treble that reads bright.",
     "correctionNotes": [
       "Needs a ~+5.4 dB bass shelf at 105 Hz (Q0.7) plus ~+6 dB below 40 Hz to reach the Harman over-ear 2018 bass level; the driver extends cleanly to sub-bass (5 Hz spec, good measured extension).",
       "Cut ~2.4 dB wide at 236 Hz (Q0.53) and ~1.5 dB at 592 Hz to clear low-mid boxiness.",
@@ -130,97 +126,269 @@
       "Tame brightness with -4 dB at 5982 Hz (Q3.16) and a -1.5 dB high shelf at 10 kHz; Sonarworks measured a ~10 dB boost near 10 kHz vs neutral.",
       "AutoEq preamp -6.5 dB covers the +6.9 dB peak; add more preamp when stacking a sub-bass preference shelf."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 5000,
-        "highHz": 7000
+        "highHz": 7000,
+        "lowHz": 5000
       },
       {
-        "lowHz": 9000,
-        "highHz": 12000
+        "highHz": 12000,
+        "lowHz": 9000
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "austrian-audio-hi-x65",
+    "model": "Hi-X65",
+    "signature": "Open-back reference/studio tuning: extended but slightly lean bass vs Harman, mild low-mid thickness around 200-600 Hz, a noticeable 1.5-2 kHz presence dip, smooth forward upper mids, and an elevated 5-10 kHz treble that reads bright.",
     "source": "AutoEq oratory1990 over-ear measurement (https://github.com/jaakkopasanen/AutoEq results/oratory1990/over-ear/Austrian Audio Hi-X65); corroborated by Sonarworks GRAS review (neutral bass/low-mids, high-mid dip, ~10 dB treble lift near 10 kHz) and Sound On Sound (bright above ~5 kHz, even but unemphasized bass, slight low-mid thickness).",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
   },
   {
-    "id": "beyerdynamic-dt770",
+    "brand": "Austrian Audio",
+    "correctionNotes": [
+      "Broad cut centered ~180 Hz is the single most valuable move (clears the 100-300 Hz thickness).",
+      "Fill the 1-1.5 kHz scoop to bring vocals/instruments forward.",
+      "Small narrow cut near 5.5 kHz tames glare on bright tracks.",
+      "Do not correct above 8 kHz from this graph - KB501X pinna artifacts dominate there."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 6000,
+        "lowHz": 5000
+      }
+    ],
+    "id": "austrian-audio-the-arranger",
+    "model": "The Arranger",
+    "signature": "Warm-thick low end (+4-5 dB over Harman through 100-300 Hz), recessed 1-1.5 kHz (vocals sit back), presence region near target with a +3 dB peak around 5.5 kHz; treble above 8 kHz shows deep rig-dependent notches.",
+    "source": "Kuulokenurkka squig.link FR graph vs Harman 2018 target, measured with KB501X pinna (user-provided screenshot, 2026-06-10). Form factor unverified from the graph alone.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
+  },
+  {
     "brand": "Beyerdynamic",
-    "model": "DT770 Pro 80",
-    "type": "closed_back",
-    "signature": "V-shaped: elevated sub/mid-bass and a sharp treble peak around 8–9 kHz that reads as detailed but can be sibilant ('Beyer peak').",
     "correctionNotes": [
       "Pronounced 8–9 kHz peak is fatiguing; a targeted cut here is the single most useful move.",
       "Upper-mids around 250 Hz can sound slightly hollow; small bell lift improves vocal body.",
       "Bass is already strong, so prefer cutting harsh treble over boosting bass."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 7500,
-        "highHz": 9500
+        "highHz": 9500,
+        "lowHz": 7500
       },
       {
-        "lowHz": 5500,
-        "highHz": 6500
+        "highHz": 6500,
+        "lowHz": 5500
       }
     ],
-    "suggestedTargetCurveId": "late-night",
+    "id": "beyerdynamic-dt770",
+    "model": "DT770 Pro 80",
+    "signature": "V-shaped: elevated sub/mid-bass and a sharp treble peak around 8–9 kHz that reads as detailed but can be sibilant ('Beyer peak').",
     "source": "Aggregated measurement consensus (rtings / Oratory1990)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "late-night",
+    "type": "closed_back"
   },
   {
-    "id": "beyerdynamic-dt990",
     "brand": "Beyerdynamic",
-    "model": "DT990 Pro",
-    "type": "open_back",
-    "signature": "Aggressive V-shape: big sub-bass and a very prominent treble peak near 8 kHz, giving an airy but often harsh presentation.",
     "correctionNotes": [
       "Strong 8 kHz peak is the defining flaw; cut it firmly to remove sibilance and listening fatigue.",
       "A secondary 6 kHz region can also read as sharp on vocals.",
       "Mids are slightly scooped; a gentle 1–2 kHz lift restores presence."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 7000,
-        "highHz": 9000
+        "highHz": 9000,
+        "lowHz": 7000
       },
       {
-        "lowHz": 5500,
-        "highHz": 6500
+        "highHz": 6500,
+        "lowHz": 5500
       }
     ],
-    "suggestedTargetCurveId": "late-night",
+    "id": "beyerdynamic-dt990",
+    "model": "DT990 Pro",
+    "signature": "Aggressive V-shape: big sub-bass and a very prominent treble peak near 8 kHz, giving an airy but often harsh presentation.",
     "source": "Aggregated measurement consensus (rtings / Oratory1990)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "late-night",
+    "type": "open_back"
   },
   {
-    "id": "hifiman-sundara",
-    "brand": "HIFIMAN",
-    "model": "Sundara",
-    "type": "open_back",
-    "signature": "Planar-clean and neutral-bright; fast tight bass, transparent mids, and an energetic treble with a mild peak around 5–6 kHz.",
+    "brand": "Denon",
     "correctionNotes": [
-      "Treble around 5–6 kHz can edge into harshness on bright recordings; a small cut smooths it.",
-      "Sub-bass extends well but is slightly light in quantity; a gentle low shelf adds body.",
-      "Mids are accurate, so avoid large mid-range moves."
+      "Sub-bass is well-extended and robust; no major correction is needed below 100 Hz.",
+      "The dip around 2 kHz is a signature acoustic characteristic of Denon/Fostex wood cups. Over-correcting this region (e.g. by applying a large +6dB boost) will destroy the natural soundstage depth and introduce boxy cup reflections. Keep this upper-mid dip mostly intact, or apply only a very gentle correction (e.g., < +2dB).",
+      "Cut the sibilance/harshness peak around 5.4-5.5 kHz with a narrow bell filter (~ -4 to -6 dB, Q ~ 3.0) to remove metallic glare.",
+      "Smooth the piercing peak in the upper treble (11-13 kHz) with a high-shelf or bell filter to prevent fatiguing sibilance without sacrificing wood's airy resolution.",
+      "Avoid EQing the 8.5 kHz dip as it is likely a coupler measurement notch."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 5000,
-        "highHz": 6500
+        "highHz": 6000,
+        "lowHz": 5000
+      },
+      {
+        "highHz": 13500,
+        "lowHz": 11000
       }
     ],
+    "id": "denon-ah-d9200",
+    "model": "AH-D9200",
+    "signature": "Warm, spacious closed-back wood sound: robust sub-bass, relaxed upper-mids (2kHz dip), and bright treble with peaks at 5.5kHz and 11-13kHz.",
+    "source": "Crinacle frequency response graph measurement (GRAS 43AG-7) - 2026-06-16. Closed-back Japanese bamboo wood cups.",
     "suggestedTargetCurveId": "harman-neutral",
-    "source": "Aggregated measurement consensus (Crinacle / Oratory1990)",
-    "credibility": "measured"
+    "type": "closed_back"
   },
   {
-    "id": "harmonic-empire-xiaoqiao",
+    "brand": "DITA",
+    "correctionNotes": [
+      "W-shaped tuning: elevated sub/mid-bass (+7-8 dB at 20-100 Hz), forward upper mids (~+14 dB pinna gain at 2.5 kHz), and a secondary treble peak (~+12 dB at 10 kHz).",
+      "Mid-bass emphasis (100-200 Hz) is the defining character; trim modestly toward the IEF target but preserve some warmth to keep the musical intent.",
+      "The 5-5.5 kHz presence peak can read as forward or slightly hard on vocals; a gentle cut here smooths the transition between upper mids and treble.",
+      "The 9-10 kHz treble peak adds sparkle and air but may cause sibilance on bright recordings; a moderate cut tames this without killing the extension.",
+      "The 7 kHz dip is a typical IEM coupler feature; do not chase it with EQ.",
+      "Lower mids (300-600 Hz) are slightly pulled back relative to the bass and upper mids; a small lift can restore vocal body if needed."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 6000,
+        "lowHz": 5000
+      },
+      {
+        "highHz": 10500,
+        "lowHz": 9000
+      }
+    ],
+    "id": "dita-project-m2",
+    "model": "Project M2",
+    "signature": "W-shaped single-DD tuning: well-extended, punchy bass with mid-bass emphasis; forward, emotional upper mids and vocals; smooth treble with extra sparkle near 10 kHz. Described as a 'neutral+' everyday IEM with natural coherence and musicality.",
+    "source": "Bloom Audio squig.link measurement (IEC 711 clone), July 2026. Corroborated by Bloom Audio written review, Head-Fi review (Pseudonym031), and eddie0817 WordPress impressions.",
+    "suggestedTargetCurveId": "crinacle-ief-2025",
+    "type": "iem"
+  },
+  {
+    "brand": "DUNU",
+    "correctionNotes": [
+      "For a bass-boosted Crinacle-style target, add a clean sub/low-bass shelf rather than mid-bass hump; keep 150–250 Hz controlled to avoid wooden-cup warmth turning muddy.",
+      "Trim the 2.5–3 kHz presence peak modestly if vocals/guitars feel too forward; the target still needs natural presence, so avoid over-cutting.",
+      "Smooth 6–9 kHz with gentle cuts for edge/sibilance; do not chase the deep ~10 kHz notch because it is likely measurement/rig dependent.",
+      "A small air shelf above ~12 kHz can restore openness, but keep it conservative because the graph becomes less reliable in the upper treble."
+    ],
+    "credibility": "community",
+    "harshRegionsHz": [
+      {
+        "highHz": 3300,
+        "lowHz": 2500
+      },
+      {
+        "highHz": 9500,
+        "lowHz": 6000
+      }
+    ],
+    "id": "dunu-mortise",
+    "model": "Mortise",
+    "signature": "Semi-open wooden headphone with a warm-neutral/relaxed upper-treble balance from the user-provided FR image: extended bass, clean lower mids, a strong 2.5–3 kHz presence rise, uneven 6–9 kHz lower treble, and a deep ~10 kHz notch that should be treated as likely rig/coupler artifact.",
+    "source": "User-provided FR image /Users/donahn/Downloads/something-quite-interesting-has-arrived-recently-and-im-v0-w8qk6xb3fszg1.webp; user notes: DUNU Mortise is a semi-open wooden headphone. Prior vault note had it as IEM; updated to headphone per Simon's correction. AutoEq exact lookup returned no DUNU Mortise result.",
+    "suggestedTargetCurveId": "bass-boost",
+    "type": "open_back"
+  },
+  {
+    "brand": "DUNU",
+    "correctionNotes": [
+      "Use the Crinacle 711 AutoEq measured correction for DUNU SA6 (default mode) as the base measurement-derived compensation.",
+      "For Crinacle IEF Preference 2025 on IEC 711, add the preference direction of a strong 105 Hz bass shelf and a broad -4 dB high shelf around 2500 Hz, while keeping enough preamp headroom.",
+      "Treat 5-8 kHz detail/resonance adjustments carefully because 711 IEM treble is coupler- and insertion-dependent."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 7000,
+        "lowHz": 4500
+      },
+      {
+        "highHz": 8500,
+        "lowHz": 7000
+      }
+    ],
+    "id": "dunu-sa6",
+    "model": "SA6",
+    "signature": "Balanced all-BA IEM profile registered from Crinacle 711/AutoEq measurement; tuned here toward Crinacle IEF Preference 2025 with strong sub-bass weight and relaxed upper treble.",
+    "source": "AutoEq result from crinacle/711 in-ear: DUNU SA6 (default mode), plus Crinacle/In-Ear Fidelity article 'The New 2025 IEF Target' for IEF Preference 2025 IEC 711 target parameters.",
+    "suggestedTargetCurveId": "crinacle-ief-2025",
+    "type": "iem"
+  },
+  {
+    "brand": "Elysian Acoustic Labs",
+    "correctionNotes": [
+      "Use the ATechReviews standard-fit L/R average measured on 2026-02-12 as the primary baseline.",
+      "Relative to IEF Preference 2025, preserve the already-strong sub-bass and use modest cleanup around 160 Hz plus body restoration around 400-650 Hz.",
+      "The main target correction is a controlled 3 kHz presence lift and broad relaxation approaching 7 kHz.",
+      "Do not chase narrow peaks or dips above 7 kHz: the standard, shallow, deep, and tip measurements show strong insertion-depth and coupler sensitivity there."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 8500,
+        "lowHz": 6800
+      }
+    ],
+    "id": "elysian-acoustic-labs-annihilator-2026",
+    "model": "Annihilator 2026",
+    "signature": "Sub-bass-forward flagship IEM with clean lower mids, energetic upper-mid presence, and exceptionally extended, fit-sensitive treble.",
+    "source": "ATechReviews Squiglink IEC 711-style L/R measurements, standard fit, measured 2026-02-12: https://atechreviews.squig.link/ ; cross-check variants include shallow fit, deep fit, stock Divinus Velvet and wide-bore tips. Target: Crinacle IEF Preference 2025, the latest Crinacle IEM preference target currently registered in Auralink.",
+    "suggestedTargetCurveId": "crinacle-ief-2025",
+    "type": "iem"
+  },
+  {
+    "brand": "final",
+    "correctionNotes": [
+      "AutoEq lookup found no exact Final DX3000 CL measurement, so this profile is estimated from official specs and text reviews rather than a measured correction.",
+      "Because reviews describe the DX3000 CL as already bass-prominent/slightly warm with smooth treble, apply the Crinacle IEF Preference 2025 target conservatively on this headphone; prioritize sub-bass shape and low-mid cleanup over more mid-bass.",
+      "Crinacle IEF Preference 2025 is an IEM target (5128/IEC 711 discussion), so use it here as a preference reference/voicing direction for this closed-back headphone, not as a literal measured over-ear compensation curve.",
+      "Preserve the headphone's reported vocal realism and smooth upper treble; avoid aggressive high-Q boosts unless a future measurement shows a specific deficit."
+    ],
+    "credibility": "estimated",
+    "harshRegionsHz": [],
+    "id": "final-dx3000-cl",
+    "model": "DX3000 CL",
+    "signature": "Closed-back dynamic headphone with strong/deep but controlled bass, slightly warm-neutral/lush mids, realistic forward vocals, smooth rounded treble and unusually open staging for a closed-back; measured correction not yet available.",
+    "source": "Official final DX3000 CL product page https://snext-final.com/en/products/detail/DX3000CL (closed-back dynamic, 40 mm paper/carbon driver, 37 ohm, 96 dB/mW, 410 g); Headfonics review https://headfonics.com/final-dx3000-cl-review/ (deep punchy textured bass, slightly warm, natural/lush mids, smooth rounded upper treble); Trusted Reviews https://www.trustedreviews.com/reviews/final-dx3000cl (revealing, big stage, neutral tonality, polite dynamics); AutoEq lookup on 2026-07-06 found no exact match; Crinacle IEF Preference 2025 target reference https://crinacle.com/2025/02/05/the-new-2025-ief-target/",
+    "suggestedTargetCurveId": "crinacle-ief-2025",
+    "type": "closed_back"
+  },
+  {
+    "brand": "Focal",
+    "correctionNotes": [
+      "AutoEq (oratory1990) measured correction toward the Harman over-ear target applies: broad low-shelf lift at 105 Hz paired with a 53 Hz cut — this concentrates bass correction in the mid-bass an open-back dynamic can actually deliver instead of forcing sub-bass it cannot reproduce cleanly.",
+      "Cut around 3.5 kHz (-3.5 dB) tames the Focal upper-mid glare; small boosts at 2.4 kHz and 5 kHz restore presence and edge.",
+      "As an open-back, do not chase deep 20-40 Hz sub-bass with big boosts; the measured correction's shape already respects the driver's physical limits.",
+      "No Crinacle (GRAS 43AG) measurement exists for this model; oratory1990's GRAS measurement toward Harman over-ear 2018 is the closest Crinacle-style over-ear reference target."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 4200,
+        "lowHz": 3200
+      },
+      {
+        "highHz": 6500,
+        "lowHz": 5800
+      }
+    ],
+    "id": "focal-hadenys",
+    "model": "Hadenys",
+    "signature": "Open-back dynamic with Focal's warm-neutral house sound: rolled sub-bass typical of open designs, full but controlled mid-bass, natural slightly set-back mids, a presence lift around 2.4 kHz, a 3.5-4 kHz dip, and mild lower-treble unevenness around 5-6 kHz.",
+    "source": "AutoEq oratory1990 (GRAS 43AG) measured parametric + graphic EQ correction, https://github.com/jaakkopasanen/AutoEq/tree/master/results/oratory1990/over-ear/Focal%20Hadenys; Crinacle has not measured the Hadenys — oratory1990/Harman over-ear 2018 used as the Crinacle-style over-ear reference.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
+  },
+  {
     "brand": "Harmonic Empire",
-    "model": "XiaoQiao",
-    "type": "iem",
-    "signature": "Semi-open single graphene DD IEM with a V-shaped tuning: elevated sub-bass and mid-bass, slightly recessed lower mids, forward upper-mid/presence peak around 3-5 kHz, an 8 kHz resonance bump, a 9-10 kHz dip, and relaxed air above 12 kHz. Detailed female vocals and airy treble per reviews, but bass lacks physicality and male voices can sound thin.",
     "correctionNotes": [
       "Crinacle B&K 5128 measurement available via hangout.audio; AutoEQ correction computed toward IEF Preference 2025 (B&K 5128) target.",
       "Mid-bass is elevated relative to IEF 2025: a 160 Hz bell cut around -2.5 dB tightens the low end without killing sub-bass extension.",
@@ -232,81 +400,418 @@
       "Ultra-treble above 12 kHz is unreliable on 5128; avoid narrow corrections there.",
       "Semi-open design means sub-bass seal is moderate; do not chase extreme sub-bass boost."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 4000,
-        "highHz": 5500
+        "highHz": 5500,
+        "lowHz": 4000
       },
       {
-        "lowHz": 7500,
-        "highHz": 9000
+        "highHz": 9000,
+        "lowHz": 7500
       }
     ],
-    "suggestedTargetCurveId": "crinacle-ief-2025",
+    "id": "harmonic-empire-xiaoqiao",
+    "model": "XiaoQiao",
+    "signature": "Semi-open single graphene DD IEM with a V-shaped tuning: elevated sub-bass and mid-bass, slightly recessed lower mids, forward upper-mid/presence peak around 3-5 kHz, an 8 kHz resonance bump, a 9-10 kHz dip, and relaxed air above 12 kHz. Detailed female vocals and airy treble per reviews, but bass lacks physicality and male voices can sound thin.",
     "source": "Crinacle B&K Type 5128 (ITU-T P.57 Type 4.3) measurement via hangout.audio graph tool: https://graph.hangout.audio/iem/5128/?share=IEF_Preference_2025_(B%2526K_5128)_Target,HE_XiaoQiao . AutoEQ PEQ computed in-browser toward IEF Preference 2025 (B&K 5128) target, 20-15000 Hz, gain +/-12 dB, Q 0.5-2.0. Corroborated by Head-Fi reviews (Hifi Juegos, ybricko): https://www.head-fi.org/showcase/tangzu-harmonic-empire-xiaoqiao-iem.28377/ . Also measured on Aftersound squig.link (IEC 711 clone). Specs: single graphene DD, 104 dB @1 kHz, 9.8 ohm, semi-open, 4.4 mm balanced.",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "crinacle-ief-2025",
+    "type": "iem"
   },
   {
-    "id": "sennheiser-hd600",
+    "brand": "HEDD Audio",
+    "correctionNotes": [
+      "Sub-bass rolls off ~3-6 dB under Harman 2018 below 60 Hz (typical open-back dynamic): fill with a low shelf ~70 Hz.",
+      "Mild +2 dB warmth hump 150-250 Hz: small bell cut keeps low-mids clean when adding sub-bass boost.",
+      "Presence dip of ~2.5 dB at 4.2-4.6 kHz and ~3.5 dB at 7-7.5 kHz: gentle fills restore detail/dialogue clarity; do not over-boost the natural +1.8 dB 6 kHz energy nearby.",
+      "Deep 9.5-10 kHz notch and 12 kHz peak in the measurement are known clone-711 coupler artifacts (per Kuulokenurkka) - do NOT chase them with big boosts/cuts.",
+      "Treble above ~15 kHz rolls off sharply; headphone can sound slightly dark vs airier rivals. A small +1 dB air shelf at 11-12 kHz is enough; treble is otherwise calm and non-fatiguing, no harsh peaks need cutting."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [],
+    "id": "hedd-heddphone-d1",
+    "model": "HEDDphone D1",
+    "signature": "Open-back dynamic with TPCD (thin-ply carbon) diaphragm; HD600-successor neutral tuning that tracks Harman 2018 closely through mids and ear-gain, with slightly rolled sub-bass below 60 Hz, mild 150-300 Hz warmth, and calm treble that rolls off above 15 kHz.",
+    "source": "Kuulokenurkka.com HEDDphone D1 review (2026-02-25) + frequency response measurement (clone IEC-60318-4 coupler, KB501X pinnae, Harman 2018 reference): https://kuulokenurkka.com/en/review-heddphone-d1/ + https://kuulokenurkka.squig.link/?share=Harman_2018_Target,HEDDphone_D1_** — AutoEq has NO D1 entry (its 'HEDD HEDDphone' entries are the older AMT models, not applicable). Also corroborated by headphones.com 5128 measurement thread and Headfonics review.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
+  },
+  {
+    "brand": "HIFIMAN",
+    "correctionNotes": [
+      "Treble around 5–6 kHz can edge into harshness on bright recordings; a small cut smooths it.",
+      "Sub-bass extends well but is slightly light in quantity; a gentle low shelf adds body.",
+      "Mids are accurate, so avoid large mid-range moves."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 6500,
+        "lowHz": 5000
+      }
+    ],
+    "id": "hifiman-sundara",
+    "model": "Sundara",
+    "signature": "Planar-clean and neutral-bright; fast tight bass, transparent mids, and an energetic treble with a mild peak around 5–6 kHz.",
+    "source": "Aggregated measurement consensus (Crinacle / Oratory1990)",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
+  },
+  {
+    "brand": "Koss",
+    "correctionNotes": [
+      "Use the measured AutoEq Harman correction from crinacle GRAS 43AG-7 as the baseline.",
+      "Keep AutoEq's -6.2 dB preamp for headroom; the low-frequency correction includes a large shelf due to the open/on-ear fit.",
+      "Main corrective moves are low-bass restoration, a 3.7 kHz presence lift, a 5.4 kHz glare cut, and a mild 10 kHz air shelf."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 6000,
+        "lowHz": 5000
+      }
+    ],
+    "id": "koss-kph40",
+    "model": "KPH40",
+    "signature": "Open on-ear Koss with limited seal-dependent low bass and uneven upper treble; Harman correction mainly restores bass/body, lifts presence around 3.7 kHz, and cuts a strong 5.4 kHz glare region.",
+    "source": "AutoEq result from crinacle GRAS 43AG-7 over-ear measurement for Koss KPH40: https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/crinacle/GRAS%2043AG-7%20over-ear/Koss%20KPH40/Koss%20KPH40%20ParametricEQ.txt ; user also provided crinacle graph image at /Users/donahn/Downloads/KPH40.jpg. Alternate AutoEq source available: oratory1990.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "on_ear"
+  },
+  {
+    "brand": "Koss",
+    "correctionNotes": [
+      "Use Crinacle/AutoEq Koss KPH40 GRAS 43AG-7 Harman correction as the measured baseline.",
+      "Treat the headphone as an open over-ear/on-ear style for X8 form mapping; do not overcorrect sub-bass because fit and pad seal vary strongly.",
+      "Because Yaxi pads can change pad distance/seal and often sound a little fuller/smoother than stock foam, reduce the stock AutoEq bass shelf slightly and keep the 5.4 kHz glare cut strong but not over-deadened.",
+      "Use ASCII-safe preset names for Luxsin X8 hardware entries."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 6000,
+        "lowHz": 5000
+      }
+    ],
+    "id": "koss-kph40-yaxi",
+    "model": "KPH40 Yaxi Pad",
+    "signature": "Open Koss KPH40 used with Yaxi pads; Crinacle GRAS stock KPH40 measurement suggests limited seal-dependent low bass, a strong 5.4 kHz glare region, and presence/treble unevenness. Yaxi pads are treated as a fit/pad preference variant, so bass correction is kept slightly lighter than stock AutoEq.",
+    "source": "AutoEq crinacle GRAS 43AG-7 Koss KPH40 measured Harman correction; user notes: Yaxi pads and open over-ear style usage. Yaxi-specific measured correction not confirmed, so pad adjustment is conservative preference-layering.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
+  },
+  {
+    "brand": "Moondrop",
+    "correctionNotes": [
+      "Sub-bass rolls off slightly below 40 Hz; a gentle low shelf lift below 30 Hz restores the very lowest octave.",
+      "Tame the +2 dB protrusion around 400 Hz to clean up the transition from lower-mids to mid-bass.",
+      "Fill the broad 1.5–2.5 kHz presence scoop (centered near 2.1 kHz) to bring vocals and acoustic instrument overtones forward to the Harman target.",
+      "Smooth the narrow peaks at 9 kHz and 11 kHz, and the high-treble peak at 16 kHz to remove glare and metallic timbre.",
+      "Do not attempt to EQ the deep notch at 9.8 kHz — it is highly likely a coupler reflection/resonance artifact."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 9500,
+        "lowHz": 8500
+      },
+      {
+        "highHz": 11500,
+        "lowHz": 10500
+      },
+      {
+        "highHz": 17000,
+        "lowHz": 15000
+      }
+    ],
+    "id": "moondrop-cosmo",
+    "model": "Cosmo",
+    "signature": "Neutral-leaning planar with linear bass matching Harman target down to 40 Hz, elevated mid-bass/lower-mids near 400 Hz, relaxed presence region (1.5-2.5 kHz dip), and energetic treble featuring peaks at 9 kHz, 11 kHz, and 16 kHz.",
+    "source": "GRAS 43AG-4 measurement by unheardlab.com, user-provided compensated frequency response graph vs Harman OE 2018 Linear Target (screenshot, 2026-06-15).",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
+  },
+  {
+    "brand": "Moondrop",
+    "correctionNotes": [
+      "AutoEq has no published exact match, so use the user-provided Simkin Boris measurement graph and conservative earbud tuning notes rather than exact Harman correction.",
+      "Do not chase sealed-IEM sub-bass; modest low-shelf support is acceptable but large boosts will likely add distortion or do little acoustically.",
+      "Preserve the audible midrange strength; smooth likely roughness around 4-5 kHz and add only gentle upper-air support.",
+      "Fit, foam cover, and shell position can change response strongly below about 500-1000 Hz."
+    ],
+    "credibility": "community",
+    "harshRegionsHz": [
+      {
+        "highHz": 5200,
+        "lowHz": 4200
+      },
+      {
+        "highHz": 7500,
+        "lowHz": 6500
+      }
+    ],
+    "id": "moondrop-nice-buds",
+    "model": "Nice Buds",
+    "signature": "Open flat-head earbud with seal-dependent bass roll-off, clear and forward-feeling mids, a budget roughness/edge around the upper-mid to lower-treble region, and limited true sub-bass. Best treated as a mid-focused, lightweight earbud rather than forced into full Harman bass.",
+    "source": "Official Moondrop product specs: https://moondroplab.com/en/products/nice-buds ; user-provided Simkin Boris frequency response screenshot at /Users/donahn/Downloads/Moondrop-Nice-Buds-PFR.jpg ; Simkin Boris review/measurements: https://simkinbh.com/?p=19103 . Caveat: no AutoEq exact match or raw target-compensated data; tuning is a conservative baseline inferred from the graph and user listening notes.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "earbud"
+  },
+  {
+    "brand": "Moondrop",
+    "correctionNotes": [
+      "No exact AutoEq/Crinacle correction was found for Moondrop Old Fashioned, so do not claim a true measured Crinacle EQ; use conservative Crinacle/IEF-neutral-style shaping.",
+      "Official/vendor pages describe it as 40mm on-ear/open-back; user requested open over-ear handling, so use open-back headphone assumptions: avoid aggressive sub-bass forcing and preserve open-stage mids.",
+      "RAA has a measurement report for this model, but this profile/preset is not derived from raw exported Crinacle measurements.",
+      "Preserve the clear midrange and vocal presentation; this is the model's main strength.",
+      "Add modest low-end/body support only; seal and pad pressure strongly affect bass response.",
+      "Smooth likely rough regions with small cuts around 3-3.5 kHz and 5-6 kHz rather than changing the whole tonal balance."
+    ],
+    "credibility": "community",
+    "harshRegionsHz": [
+      {
+        "highHz": 3600,
+        "lowHz": 2800
+      },
+      {
+        "highHz": 6000,
+        "lowHz": 4800
+      }
+    ],
+    "id": "moondrop-old-fashioned",
+    "model": "Old Fashioned",
+    "signature": "Retro open-back portable headphone; user wants it treated as open over-ear/open-back in the library. Light body and seal-dependent bass, clear forward mids/vocals, open stereo feel, smooth but not highly extended treble, with possible roughness around upper-mids/lower-treble.",
+    "source": "Official Moondrop specs: https://moondroplab.com/en/products/old-fashioned ; HiFiGo vendor page says open-back architecture and DF-HRTF tuning: https://hifigo.com/products/moondrop-old-fashioned ; RAA measurement report exists: https://reference-audio-analyzer.pro/en/report/hp/moondrop-old-fashioned.php ; Crinacle search/AutoEq exact match not found, so the saved EQ is conservative Crinacle/IEF Neutral-style, not a raw Crinacle measurement correction. User requested open over-ear/open-back handling for Luxsin X8 use.",
+    "suggestedTargetCurveId": "crinacle-ief-neutral",
+    "type": "open_back"
+  },
+  {
+    "brand": "NiceHCK",
+    "correctionNotes": [
+      "No exact AutoEq/public measurement match was found for EBX25Ti; do not treat prose-derived EQ as exact correction.",
+      "Assume stock full foams and a stable fit. Add only a gentle low shelf plus a small mid-bass reinforcement; avoid trying to force sealed-IEM sub-bass from an open flathead.",
+      "Keep the naturally clear/forward upper mids largely intact; use only a mild broad trim around 3 kHz.",
+      "Foam and fit dominate the result: ring/no-foam use may need slightly more bass, while a tight full-foam fit may need less. Re-tune by ear in 0.5-1 dB steps."
+    ],
+    "credibility": "estimated",
+    "harshRegionsHz": [],
+    "id": "nicehck-ebx25ti",
+    "model": "EBX25Ti",
+    "signature": "Fit/foam-dependent semi-open flathead: clear, forward upper mids and wide presentation; clean bass with modest impact but useful extension when full foams achieve a stable fit; generally smooth, non-fatiguing treble. Review tonal descriptions vary from neutral-bright to warm, so treat this as an estimated baseline.",
+    "source": "Estimated from text reviews; no EBX25Ti AutoEq match. Prime Audio: https://primeaudio.org/nicehck-ebx25ti-review/ ; Hi End Portable: https://hiendportable.com/nicehck-ebx25ti-english-review/ ; manufacturer overview: https://www.nicehck.com/blogs/guides/flathead-flagship-redefined-in-depth-review-of-the-nicehck-ebx25ti-2",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "earbud"
+  },
+  {
+    "brand": "ODA",
+    "correctionNotes": [
+      "Preserve the 1–3 kHz vocal core: its forward, natural and organic midrange is the defining strength, so avoid generic presence boosts or broad mid cuts.",
+      "Sub-bass is quality-first and track-dependent while mid-bass is already punchy and textured; use only a very small deep-bass lift and keep upper-bass cleanup subtle.",
+      "Treble is extended and energetic but generally smooth; use sub-1 dB edge/sibilance trimming only, retaining air above 10 kHz.",
+      "At 8 ohms / 116 dB this IEM is source-sensitive; use a low-output-impedance X8 headphone path and keep gain/volume conservative."
+    ],
+    "credibility": "manufacturer",
+    "harshRegionsHz": [
+      {
+        "highHz": 6500,
+        "lowHz": 4500
+      },
+      {
+        "highHz": 9000,
+        "lowHz": 7000
+      }
+    ],
+    "id": "oda-amarantine-korean-edition",
+    "model": "Amarantine (Korean Edition)",
+    "signature": "Natural warm-neutral/W-shaped 5-BA wood IEM with an intimate, organic vocal-led midrange, textured fast bass, realistic note body, and lively but controlled airy treble.",
+    "source": "Official Korean retailer (natural CNC wood shell, 5 BA, Korea-exclusive tuning, vocal-centered natural mids): https://usound.co.kr/product/detail.html?product_no=372 ; ODA product page: https://onedotaudio.com/products/amarantine-wood-edition ; manufacturer FR graph and 2026 community review: https://mobileaudiophile.com/in-ear-earphones-iem-iems-reviews/oda-amarantine-a500-wood-edition-review/ ; corroborating review/specs: https://sonicmantra.org/product-review/oda-amarantine-a500-wood-edition-review-arifgraphy/ . AutoEq exact match not found on 2026-07-16; tuning is a conservative manufacturer-graph/review-derived estimate, not independent lab compensation.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "iem"
+  },
+  {
     "brand": "Sennheiser",
-    "model": "HD600",
-    "type": "open_back",
-    "signature": "Reference-neutral, slightly mid-forward, polite treble with a mild upper-mid lift; bass is fast but rolls off in the sub region.",
     "correctionNotes": [
       "Sub-bass below ~40 Hz rolls off; a gentle low shelf restores weight without bloat.",
       "Mild presence bump around 3 kHz can sound forward on bright tracks; a small dip tames it.",
       "Treble is well controlled, so boosts above 8 kHz are usually unnecessary."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 2800,
-        "highHz": 3600
+        "highHz": 3600,
+        "lowHz": 2800
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "sennheiser-hd600",
+    "model": "HD600",
+    "signature": "Reference-neutral, slightly mid-forward, polite treble with a mild upper-mid lift; bass is fast but rolls off in the sub region.",
     "source": "Aggregated measurement consensus (Crinacle, Oratory1990 style targets)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
   },
   {
-    "id": "sennheiser-hd650",
     "brand": "Sennheiser",
-    "model": "HD650",
-    "type": "open_back",
-    "signature": "Warm-neutral, smooth and relaxed; the classic 'veil' is a gentle upper-mid/lower-treble dip with a touch more mid-bass than the HD600.",
     "correctionNotes": [
       "Lower treble (5–7 kHz) is recessed, so a small lift adds clarity and air.",
       "Sub-bass roll-off below ~40 Hz benefits from a modest low shelf.",
       "Already warm — avoid stacking extra mid-bass or it turns muddy."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 5500,
-        "highHz": 7000
+        "highHz": 7000,
+        "lowHz": 5500
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "sennheiser-hd650",
+    "model": "HD650",
+    "signature": "Warm-neutral, smooth and relaxed; the classic 'veil' is a gentle upper-mid/lower-treble dip with a touch more mid-bass than the HD600.",
     "source": "Aggregated measurement consensus (Oratory1990 style targets)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
   },
   {
-    "id": "sony-wh-1000xm5",
     "brand": "Sony",
-    "model": "WH-1000XM5",
-    "type": "closed_back",
-    "signature": "Consumer-warm with elevated bass and a smooth, slightly relaxed treble; mids are clean but bass can dominate at default.",
+    "correctionNotes": [
+      "Use Sony MDR-M1ST Crinacle GRAS 43AG-7 AutoEq as the measured baseline, not prose-only inference.",
+      "Yaxi PRO M-ST pad effect is not confirmed by a dedicated measurement here, so treat it as a pad/preference layer: reduce the strongest stock bass shelf and broad treble lift modestly rather than fully retargeting.",
+      "Keep headroom generous because the measured baseline has large low-shelf and treble boosts.",
+      "If Simon reports too lean bass after listening, restore part of the 105 Hz shelf before changing mids."
+    ],
+    "credibility": "community",
+    "harshRegionsHz": [
+      {
+        "highHz": 8000,
+        "lowHz": 6000
+      }
+    ],
+    "id": "sony-mdr-m1st-yaxi",
+    "model": "MDR-M1ST Yaxi Pad",
+    "signature": "Closed-back studio monitor variant using YAXI PRO M-ST pads. Stock MDR-M1ST has a Crinacle/AutoEq GRAS 43AG-7 measured Harman correction; Yaxi pads are reported/user-confirmed to change the sound substantially by improving comfort, low-frequency resolution, and perceived openness/clarity, so bass and treble correction should be kept slightly less aggressive than stock AutoEq.",
+    "source": "AutoEq crinacle GRAS 43AG-7 Sony MDR-M1ST measured Harman correction; YAXI PRO M-ST product descriptions and community reports; user note that Yaxi pads make the sound substantially different from stock. No dedicated Yaxi-pad measurement confirmed.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "closed_back"
+  },
+  {
+    "brand": "Sony",
     "correctionNotes": [
       "Mid-bass can mask lower mids; a small dip around 150–200 Hz cleans up muddiness.",
       "Upper treble above 10 kHz is gently rolled off; a light high shelf adds air.",
       "Default DSP already shapes the sound, so keep EQ moves modest."
     ],
+    "credibility": "measured",
     "harshRegionsHz": [
       {
-        "lowHz": 6000,
-        "highHz": 7500
+        "highHz": 7500,
+        "lowHz": 6000
       }
     ],
-    "suggestedTargetCurveId": "harman-neutral",
+    "id": "sony-wh-1000xm5",
+    "model": "WH-1000XM5",
+    "signature": "Consumer-warm with elevated bass and a smooth, slightly relaxed treble; mids are clean but bass can dominate at default.",
     "source": "Aggregated measurement consensus (rtings)",
-    "credibility": "measured"
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "closed_back"
+  },
+  {
+    "brand": "TimeEar",
+    "correctionNotes": [
+      "Treat this as an open-earbud baseline: add only light bass/body support, not heavy sealed-IEM sub-bass correction.",
+      "Do not try to force extreme sub-bass; the open fit leaks low frequencies and too much low-shelf boost can erase the NH60's fast, airy character.",
+      "Keep mids mostly intact; review impressions emphasize clear, natural, warm vocals and spacious separation without muddiness.",
+      "Use a small 7-9 kHz cut when the user wants smoother treble or less metallic glare, while preserving some upper-air sparkle.",
+      "Because no measurement graph / AutoEq match was found, describe presets as estimated preference baselines rather than exact correction."
+    ],
+    "credibility": "estimated",
+    "harshRegionsHz": [
+      {
+        "highHz": 9000,
+        "lowHz": 7000
+      }
+    ],
+    "id": "timeear-nh60",
+    "model": "NH60",
+    "signature": "Open-air/flathead earbud with clear natural mids, fast tight bass that has scale but does not truly extend like a sealed IEM, and delicate extended treble with a mild metallic brilliance that may need light glare smoothing.",
+    "source": "Official/product and community sources: TimeEar NH60 official product page https://timeear.com/products/nh60-titanium-alloy-flagship-earbuds ; Flatheads news/specs https://flatheads.net/flathead-news/timeear-introduces-its-titanium-flatheads-nh60-nh80/ (14.2 mm dynamic driver, titanium alloy shell, 60 ohm / 109 dB @1 kHz, 20 Hz–20 kHz); Sekiyoxu Nishino note.com review https://note.com/sekixyo/n/n807477859dd6?hl=en (open-air earbud, tight responsive low range that does not crawl into sub-bass, clear natural mids, extended delicate treble with mild metallic brilliance). AutoEq lookup on 2026-07-06 found no exact match.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "earbud"
+  },
+  {
+    "brand": "TimeEar",
+    "correctionNotes": [
+      "Open earbud with no seal: sub-bass rolls off steeply (about -9 dB at 60 Hz and -13 dB at 40 Hz vs mids on the community graph). Support bass with a moderate low shelf plus a mid-bass bell; do not chase sealed-IEM sub-bass levels.",
+      "Requested tuning direction is a Harman-style target with appropriately enhanced bass: keep total low-end lift around +3 to +4 dB centered on 60-120 Hz so the open fit keeps its fast, clean character instead of forcing rumble.",
+      "Mids measure smooth and reviews praise natural vocals; leave 300 Hz-3 kHz essentially intact, with only a small ~280 Hz trim so the bass boost does not bleed into the low mids.",
+      "Treble falls early above ~6 kHz and sparkle is slightly subdued; a gentle 10 kHz high shelf restores some air, but avoid large upper-treble boosts because coupler behavior up there is unreliable.",
+      "Do not chase the mild 5-6.5 kHz secondary resonance or >8 kHz graph detail with narrow EQ; this is a single-unit informal measurement, so treat fine structure as approximate."
+    ],
+    "credibility": "community",
+    "harshRegionsHz": [
+      {
+        "highHz": 6500,
+        "lowHz": 5000
+      }
+    ],
+    "id": "timeear-nh80",
+    "model": "NH80",
+    "signature": "Open titanium flathead earbud with smooth natural mids, fast mid-bass but rolled-off sub-bass, and relaxed detailed treble with slightly subdued sparkle; community measurement shows bass rolling off below ~150 Hz and treble falling early above ~6 kHz.",
+    "source": "Head-Fi showcase review by mt877 with owner-measured L+R averaged raw FR graph (Psy smoothing, informal rig, single unit, 2026-05-09): https://www.head-fi.org/showcase/timeear-nh80-nianhua-glorious-years-earbuds.29127/reviews (graph: https://cdn.head-fi.org/a/13068385.jpg). Alias: Nianhua (Glorious Years). Specs per TimeEar/Flatheads: 14.2 mm dynamic driver, titanium alloy shell, 80 ohm, power hungry. AutoEq index lookup on 2026-07-25 found no exact match.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "earbud"
+  },
+  {
+    "brand": "TimeEar",
+    "correctionNotes": [
+      "No published measurement exists (AutoEq, squig.link, Crinacle, 0db all checked on 2026-07-29). Every band here is a review-derived preference baseline, not a correction curve - keep moves modest and do not use narrow high-Q filters.",
+      "Open fit with no seal: sub-bass leaks out. Use a low shelf around 45-60 Hz to restore weight; do not chase sealed-IEM rumble.",
+      "Unlike the NH80, mid-bass is already slightly emphasized/bloomy, so pair the sub-bass shelf with a small 150-200 Hz trim instead of a mid-bass boost.",
+      "Lower mids are reported as slightly recessed/spread out; a gentle ~400 Hz lift restores body without adding mud.",
+      "Upper mids around 2-3 kHz are already forward (the 'V' of the V shape). Do not add Harman ear-gain here; a small trim is usually the better direction.",
+      "Treble varies a lot with foam/pad choice. Use a light 5.5-7 kHz cut for metallic glare and a gentle 10 kHz shelf for the air that Korean reviewers find lacking; re-evaluate whenever the foams change.",
+      "Sits below the NH60/NH80 in refinement, so avoid heavy corrective EQ that would expose its limits - prefer a tonal-balance pass."
+    ],
+    "credibility": "community",
+    "harshRegionsHz": [
+      {
+        "highHz": 7000,
+        "lowHz": 5500
+      }
+    ],
+    "id": "timeear-tea99",
+    "model": "TEA-99",
+    "signature": "Affordable open flathead earbud with a mild V / upper-mid-forward voicing: punchy, slightly rich mid-bass that is unusually present for an earbud but still rolls off in the sub-bass because there is no seal; lower mids sit a little back; vocals (especially female) are clear and forward; treble is extended but described anywhere from politely restrained to mildly bright and metallic depending on foam/pad. 14.2 mm dynamic driver, 44 ohm, 115 dB.",
+    "source": "Community/reviewer consensus only, no measurement found (2026-07-29). Official specs: https://timeear.com/products/premium-metal-hifi-earbuds-tea-99 (14.2 mm DD, Daikoku pure-copper voice coil, 44 ohm +/-10%, 115 dB @1 kHz, 15.5 mm aluminum chamber, 3.5/4.4 mm). Reviews: arca.live/b/headphones/151248790 (KR: punchy bass, close clear vocals, treble not plentiful, pad-dependent); 0db.co.kr/REVIEW_USER/6056497 (KR owner: fun balance, good bass for open type, more resolving than FiiO FF1); bisonicr.ldblog.jp/archives/56047269 (JP: upper-mid-focused mild V, bright extended highs, mid-bass bloom); zhuanlan.zhihu.com/p/698398864 (CN: restrained, natural mid-highs); note.com/sekixyo/n/nc5946b966801 (JP: tight fast bass, smooth treble, follows NH60 direction with less refinement). AutoEq/squig.link lookups on 2026-07-29 found no match.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "earbud"
+  },
+  {
+    "brand": "Yamaha",
+    "correctionNotes": [
+      "Use the leather-pad measured correction as the primary baseline for Simon's current pad setup; Kuulokenurkka AutoEq has a dedicated 'Yamaha YH-5000SE (leather earpads)' result.",
+      "Chord Alto drive headroom should not be the bottleneck, but digital headroom still matters because the correction uses large +8 dB bass and +7 dB upper-presence boosts; keep a negative preamp around -7.5 dB for X8.",
+      "Reduce the 1.3 kHz excess substantially to avoid honk/forwardness, then restore the 2.6–4 kHz presence recession carefully for Crinacle/Harman-like clarity without making the headphone shouty.",
+      "Treat >7 kHz cautiously: pad seal, ear position, and measurement rig variance are large, so use only the measured broad shelf/limited resonance shaping rather than chasing narrow ultra-treble notches."
+    ],
+    "credibility": "measured",
+    "harshRegionsHz": [
+      {
+        "highHz": 1550,
+        "lowHz": 1150
+      },
+      {
+        "highHz": 4800,
+        "lowHz": 4300
+      },
+      {
+        "highHz": 10000,
+        "lowHz": 7000
+      }
+    ],
+    "id": "yamaha-yh-5000se",
+    "model": "YH-5000SE",
+    "signature": "Open-back orthodynamic/planar flagship. Leather-pad measurements show a large bass/sub-bass deficit relative to Harman/Crinacle-style over-ear targets, a strong 1.2–1.4 kHz forward/honk region, recessed 2.5–4 kHz presence/attack, and fit/fixture-sensitive treble above ~7 kHz.",
+    "source": "Primary for current setup: AutoEq Kuulokenurkka measured leather-pad result, Yamaha YH-5000SE (leather earpads), https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/Kuulokenurkka/over-ear/Yamaha%20YH-5000SE%20%28leather%20earpads%29/Yamaha%20YH-5000SE%20%28leather%20earpads%29%20ParametricEQ.txt . Cross-check: AutoEq/oratory1990 Yamaha YH-5000SE Harman baseline, https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/oratory1990/over-ear/Yamaha%20YH-5000SE/Yamaha%20YH-5000SE%20ParametricEQ.txt . Official Yamaha specs: open-back over-ear orthodynamic, 34 ohm, 98 dB/mW, 5 Hz–70 kHz, 320 g, leather pad material sheep-skin/PU plus suede option. No exact Crinacle YH-5000SE measurement was found via AutoEq/source lookup in this session; X8 preset therefore uses leather-pad measured correction shaped as a Crinacle/Harman-style reference, not a claimed Crinacle raw measurement.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "type": "open_back"
   }
 ]

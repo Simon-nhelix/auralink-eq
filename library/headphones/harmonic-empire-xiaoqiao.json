@@ -1,0 +1,31 @@
+{
+  "brand": "Harmonic Empire",
+  "correctionNotes": [
+    "Crinacle B&K 5128 measurement available via hangout.audio; AutoEQ correction computed toward IEF Preference 2025 (B&K 5128) target.",
+    "Mid-bass is elevated relative to IEF 2025: a 160 Hz bell cut around -2.5 dB tightens the low end without killing sub-bass extension.",
+    "Lower mids (300-500 Hz) are recessed: a +2 dB bell around 400 Hz restores body and male vocal weight.",
+    "Upper mids around 2.5-3 kHz need a +3 dB boost to reach IEF 2025 ear-gain; the stock tuning is forward at 4-5 kHz but recessed in the 2-3 kHz transition.",
+    "A 4.5-5 kHz presence peak needs a -3 to -4 dB cut to smooth the shouty edge.",
+    "The 8 kHz region shows elevated energy; treat conservatively (-2 to -3 dB) as part of this may be 5128 rig-dependent resonance.",
+    "A 9-10 kHz dip can accept a moderate +2.5 to +3 dB boost for treble sparkle, but avoid pushing above +3 dB in this region.",
+    "Ultra-treble above 12 kHz is unreliable on 5128; avoid narrow corrections there.",
+    "Semi-open design means sub-bass seal is moderate; do not chase extreme sub-bass boost."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 5500,
+      "lowHz": 4000
+    },
+    {
+      "highHz": 9000,
+      "lowHz": 7500
+    }
+  ],
+  "id": "harmonic-empire-xiaoqiao",
+  "model": "XiaoQiao",
+  "signature": "Semi-open single graphene DD IEM with a V-shaped tuning: elevated sub-bass and mid-bass, slightly recessed lower mids, forward upper-mid/presence peak around 3-5 kHz, an 8 kHz resonance bump, a 9-10 kHz dip, and relaxed air above 12 kHz. Detailed female vocals and airy treble per reviews, but bass lacks physicality and male voices can sound thin.",
+  "source": "Crinacle B&K Type 5128 (ITU-T P.57 Type 4.3) measurement via hangout.audio graph tool: https://graph.hangout.audio/iem/5128/?share=IEF_Preference_2025_(B%2526K_5128)_Target,HE_XiaoQiao . AutoEQ PEQ computed in-browser toward IEF Preference 2025 (B&K 5128) target, 20-15000 Hz, gain +/-12 dB, Q 0.5-2.0. Corroborated by Head-Fi reviews (Hifi Juegos, ybricko): https://www.head-fi.org/showcase/tangzu-harmonic-empire-xiaoqiao-iem.28377/ . Also measured on Aftersound squig.link (IEC 711 clone). Specs: single graphene DD, 104 dB @1 kHz, 9.8 ohm, semi-open, 4.4 mm balanced.",
+  "suggestedTargetCurveId": "crinacle-ief-2025",
+  "type": "iem"
+}

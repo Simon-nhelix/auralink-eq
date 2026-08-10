@@ -1,0 +1,21 @@
+{
+  "brand": "Apple",
+  "correctionNotes": [
+    "Presence around 3 kHz can be a touch forward for long listening; a small dip helps.",
+    "Adaptive EQ already compensates for seal, so only modest corrections are appropriate.",
+    "Sub-bass is full thanks to in-ear seal; add very little extra low end."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 3600,
+      "lowHz": 2800
+    }
+  ],
+  "id": "apple-airpods-pro-2",
+  "model": "AirPods Pro 2",
+  "signature": "Adaptive in-ear with a Harman-leaning tuning: clean elevated bass, neutral mids, and a slightly forward presence region; treble is smooth.",
+  "source": "Aggregated measurement consensus (rtings)",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "true_wireless"
+}

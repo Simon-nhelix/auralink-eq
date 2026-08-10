@@ -1,0 +1,21 @@
+{
+  "brand": "Sennheiser",
+  "correctionNotes": [
+    "Lower treble (5–7 kHz) is recessed, so a small lift adds clarity and air.",
+    "Sub-bass roll-off below ~40 Hz benefits from a modest low shelf.",
+    "Already warm — avoid stacking extra mid-bass or it turns muddy."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "highHz": 7000,
+      "lowHz": 5500
+    }
+  ],
+  "id": "sennheiser-hd650",
+  "model": "HD650",
+  "signature": "Warm-neutral, smooth and relaxed; the classic 'veil' is a gentle upper-mid/lower-treble dip with a touch more mid-bass than the HD600.",
+  "source": "Aggregated measurement consensus (Oratory1990 style targets)",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "open_back"
+}

@@ -1,0 +1,22 @@
+{
+  "brand": "Sony",
+  "correctionNotes": [
+    "Use Sony MDR-M1ST Crinacle GRAS 43AG-7 AutoEq as the measured baseline, not prose-only inference.",
+    "Yaxi PRO M-ST pad effect is not confirmed by a dedicated measurement here, so treat it as a pad/preference layer: reduce the strongest stock bass shelf and broad treble lift modestly rather than fully retargeting.",
+    "Keep headroom generous because the measured baseline has large low-shelf and treble boosts.",
+    "If Simon reports too lean bass after listening, restore part of the 105 Hz shelf before changing mids."
+  ],
+  "credibility": "community",
+  "harshRegionsHz": [
+    {
+      "highHz": 8000,
+      "lowHz": 6000
+    }
+  ],
+  "id": "sony-mdr-m1st-yaxi",
+  "model": "MDR-M1ST Yaxi Pad",
+  "signature": "Closed-back studio monitor variant using YAXI PRO M-ST pads. Stock MDR-M1ST has a Crinacle/AutoEq GRAS 43AG-7 measured Harman correction; Yaxi pads are reported/user-confirmed to change the sound substantially by improving comfort, low-frequency resolution, and perceived openness/clarity, so bass and treble correction should be kept slightly less aggressive than stock AutoEq.",
+  "source": "AutoEq crinacle GRAS 43AG-7 Sony MDR-M1ST measured Harman correction; YAXI PRO M-ST product descriptions and community reports; user note that Yaxi pads make the sound substantially different from stock. No dedicated Yaxi-pad measurement confirmed.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "closed_back"
+}

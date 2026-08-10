@@ -1,0 +1,26 @@
+{
+  "brand": "Moondrop",
+  "correctionNotes": [
+    "AutoEq has no published exact match, so use the user-provided Simkin Boris measurement graph and conservative earbud tuning notes rather than exact Harman correction.",
+    "Do not chase sealed-IEM sub-bass; modest low-shelf support is acceptable but large boosts will likely add distortion or do little acoustically.",
+    "Preserve the audible midrange strength; smooth likely roughness around 4-5 kHz and add only gentle upper-air support.",
+    "Fit, foam cover, and shell position can change response strongly below about 500-1000 Hz."
+  ],
+  "credibility": "community",
+  "harshRegionsHz": [
+    {
+      "highHz": 5200,
+      "lowHz": 4200
+    },
+    {
+      "highHz": 7500,
+      "lowHz": 6500
+    }
+  ],
+  "id": "moondrop-nice-buds",
+  "model": "Nice Buds",
+  "signature": "Open flat-head earbud with seal-dependent bass roll-off, clear and forward-feeling mids, a budget roughness/edge around the upper-mid to lower-treble region, and limited true sub-bass. Best treated as a mid-focused, lightweight earbud rather than forced into full Harman bass.",
+  "source": "Official Moondrop product specs: https://moondroplab.com/en/products/nice-buds ; user-provided Simkin Boris frequency response screenshot at /Users/donahn/Downloads/Moondrop-Nice-Buds-PFR.jpg ; Simkin Boris review/measurements: https://simkinbh.com/?p=19103 . Caveat: no AutoEq exact match or raw target-compensated data; tuning is a conservative baseline inferred from the graph and user listening notes.",
+  "suggestedTargetCurveId": "harman-neutral",
+  "type": "earbud"
+}
