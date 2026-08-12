@@ -12,6 +12,10 @@ struct MiniTuningPickerView: View {
     let presets: [EQPreset]
     let currentProfile: HeadphoneProfile?
     let currentPresetId: String
+    /// Fixed ScrollView height. MenuBarExtra collapses unbounded scroll regions;
+    /// callers may shrink this when a status notice is also visible so the
+    /// popover still fits under the menu bar.
+    var listHeight: CGFloat = 190
     let presetsForProfile: (HeadphoneProfile?) -> [EQPreset]
     let onSelectHeadphone: (HeadphoneProfile?) -> Void
     let onSelectPreset: (EQPreset) -> Void
@@ -29,7 +33,7 @@ struct MiniTuningPickerView: View {
             // MenuBarExtra sizes a ScrollView to almost zero when it only has
             // a maximum height. Reserve real space so search results are
             // visible instead of existing in a collapsed scroll region.
-            .frame(height: 190)
+            .frame(height: listHeight)
         }
         .padding(10)
     }
