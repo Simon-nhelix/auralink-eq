@@ -813,5 +813,31 @@
     "source": "Primary for current setup: AutoEq Kuulokenurkka measured leather-pad result, Yamaha YH-5000SE (leather earpads), https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/Kuulokenurkka/over-ear/Yamaha%20YH-5000SE%20%28leather%20earpads%29/Yamaha%20YH-5000SE%20%28leather%20earpads%29%20ParametricEQ.txt . Cross-check: AutoEq/oratory1990 Yamaha YH-5000SE Harman baseline, https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/oratory1990/over-ear/Yamaha%20YH-5000SE/Yamaha%20YH-5000SE%20ParametricEQ.txt . Official Yamaha specs: open-back over-ear orthodynamic, 34 ohm, 98 dB/mW, 5 Hz–70 kHz, 320 g, leather pad material sheep-skin/PU plus suede option. No exact Crinacle YH-5000SE measurement was found via AutoEq/source lookup in this session; X8 preset therefore uses leather-pad measured correction shaped as a Crinacle/Harman-style reference, not a claimed Crinacle raw measurement.",
     "suggestedTargetCurveId": "harman-neutral",
     "type": "open_back"
+  },
+  {
+    "brand": "Aune",
+    "model": "AC55",
+    "id": "aune-ac55",
+    "type": "on_ear",
+    "credibility": "estimated",
+    "signature": "Open-type clip-on mid-ground: mild bass, Harman-leaning target intent; no public FR in AutoEq/Squig/Crinacle — community/estimated tuning baseline for Luxsin X8 listening.",
+    "source": "Estimated/community (no published AutoEq/Squig/Crinacle FR as of 2026-08-12). Sibling context from Aune AC45 open clip-on notes.",
+    "suggestedTargetCurveId": "harman-neutral",
+    "harshRegionsHz": [
+      {
+        "lowHz": 3000,
+        "highHz": 4000
+      },
+      {
+        "lowHz": 7500,
+        "highHz": 10000
+      }
+    ],
+    "correctionNotes": [
+      "No lab FR available; treat as estimated starting point and refine by ear on Luxsin X8.",
+      "Open clip-on seal: keep sub-bass mild; prefer low-shelf around 60 Hz over deep boosts.",
+      "Upper-mid / presence around 3–4 kHz often energetic on open clip-ons; small cut reduces shout.",
+      "Gentle air shelf near 10 kHz for openness without harshness."
+    ]
   }
 ]
