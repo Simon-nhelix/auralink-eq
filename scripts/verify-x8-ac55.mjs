@@ -1,0 +1,17 @@
+import { pathToFileURL } from "node:url";
+import { join } from "node:path";
+import { homedir } from "node:os";
+const REPO = join(homedir(), "Documents/ai_eq");
+const { LuxsinX8Target } = await import(pathToFileURL(join(REPO, "mcp-server/dist/targets/index.js")).href);
+const target = new LuxsinX8Target();
+const peq = await target.client.getPeq();
+const state = await target.client.getDeviceInfo();
+const idx = state.peqSelect;
+const active = typeof idx === "number" ? peq.peq[idx]?.name : null;
+const entry = peq.peq.find((e) => e.name === "Aune AC55");
+console.log("ACTIVE=", JSON.stringify(active));
+console.log("ENTRY_KEYS=", entry ? Object.keys(entry) : null);
+if (!entry) process.exit(1);
+const filters = entry.filters ?? entry.filter ?? entry.peqFilters ?? entry.eq;
+console.log("FILTERS_TYPE=", Array.isArray(filters) ? "array" : typeof filters);
+console.log("ENTRY=", JSON.stringify(entry, null, 2));
