@@ -65,6 +65,13 @@ jobs:
             fi
           done
 
+      - name: Test legacy-to-collection migration
+        working-directory: .
+        # The migration script is the only code that preserves pre-split user
+        # data; it is exercised end-to-end against scratch fixtures (first run,
+        # idempotency, no-clobber conflicts, invalid ids, corrupt manifest).
+        run: node --test scripts/migrate-collection.test.mjs
+
   release-app:
     name: Build Auralink EQ.app artifact
     runs-on: macos-15

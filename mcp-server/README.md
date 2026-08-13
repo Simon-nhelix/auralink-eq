@@ -44,8 +44,9 @@ rollback tools require the app.
 | `add_preset_to_collection` | write | Copies a preset into the user's collection. Ask first. |
 | `remove_preset_from_collection` | write | Drops a collection entry, keeping the working copy. |
 | `delete_preset` | write | Deletes a local preset and refreshes the app when online. |
-| `create_eq_preset` | write | **Validates before writing**; applies auto-preamp; never touches live audio. |
+| `create_eq_preset` | write | **Validates before writing**; never touches live audio unless explicitly asked with `applyNow:true` + `confirmed:true`. |
 | `audition_eq_preset` | **live** | Applies an unsaved, validated preset temporarily after confirmation. |
+| `register_headphone_baseline` | write | One-shot headphone registration: upserts the profile and saves its measured/explicit baseline into the collection. |
 | `get_autoeq_correction` | network read | Fetches/caches measured AutoEq PEQ and GraphicEQ data with provenance. |
 | `get_response_curve` | read | Computes the combined left/right response before auditioning. |
 | `validate_eq_preset` | read | Offline safety + clipping check for an id or inline bands. |
@@ -58,7 +59,8 @@ rollback tools require the app.
 
 Live and destructive tools are explicitly annotated in their MCP metadata.
 `create_eq_preset` always runs the validator first and refuses to write a preset
-that produces a validation **error**.
+that produces a validation **error**. Because it can also apply the result to
+live audio (`applyNow:true` + `confirmed:true`), it is annotated destructive.
 
 ### Resources (5)
 

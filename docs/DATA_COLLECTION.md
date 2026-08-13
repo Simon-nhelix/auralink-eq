@@ -134,6 +134,12 @@ directory, the Application Support mirror, and the legacy aggregate
 `headphone-profiles.json`, then writes them into your collection. It **only
 copies** — the old locations are left untouched, so a mistaken run costs nothing.
 
+It never overwrites a record already in your collection. When the same id exists
+with different content, the record is reported as a conflict and skipped; delete
+the destination file and re-run if you want the legacy copy to win. Records with
+filesystem-unsafe ids are skipped with a warning, and a corrupt `manifest.json`
+is reported and preserved rather than replaced.
+
 Presets in your working library that were never part of the shared set stay
 machine-local. The script reports how many, and you promote the ones you want.
 

@@ -252,15 +252,11 @@ function collectionPresetPath(id: string): string {
 
 async function writeCollectionHeadphone(profile: HeadphoneProfile): Promise<void> {
   await ensureDir(collectionHeadphonesDir());
-  await fs.writeFile(collectionHeadphonePath(profile.id), stableStringify(profile), "utf8");
+  await atomicWriteFile(collectionHeadphonePath(profile.id), stableStringify(profile));
 }
 
-async function removeCollectionHeadphone(id: string): Promise<void> {
-  try {
-    await fs.unlink(collectionHeadphonePath(id));
-  } catch {
-    /* ignore missing */
-  }
+async function removeCollectionHeadphone(id: string): Promise<boolean> {
+  return unlinkUnlessMissing(collectionHeadphonePath(id));
 }
 
 async function loadHeadphoneProfilesFromLibraryDir(dir: string): Promise<HeadphoneProfile[]> {
@@ -295,6 +291,42 @@ async function loadHeadphoneProfilesFromLibraryDir(dir: string): Promise<Headpho
 
 async function ensureDir(dir: string): Promise<void> {
   await fs.mkdir(dir, { recursive: true });
+}
+
+/**
+ * Writes a file atomically: temp file in the same directory, then rename.
+ * A crash mid-write can never leave a truncated JSON at the real path —
+ * readers see either the old file or the new one, never a half-written mix.
+ */
+async function atomicWriteFile(filePath: string, content: string): Promise<void> {
+  const dir = path.dirname(filePath);
+  const tempPath = path.join(
+    dir,
+    `.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+  try {
+    await fs.writeFile(tempPath, content, "utf8");
+    await fs.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+/**
+ * Deletes a file, tolerating "already gone" but surfacing real failures.
+ * - Returns: true when a file was removed, false when it did not exist.
+ * - Throws: on any other error (permissions, I/O) — a silent "success" would
+ *   leave the record in place while the caller reports it deleted.
+ */
+async function unlinkUnlessMissing(filePath: string): Promise<boolean> {
+  try {
+    await fs.unlink(filePath);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
 }
 
 // MARK: - Band / preset normalization (mirrors EQBand.clamped + EQPreset.normalized)
@@ -492,18 +524,13 @@ export async function addPresetToCollection(id: string): Promise<EQPreset | null
   const preset = await getPreset(id);
   if (!preset) return null;
   await ensureDir(collectionPresetsDir());
-  await fs.writeFile(collectionPresetPath(preset.id), stableStringify(preset), "utf8");
+  await atomicWriteFile(collectionPresetPath(preset.id), stableStringify(preset));
   return preset;
 }
 
 /** Remove a preset from the collection, leaving the working copy alone. */
 export async function removePresetFromCollection(id: string): Promise<boolean> {
-  try {
-    await fs.unlink(collectionPresetPath(id));
-    return true;
-  } catch {
-    return false;
-  }
+  return unlinkUnlessMissing(collectionPresetPath(id));
 }
 
 /**
@@ -531,7 +558,7 @@ export async function savePreset(preset: EQPreset): Promise<EQPreset> {
 
   // Working directory only. Getting into the user's collection takes an explicit
   // `addPresetToCollection`.
-  await fs.writeFile(presetFilePath(saved.id), stableStringify(saved), "utf8");
+  await atomicWriteFile(presetFilePath(saved.id), stableStringify(saved));
   return saved;
 }
 
@@ -539,22 +566,17 @@ export async function savePreset(preset: EQPreset): Promise<EQPreset> {
 export async function deletePreset(id: string): Promise<EQPreset | null> {
   const preset = await getPreset(id);
   if (!preset) return null;
-  try {
-    await fs.unlink(presetFilePath(id));
-  } catch {
-    /* ignore missing file after the successful read */
-  }
+  await unlinkUnlessMissing(presetFilePath(id));
   // Drop the collection copy too, otherwise the preset reappears on next load
   // and the delete reads as having failed.
   await removePresetFromCollection(id);
-  try {
-    await fs.rm(path.join(revisionsDir(), requireRecordId(id)), {
-      recursive: true,
-      force: true,
-    });
-  } catch {
-    /* ignore revision cleanup failures */
-  }
+  // Revision cleanup is best-effort but real failures are surfaced: fs.rm with
+  // force:true already tolerates a missing folder, so a rejection here means a
+  // genuine I/O problem the caller should hear about.
+  await fs.rm(path.join(revisionsDir(), requireRecordId(id)), {
+    recursive: true,
+    force: true,
+  });
   return preset;
 }
 
@@ -788,7 +810,7 @@ export async function appendTuningFeedback(
   const current = await loadUserTuningPreferences();
   const entries = [entry, ...current.entries].slice(0, MAX_PREF_ENTRIES);
   const prefs: UserTuningPreferences = { entries };
-  await fs.writeFile(prefsFilePath(), stableStringify(prefs), "utf8");
+  await atomicWriteFile(prefsFilePath(), stableStringify(prefs));
   return prefs;
 }
 
@@ -801,10 +823,9 @@ export async function deleteTuningFeedback(
   if (idx < 0) return null;
   const [removed] = current.entries.splice(idx, 1);
   await ensureDir(userDataDir());
-  await fs.writeFile(
+  await atomicWriteFile(
     prefsFilePath(),
-    stableStringify({ entries: current.entries }),
-    "utf8"
+    stableStringify({ entries: current.entries })
   );
   return removed;
 }

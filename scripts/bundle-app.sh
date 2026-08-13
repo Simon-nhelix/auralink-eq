@@ -82,9 +82,21 @@ if [[ -n "${CORE_BUNDLE}" ]]; then
     cp -R "${CORE_BUNDLE}" "${RESOURCES_DIR}/"
     echo "    bundled resources: $(basename "${CORE_BUNDLE}")"
 else
-    echo "    warning: no AuralinkCore_*.bundle found; the app will fall back" >&2
-    echo "             to seeding knowledge data from ${HOME}/Library/Application Support/Auralink/data" >&2
+    # Fail closed: without the core resource bundle the app cannot seed
+    # target curves / safety rules on a clean machine — shipping that artifact
+    # would present a broken first-run experience as a successful build.
+    echo "    error: no AuralinkCore_*.bundle found in ${RELEASE_BIN_DIR}" >&2
+    echo "           the app would launch without bundled target curves / safety rules" >&2
+    exit 1
 fi
+
+# Verify the bundle actually contains the two app-owned knowledge files.
+for required in target-curves.json safety-rules.json; do
+    if ! find "${RESOURCES_DIR}/$(basename "${CORE_BUNDLE}")" -name "${required}" -print -quit | grep -q .; then
+        echo "    error: ${required} missing from the bundled resources" >&2
+        exit 1
+    fi
+done
 
 # --- 5. Copy the app icon ---------------------------------------------------
 if [[ -f "${APP_ICON}" ]]; then

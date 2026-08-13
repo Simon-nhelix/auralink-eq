@@ -265,7 +265,7 @@ the MCP section of **[docs/SETUP.md](docs/SETUP.md)**.
   64–8192-frame steady callbacks, renderer transitions, FIR gain/bypass ramps,
   cold preparation time, and retained-heap growth.
 - **AI / MCP control: implemented for alpha evaluation.** The authenticated
-  localhost control server and Node MCP server expose 25 tools plus resources,
+  localhost control server and Node MCP server expose 28 tools plus resources,
   prompts, offline validation, AutoEq lookup, and optional Luxsin X8 control.
 
 ## Privacy, security, and licensing

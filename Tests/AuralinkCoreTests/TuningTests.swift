@@ -1,3 +1,4 @@
+import CryptoKit
 import XCTest
 @testable import AuralinkCore
 
@@ -133,6 +134,109 @@ final class TuningTests: XCTestCase {
         preset.bands
             .filter { $0.enabled && $0.type.usesGain && $0.frequencyHz >= low && $0.frequencyHz <= high }
             .reduce(0) { $0 + $1.gainDb }
+    }
+
+    // MARK: Knowledge seeding / upgrades
+
+    private func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func makeSeedFixture() throws -> (KnowledgeBase, URL) {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("auralink-seed-tests-\(UUID().uuidString)", isDirectory: true)
+        let kb = KnowledgeBase(dataDirectory: nil, collectionHeadphonesDirectory: nil)
+        return (kb, root)
+    }
+
+    private func seedHashesURL(in dir: URL) -> URL {
+        dir.appendingPathComponent(".seed-hashes.json")
+    }
+
+    func testSeedFreshInstallCopiesBundledFiles() throws {
+        let (kb, root) = try makeSeedFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = kb.seedDataDirectory(root)
+        XCTAssertEqual(Set(result.refreshed), ["target-curves", "safety-rules"])
+        XCTAssertTrue(result.keptUserModified.isEmpty)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: seedHashesURL(in: root).path))
+
+        // Seeded data actually decodes.
+        let seeded = KnowledgeBase(dataDirectory: root, collectionHeadphonesDirectory: nil)
+        XCTAssertGreaterThanOrEqual(seeded.targetCurves.count, 7)
+    }
+
+    func testSeedIsIdempotentWhenNothingChanged() throws {
+        let (kb, root) = try makeSeedFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        _ = kb.seedDataDirectory(root)
+        let second = kb.seedDataDirectory(root)
+        XCTAssertTrue(second.refreshed.isEmpty, "No bundle change → no rewrite")
+        XCTAssertTrue(second.keptUserModified.isEmpty)
+    }
+
+    /// Simulates an app upgrade: the on-disk file matches what the app last
+    /// seeded (sidecar hash), but the bundle has moved on. The seed must
+    /// atomically replace the stale copy.
+    func testSeedRefreshesStaleAppOwnedCopyOnUpgrade() throws {
+        let (kb, root) = try makeSeedFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        _ = kb.seedDataDirectory(root)
+
+        // Pretend the previous seed wrote "old" content by replacing the file
+        // AND recording that content's hash as the last seed.
+        let curvesFile = root.appendingPathComponent("target-curves.json")
+        let oldContent = "[{\"id\":\"old-curve\",\"name\":\"Old\",\"category\":\"reference\",\"description\":\"x\",\"hints\":[]}]"
+        let oldData = Data(oldContent.utf8)
+        try oldData.write(to: curvesFile, options: [.atomic])
+        var hashes = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: seedHashesURL(in: root)))
+        hashes["target-curves"] = sha256Hex(oldData)
+        try JSONEncoder().encode(hashes).write(to: seedHashesURL(in: root))
+
+        let result = kb.seedDataDirectory(root)
+        XCTAssertEqual(result.refreshed, ["target-curves"])
+        XCTAssertTrue(result.keptUserModified.isEmpty)
+
+        // The file is back to the bundled content (decodes to the full set).
+        let seeded = KnowledgeBase(dataDirectory: root, collectionHeadphonesDirectory: nil)
+        XCTAssertGreaterThanOrEqual(seeded.targetCurves.count, 7)
+    }
+
+    /// A copy the user edited after seeding is kept, not clobbered.
+    func testSeedKeepsUserModifiedCopy() throws {
+        let (kb, root) = try makeSeedFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        _ = kb.seedDataDirectory(root)
+
+        let rulesFile = root.appendingPathComponent("safety-rules.json")
+        let custom = "{\"gainMinDb\":-12,\"gainMaxDb\":12,\"qMin\":0.1,\"qMax\":10,\"maxBoostDb\":4,\"maxAggregateBoostDb\":6,\"targetHeadroomDb\":1,\"autoPreampEnabled\":true}"
+        try Data(custom.utf8).write(to: rulesFile, options: [.atomic])
+
+        let result = kb.seedDataDirectory(root)
+        XCTAssertTrue(result.refreshed.isEmpty)
+        XCTAssertEqual(result.keptUserModified, ["safety-rules"])
+        // Content untouched.
+        XCTAssertEqual(try String(contentsOf: rulesFile), custom)
+    }
+
+    /// Pre-tracking installs (no sidecar) converge on the bundle once.
+    func testSeedReseedsPreTrackingInstall() throws {
+        let (kb, root) = try makeSeedFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+        let stale = "{\"gainMinDb\":-18,\"gainMaxDb\":18,\"qMin\":0.1,\"qMax\":10,\"maxBoostDb\":5,\"maxAggregateBoostDb\":9,\"targetHeadroomDb\":1,\"autoPreampEnabled\":true}"
+        try Data(stale.utf8).write(to: root.appendingPathComponent("safety-rules.json"), options: [.atomic])
+
+        let result = kb.seedDataDirectory(root)
+        XCTAssertTrue(result.refreshed.contains("safety-rules"))
+        // After the one-time reseed, the value matches the bundled rules.
+        let seeded = KnowledgeBase(dataDirectory: root, collectionHeadphonesDirectory: nil)
+        XCTAssertEqual(seeded.safetyRules.maxBoostDb, 6, accuracy: 0.001)
     }
 
     // MARK: Knowledge loading

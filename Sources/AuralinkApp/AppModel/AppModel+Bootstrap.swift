@@ -7,8 +7,15 @@ extension AppModel {
     func bootstrap() {
         // Publish the bundled target curves and safety rules to a stable on-disk
         // location so the external MCP server reads the same values the app uses.
-        // Nothing seeds headphone profiles: the collection is the user's to fill.
-        knowledge.seedDataDirectory(AuralinkPaths.dataDirectory)
+        // Refreshed-on-upgrade files require a knowledge reload; a copy the user
+        // modified after seeding is kept and surfaced instead of silently kept stale.
+        let seedResult = knowledge.seedDataDirectory(AuralinkPaths.dataDirectory)
+        if !seedResult.refreshed.isEmpty {
+            _ = reloadKnowledge()
+        }
+        if !seedResult.keptUserModified.isEmpty {
+            NSLog("Auralink: keeping user-modified knowledge files: \(seedResult.keptUserModified.joined(separator: ", "))")
+        }
         // Ensure collection manifest exists — but never overwrite a corrupt one.
         // A corrupt manifest indicates a newer build or manual editing; silently
         // replacing it would erase the schema marker and permit incompatible writes.
@@ -100,18 +107,9 @@ extension AppModel {
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
         // Collection watchers are optional: a fresh install or a user who hasn't
-        // cloned their collection yet simply has no directory to watch.
-        collectionHeadphonesWatcher = makeOptionalDirectoryWatcher(
-            url: AuralinkPaths.collectionHeadphonesDirectory
-        ) { [weak self] in
-            Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
-        }
-        // A `git pull` in the collection changes presets too, so watch both halves.
-        collectionPresetsWatcher = makeOptionalDirectoryWatcher(
-            url: AuralinkPaths.collectionPresetsDirectory
-        ) { [weak self] in
-            Task { @MainActor in self?.schedulePresetReloadFromDisk() }
-        }
+        // cloned their collection yet simply has no directory to watch. They are
+        // attached lazily by `ensureCollectionWatchers` once the directories appear.
+        ensureCollectionWatchers()
     }
 
     /// Like `makeDirectoryWatcher`, but returns nil silently when the directory
@@ -185,6 +183,7 @@ extension AppModel {
         self.tuner = TuningEngine(knowledge: kb, validator: val)
         self.headphoneProfiles = kb.headphoneProfiles
         self.targetCurves = kb.targetCurves
+        ensureCollectionWatchers()
         statusMessage = "Knowledge refreshed: \(kb.headphoneProfiles.count) headphones, \(kb.targetCurves.count) targets."
         return (kb.headphoneProfiles.count, kb.targetCurves.count)
     }
@@ -196,6 +195,28 @@ extension AppModel {
             refreshCollectionMembership()
         } catch {
             lastError = "Couldn't load presets: \(error.localizedDescription)"
+        }
+        ensureCollectionWatchers()
+    }
+
+    /// (Re)attaches collection watchers when the directories exist but aren't
+    /// watched — e.g. the user cloned their collection after launch, or replaced
+    /// the directory with a fresh checkout. A replaced directory invalidates the
+    /// old file descriptor, so a dead watcher is also re-created here.
+    func ensureCollectionWatchers() {
+        if collectionHeadphonesWatcher == nil {
+            collectionHeadphonesWatcher = makeOptionalDirectoryWatcher(
+                url: AuralinkPaths.collectionHeadphonesDirectory
+            ) { [weak self] in
+                Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
+            }
+        }
+        if collectionPresetsWatcher == nil {
+            collectionPresetsWatcher = makeOptionalDirectoryWatcher(
+                url: AuralinkPaths.collectionPresetsDirectory
+            ) { [weak self] in
+                Task { @MainActor in self?.schedulePresetReloadFromDisk() }
+            }
         }
     }
 

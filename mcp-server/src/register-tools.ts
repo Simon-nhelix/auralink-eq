@@ -1023,7 +1023,7 @@ export function registerTools(server: McpServer): void {
           .default(false)
           .describe("Set true only when the user explicitly asked for this live-audio change."),
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
     },
     async ({
       name,

@@ -115,7 +115,8 @@ export function registerPrompts(server: McpServer): void {
               `.\n\nSteps:\n` +
               `1. Read eq://target-curves and pick the curve whose id/category best matches "${genre}"; use its band hints as a starting point.\n` +
               (headphone
-                ? `2. Call get_headphone_profile for the ${headphone} and adjust the hints to its signature and harsh regions.\n`
+                ? `2. Call get_headphone_profile for the ${headphone} and adjust the hints to its signature and harsh regions. ` +
+                  `If no profile exists, call get_autoeq_correction and register_headphone_baseline to create a measured baseline first (fresh installs ship no headphone database); if AutoEq has no match either, keep the tuning generic and say so.\n`
                 : `2. (No headphone given — keep the tuning generic but conservative.)\n`) +
               `3. Read eq://safety-rules and keep every move within the limits.\n` +
               `4. Call create_eq_preset (it validates before writing). Name it clearly, e.g. "${headphone ? headphone + " – " : ""}${genre}".\n` +
