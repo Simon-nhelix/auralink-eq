@@ -1,0 +1,21 @@
+{
+  "brand": "Symphonium Audio",
+  "correctionNotes": [
+    "Use the Super* Review clone-IEC711 standard-fit L/R average (REW, 2026-05-21) as the primary measured baseline: squig.link files Symphonium Zenith L/R.",
+    "Relative to Crinacle IEF Preference 2025 (IEC711: JM-1 delta + 105 Hz +8 dB low shelf Q 0.71 + 2500 Hz -4 dB high shelf Q 0.4), trim the extra sub-bass, clean ~160 Hz and ~1.7 kHz, restore ~3 kHz presence, and relax ~7 kHz.",
+    "Do not chase the 10 kHz dip or other narrow peaks above 7 kHz: Super* Review shallow/deep/S2 plus Elise Audio and Twister6/Animagus 711 traces show strong insertion-depth and coupler sensitivity there."
+  ],
+  "credibility": "measured",
+  "harshRegionsHz": [
+    {
+      "lowHz": 6000,
+      "highHz": 8000
+    }
+  ],
+  "id": "symphonium-audio-zenith",
+  "model": "Zenith",
+  "signature": "Sub-bass-forward 4BA flagship IEM (Symphonium x Elise Audio) with a slightly recessed 3 kHz presence versus IEF Preference 2025, extra 6–7 kHz energy, and a fit-sensitive 10 kHz dip on 711.",
+  "source": "Measured Super* Review squig.link clone IEC711 standard-fit L/R average, 2026-05-21: https://squig.link/ (Symphonium Audio x Elise Audio Zenith). Cross-check: Super* Review shallow/deep/S2, Elise Audio squig https://eliseaudio.squig.link/ (Symphonium x Elise Zenith), Twister6 Animagus IEC711 https://animagus.squig.link/ and review https://twister6.com/2026/06/24/symphonium-audio-x-elise-audio-zenith/ . AutoEq GitHub index 2026-08-13 has no Symphonium Zenith (only Audio Zenith PMx2 / IMR Zenith / KZ Zenith). Target: Crinacle IEF Preference 2025 IEC711 parameters https://crinacle.com/2025/02/05/the-new-2025-ief-target/ constructed from Super* Review ∆ JM-1 (10 dB/oct tilt removed via paired ∆ 5128DF vs ∆ 5128DF-10dB Tilt) + 105 Hz +8 dB LS / 2500 Hz -4 dB HS. AutoEQ constrained to 20–7000 Hz.",
+  "suggestedTargetCurveId": "crinacle-ief-2025",
+  "type": "iem"
+}
