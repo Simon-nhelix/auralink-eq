@@ -1,5 +1,19 @@
 import Foundation
 
+public enum CollectionManifestError: Error, LocalizedError {
+    case corrupt(url: URL, underlying: Error)
+    case writeFailed(url: URL, underlying: Error)
+
+    public var errorDescription: String? {
+        switch self {
+        case .corrupt(let url, let underlying):
+            return "Collection manifest at \(url.path) is corrupt or from a newer build: \(underlying.localizedDescription)"
+        case .writeFailed(let url, let underlying):
+            return "Failed to write collection manifest at \(url.path): \(underlying.localizedDescription)"
+        }
+    }
+}
+
 /// Metadata for a user-owned headphone/preset collection.
 ///
 /// The collection lives in its own directory (often a git checkout) and evolves on
@@ -38,11 +52,30 @@ public struct CollectionManifest: Codable, Equatable, Sendable {
         return (enc, dec)
     }
 
-    /// Reads the manifest at `url`, or nil when it is absent or unreadable.
-    public static func read(from url: URL) -> CollectionManifest? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
+    /// Reads the manifest at `url`.
+    /// - Returns: The manifest if readable, `nil` if the file doesn't exist
+    /// - Throws: `CollectionManifestError.corrupt` if the file exists but cannot be decoded
+    public static func read(from url: URL) -> Result<CollectionManifest?, CollectionManifestError> {
+        guard let data = try? Data(contentsOf: url) else {
+            return .success(nil) // File doesn't exist
+        }
         let (_, decoder) = coder()
-        return try? decoder.decode(CollectionManifest.self, from: data)
+        do {
+            let manifest = try decoder.decode(CollectionManifest.self, from: data)
+            return .success(manifest)
+        } catch {
+            return .failure(.corrupt(url: url, underlying: error))
+        }
+    }
+
+    /// Legacy compatibility: reads the manifest, returning nil for missing or corrupt.
+    /// Prefer `read(from:)` for proper error handling.
+    @available(*, deprecated, message: "Use read(from:) which returns Result")
+    public static func readOrNil(from url: URL) -> CollectionManifest? {
+        switch read(from: url) {
+        case .success(let manifest): return manifest
+        case .failure: return nil
+        }
     }
 
     public func write(to url: URL) throws {
@@ -55,13 +88,27 @@ public struct CollectionManifest: Codable, Equatable, Sendable {
     }
 
     /// Writes a default manifest when the collection has none, so a freshly
-    /// created or hand-cloned directory becomes self-describing. Never overwrites
-    /// an existing manifest — the user's own metadata wins.
+    /// created or hand-cloned directory becomes self-describing.
+    /// - Important: Never overwrites an existing manifest — even a corrupt one.
+    ///   A corrupt manifest indicates data from a newer build or manual editing;
+    ///   overwriting it would silently downgrade the schema version.
     @discardableResult
-    public static func ensureExists(at url: URL) -> CollectionManifest {
-        if let existing = read(from: url) { return existing }
-        let fresh = CollectionManifest()
-        try? fresh.write(to: url)
-        return fresh
+    public static func ensureExists(at url: URL) -> Result<CollectionManifest, CollectionManifestError> {
+        switch read(from: url) {
+        case .success(let existing?):
+            return .success(existing)
+        case .success(nil):
+            // No manifest — create a fresh one
+            let fresh = CollectionManifest()
+            do {
+                try fresh.write(to: url)
+                return .success(fresh)
+            } catch {
+                return .failure(.writeFailed(url: url, underlying: error))
+            }
+        case .failure(let error):
+            // Corrupt manifest — do NOT overwrite, return the error
+            return .failure(error)
+        }
     }
 }

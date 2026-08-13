@@ -65,6 +65,10 @@ public final class PresetStore {
     /// normalizing each one (exactly 20 clamped bands, clamped preamp). If the
     /// working directory is empty (first run), the factory presets are seeded
     /// first so `preset_flat` always exists as a bypass.
+    ///
+    /// IDs are validated via `CollectionRecordID` — records with path-traversal
+    /// IDs (e.g., `../manifest`) are silently skipped to prevent directory
+    /// escape.
     public func loadAll() throws -> [EQPreset] {
         try ensureDirectory(directory)
 
@@ -81,7 +85,9 @@ public final class PresetStore {
             // Skip files that fail to decode rather than failing the whole load:
             // a single corrupt preset shouldn't sink the library.
             guard let preset = try? load(from: url) else { continue }
-            guard !preset.id.isEmpty else { continue }
+            // Validate ID: skip path-traversal attempts and empty IDs.
+            guard let safeID = CollectionRecordID.parse(preset.id) else { continue }
+            guard safeID == preset.id else { continue } // normalized ID must match raw
             byId[preset.id] = preset.normalized()
         }
         // Stable, name-then-id order for deterministic UI listing.
@@ -91,11 +97,12 @@ public final class PresetStore {
     /// Returns the preset with `id` from the working library, falling back to the
     /// user's collection. Nil if neither has it.
     public func get(id: String) throws -> EQPreset? {
-        let url = presetURL(for: id)
+        guard let safeID = CollectionRecordID.parse(id) else { return nil }
+        let url = presetURL(for: safeID)
         if fileManager.fileExists(atPath: url.path) {
             return try load(from: url).normalized()
         }
-        if let collectionURL = collectionPresetURL(for: id),
+        if let collectionURL = collectionPresetURL(for: safeID),
            fileManager.fileExists(atPath: collectionURL.path) {
             return try load(from: collectionURL).normalized()
         }
@@ -119,11 +126,14 @@ public final class PresetStore {
     /// there, so nothing accumulates in the user's repository unless they say so.
     @discardableResult
     public func addToCollection(id: String) throws -> EQPreset {
-        guard let collectionURL = collectionPresetURL(for: id) else {
+        guard let safeID = CollectionRecordID.parse(id) else {
+            throw PresetStoreError.invalidID(id)
+        }
+        guard let collectionURL = collectionPresetURL(for: safeID) else {
             throw PresetStoreError.noCollectionConfigured
         }
-        guard let preset = try get(id: id) else {
-            throw PresetStoreError.notFound(id)
+        guard let preset = try get(id: safeID) else {
+            throw PresetStoreError.notFound(safeID)
         }
         try write(preset, to: collectionURL)
         return preset
@@ -131,7 +141,10 @@ public final class PresetStore {
 
     /// Removes `id` from the collection, leaving the working copy alone.
     public func removeFromCollection(id: String) throws {
-        guard let collectionURL = collectionPresetURL(for: id) else {
+        guard let safeID = CollectionRecordID.parse(id) else {
+            throw PresetStoreError.invalidID(id)
+        }
+        guard let collectionURL = collectionPresetURL(for: safeID) else {
             throw PresetStoreError.noCollectionConfigured
         }
         if fileManager.fileExists(atPath: collectionURL.path) {
@@ -144,16 +157,23 @@ public final class PresetStore {
     /// Persists `preset`. If a version already exists on disk it is first
     /// snapshotted into the revisions folder, then `version` is bumped and
     /// `updatedAt` is set to now. Returns the exact preset written.
+    ///
+    /// The preset's ID is validated before writing — path-traversal IDs are
+    /// rejected with `PresetStoreError.invalidID`.
     @discardableResult
     public func save(_ preset: EQPreset) throws -> EQPreset {
+        guard let safeID = CollectionRecordID.parse(preset.id) else {
+            throw PresetStoreError.invalidID(preset.id)
+        }
         try ensureDirectory(directory)
 
         var toWrite = preset.normalized()
-        let url = presetURL(for: toWrite.id)
+        toWrite.id = safeID // use validated ID
+        let url = presetURL(for: safeID)
 
         // A collection preset being edited for the first time has no working copy
         // yet; continue its version from the collection so history stays linear.
-        let existingOnDisk = (try? load(from: url)) ?? collectionPresetURL(for: toWrite.id)
+        let existingOnDisk = (try? load(from: url)) ?? collectionPresetURL(for: safeID)
             .flatMap { try? load(from: $0) }
 
         if let existing = existingOnDisk {
@@ -183,15 +203,18 @@ public final class PresetStore {
     /// preset reappear on the next `loadAll` and read as a failed delete. The
     /// collection is typically a git checkout, so the removal stays recoverable.
     public func delete(id: String) throws {
-        let url = presetURL(for: id)
+        guard let safeID = CollectionRecordID.parse(id) else {
+            throw PresetStoreError.invalidID(id)
+        }
+        let url = presetURL(for: safeID)
         if fileManager.fileExists(atPath: url.path) {
             try fileManager.removeItem(at: url)
         }
-        if let collectionURL = collectionPresetURL(for: id),
+        if let collectionURL = collectionPresetURL(for: safeID),
            fileManager.fileExists(atPath: collectionURL.path) {
             try fileManager.removeItem(at: collectionURL)
         }
-        let revDir = revisionsDirectory.appendingPathComponent(id, isDirectory: true)
+        let revDir = try CollectionRecordID.subdirectory(in: revisionsDirectory, id: safeID)
         if fileManager.fileExists(atPath: revDir.path) {
             try fileManager.removeItem(at: revDir)
         }
@@ -260,9 +283,14 @@ public final class PresetStore {
     /// imported preset (not yet saved — caller decides via `save`).
     public func importPreset(from url: URL) throws -> EQPreset {
         var imported = try load(from: url).normalized()
-        let collides = ((try? get(id: imported.id)) ?? nil) != nil
-        if collides {
+        // Validate ID: if invalid or colliding, assign a fresh safe ID.
+        if CollectionRecordID.parse(imported.id) == nil {
             imported.id = freshID(base: "preset")
+        } else {
+            let collides = ((try? get(id: imported.id)) ?? nil) != nil
+            if collides {
+                imported.id = freshID(base: "preset")
+            }
         }
         return imported
     }
@@ -350,8 +378,10 @@ public final class PresetStore {
     // MARK: - Private helpers
 
     /// Snapshots a preset into `revisionsDirectory/<id>/v<version>.json`.
+    /// The ID is validated before constructing the path.
     private func snapshot(_ preset: EQPreset) throws {
-        let revDir = revisionsDirectory.appendingPathComponent(preset.id, isDirectory: true)
+        let safeID = try CollectionRecordID.require(preset.id)
+        let revDir = try CollectionRecordID.subdirectory(in: revisionsDirectory, id: safeID)
         try ensureDirectory(revDir)
         let url = revDir.appendingPathComponent("v\(preset.version).json")
         try write(preset, to: url)
@@ -421,6 +451,7 @@ public final class PresetStore {
 public enum PresetStoreError: Error, LocalizedError, Equatable {
     case notFound(String)
     case noCollectionConfigured
+    case invalidID(String)
 
     public var errorDescription: String? {
         switch self {
@@ -428,6 +459,8 @@ public enum PresetStoreError: Error, LocalizedError, Equatable {
             return "No preset found with id \"\(id)\"."
         case .noCollectionConfigured:
             return "No preset collection is configured. Set one up before adding presets to it."
+        case .invalidID(let id):
+            return "Invalid preset ID: '\(id)'. IDs must start with a letter or number, contain only letters, numbers, dots, underscores, and dashes, and be at most \(CollectionRecordID.maxLength) characters."
         }
     }
 }

@@ -25,6 +25,7 @@
  */
 
 import { promises as fs } from "node:fs";
+import { execSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,6 +50,57 @@ import {
   BandType,
   BandChannel,
 } from "./types.js";
+
+// MARK: - ID validation (mirrors Swift CollectionRecordID)
+
+const ID_MAX_LENGTH = 128;
+
+/**
+ * Validates that `id` is safe for filesystem use.
+ * Mirrors Swift `CollectionRecordID.isValid`.
+ */
+export function isValidRecordId(id: string): boolean {
+  const trimmed = id.trim();
+  if (!trimmed || trimmed.length > ID_MAX_LENGTH) return false;
+  if (trimmed === "." || trimmed === "..") return false;
+  if (trimmed.includes("..")) return false;
+  if (trimmed.startsWith("-") || trimmed.startsWith(".")) return false;
+  if (trimmed.endsWith(".") || trimmed.endsWith("-")) return false;
+  // Must start with alphanumeric, then allow alphanumeric + ._-
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(trimmed);
+}
+
+/**
+ * Returns the ID if valid, null otherwise.
+ * Mirrors Swift `CollectionRecordID.parse`.
+ */
+export function parseRecordId(id: string): string | null {
+  return isValidRecordId(id) ? id.trim() : null;
+}
+
+/**
+ * Returns the ID if valid, throws otherwise.
+ * Mirrors Swift `CollectionRecordID.require`.
+ */
+export function requireRecordId(id: string): string {
+  const parsed = parseRecordId(id);
+  if (parsed === null) {
+    throw new Error(
+      `Invalid collection record ID: '${id}'. IDs must start with a letter or number, ` +
+        `contain only letters, numbers, dots, underscores, and dashes, and be at most ${ID_MAX_LENGTH} characters.`
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Sanitizes an ID for filesystem use by replacing invalid characters.
+ * Use `requireRecordId` when the ID must be preserved exactly.
+ * @deprecated Prefer requireRecordId for strict validation; this is for legacy migration only.
+ */
+function sanitizeId(id: string): string {
+  return id.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, ID_MAX_LENGTH);
+}
 
 // MARK: - Directory resolution
 
@@ -102,18 +154,78 @@ export function userDataDir(): string {
 }
 
 /**
+ * Expands `~` to the user's home directory.
+ * Mirrors Swift `configuredCollectionPath`'s tilde expansion.
+ */
+function expandTilde(p: string): string {
+  if (p === "~") return os.homedir();
+  if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
+  return p;
+}
+
+/**
+ * Normalizes a configured collection path: trims, expands `~`, rejects empty
+ * values and relative paths (a relative collection root would follow the
+ * process CWD).
+ * Mirrors Swift `AuralinkPaths.configuredCollectionPath`.
+ */
+function normalizeCollectionPath(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const expanded = expandTilde(trimmed);
+  if (!path.isAbsolute(expanded)) return null;
+  return expanded;
+}
+
+/**
  * The user's own headphone/preset collection root (`~/auralink-collection` by
  * default). Override with `AURALINK_COLLECTION_DIR`; `AURALINK_LIBRARY_DIR` is
  * accepted as the pre-split name so existing configs keep working.
+ *
+ * Resolution order matches Swift `AuralinkPaths.collectionDirectory`:
+ * 1. `AURALINK_COLLECTION_DIR` / `AURALINK_LIBRARY_DIR` environment variable
+ * 2. macOS `defaults read com.auralink.eq AuralinkCollectionDirectory` (when
+ *    available and env is unset)
+ * 3. `~/auralink-collection`
  *
  * Deliberately not under `~/Documents`: that folder is TCC-protected and an
  * ad-hoc signed build loses the grant on every rebuild.
  */
 export function collectionDir(): string {
-  const override =
+  // 1. Environment override
+  const envOverride =
     process.env.AURALINK_COLLECTION_DIR ?? process.env.AURALINK_LIBRARY_DIR;
-  if (override && override.trim().length > 0) return override.trim();
+  const fromEnv = normalizeCollectionPath(envOverride);
+  if (fromEnv) return fromEnv;
+
+  // 2. macOS UserDefaults (only when env is unset and on macOS).
+  //    Memoized: spawning `defaults` on every call would be wasteful.
+  if (process.platform === "darwin") {
+    if (cachedDefaultsCollectionDir === undefined) {
+      cachedDefaultsCollectionDir = readDefaultsCollectionDir();
+    }
+    if (cachedDefaultsCollectionDir) return cachedDefaultsCollectionDir;
+  }
+
+  // 3. Default
   return path.join(os.homedir(), "auralink-collection");
+}
+
+/** undefined = not yet read; null = read but unset/invalid. */
+let cachedDefaultsCollectionDir: string | null | undefined;
+
+function readDefaultsCollectionDir(): string | null {
+  try {
+    const result = execSync(
+      "defaults read com.auralink.eq AuralinkCollectionDirectory 2>/dev/null || true",
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    ).trim();
+    return normalizeCollectionPath(result);
+  } catch {
+    // defaults command not available or failed — fall through to default
+    return null;
+  }
 }
 
 export function collectionHeadphonesDir(): string {
@@ -129,11 +241,13 @@ export function collectionManifestPath(): string {
 }
 
 function collectionHeadphonePath(id: string): string {
-  return path.join(collectionHeadphonesDir(), `${sanitizeId(id)}.json`);
+  const safeID = requireRecordId(id);
+  return path.join(collectionHeadphonesDir(), `${safeID}.json`);
 }
 
 function collectionPresetPath(id: string): string {
-  return path.join(collectionPresetsDir(), `${sanitizeId(id)}.json`);
+  const safeID = requireRecordId(id);
+  return path.join(collectionPresetsDir(), `${safeID}.json`);
 }
 
 async function writeCollectionHeadphone(profile: HeadphoneProfile): Promise<void> {
@@ -160,7 +274,19 @@ async function loadHeadphoneProfilesFromLibraryDir(dir: string): Promise<Headpho
   for (const entry of entries) {
     if (!entry.toLowerCase().endsWith(".json")) continue;
     const parsed = await readJson<HeadphoneProfile>(path.join(dir, entry));
-    if (parsed && typeof parsed.id === "string" && typeof parsed.brand === "string") {
+    // Defensive: skip records missing required fields rather than crashing.
+    if (
+      parsed &&
+      typeof parsed.id === "string" &&
+      typeof parsed.brand === "string" &&
+      typeof parsed.model === "string" &&
+      typeof parsed.type === "string" &&
+      typeof parsed.signature === "string" &&
+      Array.isArray(parsed.correctionNotes) &&
+      Array.isArray(parsed.harshRegionsHz) &&
+      typeof parsed.source === "string" &&
+      typeof parsed.credibility === "string"
+    ) {
       out.push(parsed);
     }
   }
@@ -300,12 +426,8 @@ function stableStringify(value: unknown): string {
 }
 
 function presetFilePath(id: string): string {
-  return path.join(presetsDir(), `${sanitizeId(id)}.json`);
-}
-
-/** Keep ids filesystem-safe; preset ids are slugs/uuids so this is defensive. */
-function sanitizeId(id: string): string {
-  return id.replace(/[^A-Za-z0-9._-]/g, "_");
+  const safeID = requireRecordId(id);
+  return path.join(presetsDir(), `${safeID}.json`);
 }
 
 // MARK: - Preset CRUD
@@ -426,7 +548,7 @@ export async function deletePreset(id: string): Promise<EQPreset | null> {
   // and the delete reads as having failed.
   await removePresetFromCollection(id);
   try {
-    await fs.rm(path.join(revisionsDir(), sanitizeId(id)), {
+    await fs.rm(path.join(revisionsDir(), requireRecordId(id)), {
       recursive: true,
       force: true,
     });
@@ -444,21 +566,43 @@ export async function presetExists(id: string): Promise<boolean> {
 // MARK: - Knowledge data
 
 function normalizeProfile(profile: HeadphoneProfile): HeadphoneProfile {
+  // Defensive: handle missing fields gracefully to prevent crashes.
+  const safeId = typeof profile.id === "string" ? profile.id.trim().toLowerCase() : "";
+  const brand = typeof profile.brand === "string" ? profile.brand.trim() : "";
+  const model = typeof profile.model === "string" ? profile.model.trim() : "";
+  const signature = typeof profile.signature === "string" ? profile.signature.trim() : "";
+  const source = typeof profile.source === "string" ? profile.source.trim() : "";
+  const correctionNotes = Array.isArray(profile.correctionNotes)
+    ? profile.correctionNotes.map((n) => (typeof n === "string" ? n.trim() : "")).filter(Boolean)
+    : [];
+  const harshRegionsHz = Array.isArray(profile.harshRegionsHz)
+    ? profile.harshRegionsHz
+        .map((range) => {
+          if (!range || typeof range.lowHz !== "number" || typeof range.highHz !== "number") {
+            return null;
+          }
+          return {
+            lowHz: Math.max(20, Math.min(range.lowHz, range.highHz)),
+            highHz: Math.min(20_000, Math.max(range.lowHz, range.highHz)),
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+        .filter((r) => r.highHz > r.lowHz)
+    : [];
+
   return {
-    id: sanitizeId(profile.id.trim().toLowerCase()),
-    brand: profile.brand.trim(),
-    model: profile.model.trim(),
+    id: sanitizeId(safeId),
+    brand,
+    model,
     type: profile.type,
-    signature: profile.signature.trim(),
-    correctionNotes: profile.correctionNotes.map((note) => note.trim()).filter(Boolean),
-    harshRegionsHz: profile.harshRegionsHz
-      .map((range) => ({
-        lowHz: Math.max(20, Math.min(range.lowHz, range.highHz)),
-        highHz: Math.min(20_000, Math.max(range.lowHz, range.highHz)),
-      }))
-      .filter((range) => range.highHz > range.lowHz),
-    suggestedTargetCurveId: profile.suggestedTargetCurveId?.trim() || undefined,
-    source: profile.source.trim(),
+    signature,
+    correctionNotes,
+    harshRegionsHz,
+    suggestedTargetCurveId:
+      typeof profile.suggestedTargetCurveId === "string"
+        ? profile.suggestedTargetCurveId.trim() || undefined
+        : undefined,
+    source,
     credibility: profile.credibility,
   };
 }

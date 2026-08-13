@@ -9,7 +9,25 @@ extension AppModel {
         // location so the external MCP server reads the same values the app uses.
         // Nothing seeds headphone profiles: the collection is the user's to fill.
         knowledge.seedDataDirectory(AuralinkPaths.dataDirectory)
-        CollectionManifest.ensureExists(at: AuralinkPaths.collectionManifestFile)
+        // Ensure collection manifest exists — but never overwrite a corrupt one.
+        // A corrupt manifest indicates a newer build or manual editing; silently
+        // replacing it would erase the schema marker and permit incompatible writes.
+        //
+        // Only do this when the collection directory already exists: a fresh
+        // install must not create ~/auralink-collection, because that would
+        // block the documented `git clone <remote> ~/auralink-collection` flow.
+        var collectionIsDir: ObjCBool = false
+        if FileManager.default.fileExists(
+            atPath: AuralinkPaths.collectionDirectory.path,
+            isDirectory: &collectionIsDir
+        ), collectionIsDir.boolValue {
+            switch CollectionManifest.ensureExists(at: AuralinkPaths.collectionManifestFile) {
+            case .success:
+                break
+            case .failure(let error):
+                NSLog("Auralink: collection manifest issue: \(error.localizedDescription)")
+            }
+        }
         startFileWatchers()
         loadPresets()
         refreshDevices()
@@ -54,10 +72,17 @@ extension AppModel {
                 + "Run scripts/migrate-collection.mjs to move them into "
                 + AuralinkPaths.collectionDirectory.path
         }
-        if let manifest = CollectionManifest.read(from: AuralinkPaths.collectionManifestFile),
-           manifest.isFromNewerBuild {
-            return "This collection was written by a newer Auralink "
-                + "(schema \(manifest.schemaVersion)); some entries may not load."
+        switch CollectionManifest.read(from: AuralinkPaths.collectionManifestFile) {
+        case .success(let manifest?):
+            if manifest.isFromNewerBuild {
+                return "This collection was written by a newer Auralink "
+                    + "(schema \(manifest.schemaVersion)); some entries may not load."
+            }
+        case .failure(let error):
+            return "Collection manifest is corrupt or unreadable. "
+                + error.localizedDescription
+        case .success(nil):
+            break
         }
         return nil
     }
@@ -74,17 +99,32 @@ extension AppModel {
         knowledgeWatcher = makeDirectoryWatcher(url: AuralinkPaths.dataDirectory) { [weak self] in
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
-        collectionHeadphonesWatcher = makeDirectoryWatcher(
+        // Collection watchers are optional: a fresh install or a user who hasn't
+        // cloned their collection yet simply has no directory to watch.
+        collectionHeadphonesWatcher = makeOptionalDirectoryWatcher(
             url: AuralinkPaths.collectionHeadphonesDirectory
         ) { [weak self] in
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
         // A `git pull` in the collection changes presets too, so watch both halves.
-        collectionPresetsWatcher = makeDirectoryWatcher(
+        collectionPresetsWatcher = makeOptionalDirectoryWatcher(
             url: AuralinkPaths.collectionPresetsDirectory
         ) { [weak self] in
             Task { @MainActor in self?.schedulePresetReloadFromDisk() }
         }
+    }
+
+    /// Like `makeDirectoryWatcher`, but returns nil silently when the directory
+    /// doesn't exist (fresh install / collection not cloned yet).
+    func makeOptionalDirectoryWatcher(
+        url: URL,
+        onChange: @escaping @Sendable () -> Void
+    ) -> DispatchSourceFileSystemObject? {
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
+            return nil // Directory doesn't exist — no watcher, no error
+        }
+        return makeDirectoryWatcher(url: url, onChange: onChange)
     }
 
     func makeDirectoryWatcher(

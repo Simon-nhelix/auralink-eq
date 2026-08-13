@@ -352,6 +352,67 @@ final class PresetTests: XCTestCase {
         XCTAssertNoThrow(try storeWithoutDir.loadAll())
     }
 
+    // MARK: - Path traversal protection
+
+    func testSaveRejectsPathTraversalID() throws {
+        let evil = makePreset(id: "../manifest", name: "Evil")
+        XCTAssertThrowsError(try store.save(evil)) { error in
+            XCTAssertEqual(error as? PresetStoreError, .invalidID("../manifest"))
+        }
+        // Nothing should have been written outside the presets directory.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("manifest.json").path))
+    }
+
+    func testDeleteRejectsPathTraversalID() throws {
+        // Create a decoy file outside the presets directory.
+        let decoy = root.appendingPathComponent("decoy.txt")
+        try "important".write(to: decoy, atomically: true, encoding: .utf8)
+
+        XCTAssertThrowsError(try store.delete(id: "../decoy")) { error in
+            XCTAssertEqual(error as? PresetStoreError, .invalidID("../decoy"))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: decoy.path),
+                      "Delete with traversal ID must not touch files outside the store")
+    }
+
+    func testGetReturnsNilForInvalidID() throws {
+        XCTAssertNil(try store.get(id: "../manifest"))
+        XCTAssertNil(try store.get(id: ".."))
+        XCTAssertNil(try store.get(id: ""))
+    }
+
+    func testLoadAllSkipsRecordsWithInvalidIDs() throws {
+        // Write a preset file with a path-traversal embedded ID directly.
+        let evil = makePreset(id: "../escape", name: "Evil")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(evil).write(
+            to: presetsDir.appendingPathComponent("evil.json"), options: .atomic)
+
+        _ = try store.save(makePreset(id: "preset_good", name: "Good"))
+        let all = try store.loadAll()
+        XCTAssertTrue(all.contains { $0.id == "preset_good" })
+        XCTAssertFalse(all.contains { $0.id == "../escape" },
+                       "Records with path-traversal IDs must be skipped")
+    }
+
+    func testCollectionRecordIDValidation() {
+        XCTAssertTrue(CollectionRecordID.isValid("preset_flat"))
+        XCTAssertTrue(CollectionRecordID.isValid("ai_sennheiser-hd600_harman-neutral"))
+        XCTAssertTrue(CollectionRecordID.isValid("v1.2.3"))
+        XCTAssertFalse(CollectionRecordID.isValid("../manifest"))
+        XCTAssertFalse(CollectionRecordID.isValid(".."))
+        XCTAssertFalse(CollectionRecordID.isValid(""))
+        XCTAssertFalse(CollectionRecordID.isValid(".hidden"))
+        XCTAssertFalse(CollectionRecordID.isValid("-leading-dash"))
+        XCTAssertFalse(CollectionRecordID.isValid("trailing-dot."))
+        XCTAssertFalse(CollectionRecordID.isValid("has space"))
+        XCTAssertFalse(CollectionRecordID.isValid("has/slash"))
+        XCTAssertFalse(CollectionRecordID.isValid("a..b"))
+        XCTAssertFalse(CollectionRecordID.isValid(String(repeating: "x", count: 129)))
+    }
+
     // MARK: - Validator
 
     func testValidatorFlagsOutOfRangeBand() {

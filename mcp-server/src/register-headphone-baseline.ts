@@ -300,7 +300,8 @@ export async function registerHeadphoneBaseline(
   const form: HeadphoneType = inferredType ?? "open_back";
   const niceTarget = niceTargetName(targetCurveId);
 
-  const profile = await saveHeadphoneProfile({
+  // Build the profile object (not yet saved — validation happens first).
+  const profileData: HeadphoneProfile = {
     id: profileId,
     brand,
     model,
@@ -315,9 +316,7 @@ export async function registerHeadphoneBaseline(
     suggestedTargetCurveId: targetCurveId,
     source: correctionSource,
     credibility,
-  });
-
-  const appKnowledge = await reloadKnowledgeFn();
+  };
 
   const prefSpecs = toBandSpecs(preferenceBands);
   const builtBands = bandsFromSpecs([...measuredSpecs, ...prefSpecs]);
@@ -383,16 +382,21 @@ export async function registerHeadphoneBaseline(
     },
   });
 
+  // Validate BEFORE writing anything: a validation failure leaves no orphan profile.
   const rules = await loadSafetyRules();
   const validation = validatePreset(draft, rules, 48_000, "all");
   if (!validation.ok) {
     return {
       ok: false,
       reason: "validation_failed",
-      profile,
+      profile: profileData,
       validation,
     };
   }
+
+  // Validation passed — now write profile and preset.
+  const profile = await saveHeadphoneProfile(profileData);
+  const appKnowledge = await reloadKnowledgeFn();
 
   const finalPreset: EQPreset = {
     ...draft,

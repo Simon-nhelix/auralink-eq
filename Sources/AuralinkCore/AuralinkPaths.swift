@@ -102,19 +102,90 @@ public enum AuralinkPaths {
 
     /// True when a pre-split install still has profiles in the old location and
     /// the new collection has none — the one case that needs a migration prompt.
+    ///
+    /// Checks all legacy sources:
+    /// - `library/headphones/` (mirror directory)
+    /// - `library/presets/` (curated presets)
+    /// - `data/headphone-profiles.json` (aggregate)
+    ///
+    /// A partial migration (collection has some records but legacy has more)
+    /// also triggers the prompt.
     public static var needsCollectionMigration: Bool {
-        !jsonFileNames(in: legacyLibraryDirectory.appendingPathComponent("headphones", isDirectory: true)).isEmpty
-            && jsonFileNames(in: collectionHeadphonesDirectory).isEmpty
+        needsCollectionMigration(
+            legacyHeadphonesDirectory: legacyLibraryDirectory.appendingPathComponent("headphones", isDirectory: true),
+            legacyPresetsDirectory: legacyLibraryDirectory.appendingPathComponent("presets", isDirectory: true),
+            legacyAggregateFile: dataDirectory.appendingPathComponent("headphone-profiles.json"),
+            collectionHeadphonesDirectory: collectionHeadphonesDirectory,
+            collectionPresetsDirectory: collectionPresetsDirectory
+        )
+    }
+
+    /// Pure, testable core of `needsCollectionMigration`.
+    static func needsCollectionMigration(
+        legacyHeadphonesDirectory: URL,
+        legacyPresetsDirectory: URL,
+        legacyAggregateFile: URL,
+        collectionHeadphonesDirectory: URL,
+        collectionPresetsDirectory: URL
+    ) -> Bool {
+        let legacyHeadphones = jsonFileNames(in: legacyHeadphonesDirectory)
+        let legacyPresets = jsonFileNames(in: legacyPresetsDirectory)
+        let legacyAggregate = profileIDs(inAggregateFile: legacyAggregateFile)
+
+        let collectionHeadphones = jsonFileNames(in: collectionHeadphonesDirectory)
+        let collectionPresets = jsonFileNames(in: collectionPresetsDirectory)
+
+        // If legacy is completely empty, no migration needed.
+        let legacyHasData = !legacyHeadphones.isEmpty || !legacyPresets.isEmpty || !legacyAggregate.isEmpty
+        guard legacyHasData else { return false }
+
+        // If collection is completely empty, definitely need migration.
+        if collectionHeadphones.isEmpty && collectionPresets.isEmpty {
+            return true
+        }
+
+        // Partial migration: collection has some records but legacy has more.
+        // Compare IDs to see if any legacy record is missing from collection.
+        let collectionHeadphoneIDs = Set(collectionHeadphones.map { $0.replacingOccurrences(of: ".json", with: "") })
+        let collectionPresetIDs = Set(collectionPresets.map { $0.replacingOccurrences(of: ".json", with: "") })
+
+        // Check if any legacy headphone ID is missing from collection.
+        for legacyID in legacyHeadphones.map({ $0.replacingOccurrences(of: ".json", with: "") }) + legacyAggregate {
+            if !collectionHeadphoneIDs.contains(legacyID) {
+                return true // Missing from collection → needs migration
+            }
+        }
+
+        // Check if any legacy preset ID is missing from collection.
+        for legacyID in legacyPresets.map({ $0.replacingOccurrences(of: ".json", with: "") }) {
+            if !collectionPresetIDs.contains(legacyID) {
+                return true // Missing from collection → needs migration
+            }
+        }
+
+        return false
+    }
+
+    /// Reads profile IDs from a legacy aggregate `headphone-profiles.json`.
+    private static func profileIDs(inAggregateFile url: URL) -> [String] {
+        guard let data = try? Data(contentsOf: url),
+              let profiles = try? JSONDecoder().decode([HeadphoneProfile].self, from: data) else {
+            return []
+        }
+        return profiles.map { $0.id }
     }
 
     // MARK: - Setup
 
-    /// Creates both directory trees if needed.
+    /// Creates the support directory trees if needed.
     ///
     /// Support directories are locked to user-only permissions because one of them
-    /// holds the control token. The collection is left at the user's own umask: it
-    /// may be a git checkout they manage, and silently re-chmod'ing it every launch
-    /// would be overreach.
+    /// holds the control token.
+    ///
+    /// The collection directory is NOT created here: it is user-owned (often a
+    /// git checkout) and should only be created when the user explicitly writes
+    /// to it (e.g., via migration or registration). Auto-creating it on launch
+    /// would interfere with `git clone ~/auralink-collection` workflows.
     public static func ensureDirectories() throws {
         let fm = FileManager.default
         for dir in [supportDirectory, presetsDirectory, revisionsDirectory, dataDirectory] {
@@ -123,11 +194,10 @@ public enum AuralinkPaths {
             }
             try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
         }
-        for dir in [collectionDirectory, collectionHeadphonesDirectory, collectionPresetsDirectory] {
-            if !fm.fileExists(atPath: dir.path) {
-                try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-            }
-        }
+        // Note: collectionDirectory, collectionHeadphonesDirectory, and
+        // collectionPresetsDirectory are NOT created here. They are created
+        // on-demand by the code that writes to them (migration, registration,
+        // or explicit user action).
     }
 
     // MARK: - Private helpers

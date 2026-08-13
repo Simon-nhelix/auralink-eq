@@ -27,17 +27,40 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const support = path.join(os.homedir(), "Library", "Application Support", "Auralink");
 const dryRun = process.argv.includes("--dry-run");
 
-/** Same resolution order the app and MCP server use. */
+/** Same resolution order the app and MCP server use (env → defaults → home). */
 function collectionDir() {
   const override =
     process.env.AURALINK_COLLECTION_DIR ?? process.env.AURALINK_LIBRARY_DIR;
   if (override && override.trim().length > 0) {
     const trimmed = override.trim();
-    return trimmed.startsWith("~")
+    const expanded = trimmed.startsWith("~")
       ? path.join(os.homedir(), trimmed.slice(1))
-      : path.resolve(trimmed);
+      : trimmed;
+    // Reject relative paths — they would follow the process CWD.
+    if (path.isAbsolute(expanded)) return expanded;
+    console.warn(`Ignoring relative collection path: ${trimmed}`);
   }
   return path.join(os.homedir(), "auralink-collection");
+}
+
+/** Validates that an ID is safe for filesystem use (mirrors app/MCP contract). */
+function isValidRecordId(id) {
+  if (typeof id !== "string") return false;
+  const trimmed = id.trim();
+  if (!trimmed || trimmed.length > 128) return false;
+  if (trimmed === "." || trimmed === "..") return false;
+  if (trimmed.includes("..")) return false;
+  if (trimmed.startsWith("-") || trimmed.startsWith(".")) return false;
+  if (trimmed.endsWith(".") || trimmed.endsWith("-")) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(trimmed);
+}
+
+/** Writes a file atomically (write to temp, then rename). */
+async function atomicWriteFile(filePath, content, encoding = "utf8") {
+  const dir = path.dirname(filePath);
+  const tempPath = path.join(dir, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  await fs.writeFile(tempPath, content, encoding);
+  await fs.rename(tempPath, filePath);
 }
 
 /** Curve id that only ever existed in profile data, never in `target-curves.json`. */
@@ -69,7 +92,11 @@ async function readJsonDir(dir) {
     if (!entry.toLowerCase().endsWith(".json")) continue;
     const parsed = await readJsonFile(path.join(dir, entry));
     if (parsed && typeof parsed.id === "string" && parsed.id.length > 0) {
-      out.push(parsed);
+      if (isValidRecordId(parsed.id)) {
+        out.push(parsed);
+      } else {
+        console.warn(`Skipping record with invalid ID '${parsed.id}' in ${dir}/${entry}`);
+      }
     }
   }
   return out;
@@ -155,7 +182,9 @@ function isMachineLocalPreset(preset) {
 async function writeRecords(byId, destination, { fixCurveIds }) {
   const fixes = [];
   let written = 0;
+  const conflicts = [];
   if (!dryRun) await fs.mkdir(destination, { recursive: true });
+
   for (const record of byId.values()) {
     let payload = record;
     if (fixCurveIds) {
@@ -163,16 +192,29 @@ async function writeRecords(byId, destination, { fixCurveIds }) {
       payload = result.fixed;
       fixes.push(...result.fixes);
     }
+
+    const destPath = path.join(destination, `${payload.id}.json`);
+
+    // No-clobber: check if destination already has this record.
+    const existing = await readJsonFile(destPath);
+    if (existing) {
+      const existingJson = JSON.stringify(existing, Object.keys(flatten(existing)).sort());
+      const payloadJson = JSON.stringify(payload, Object.keys(flatten(payload)).sort());
+      if (existingJson !== payloadJson) {
+        conflicts.push(payload.id);
+        console.warn(`Conflict: '${payload.id}' already exists in destination with different content`);
+        continue;
+      }
+      // Same content — skip silently (idempotent).
+      continue;
+    }
+
     if (!dryRun) {
-      await fs.writeFile(
-        path.join(destination, `${payload.id}.json`),
-        stableStringify(payload),
-        "utf8"
-      );
+      await atomicWriteFile(destPath, stableStringify(payload), "utf8");
     }
     written += 1;
   }
-  return { written, fixes };
+  return { written, fixes, conflicts };
 }
 
 async function main() {
@@ -228,6 +270,13 @@ async function main() {
     { fixCurveIds: true }
   );
 
+  const allConflicts = [...profileResult.conflicts, ...presetResult.conflicts];
+  if (allConflicts.length > 0) {
+    console.log(`\n⚠️  ${allConflicts.length} conflict(s) detected (not overwritten):`);
+    for (const id of allConflicts) console.log(`  - ${id}`);
+    console.log("Review these manually and delete the destination record if you want to overwrite.\n");
+  }
+
   const fixes = [...profileResult.fixes, ...presetResult.fixes];
   if (fixes.length > 0) {
     console.log("Data fixes applied (curve ids with no matching target curve):");
@@ -237,8 +286,18 @@ async function main() {
 
   if (!dryRun) {
     const manifestPath = path.join(destination, "manifest.json");
-    if (!(await readJsonFile(manifestPath))) {
-      await fs.writeFile(
+    // Only write a manifest when none exists. A corrupt manifest is left
+    // untouched and reported — silently replacing it would erase the schema
+    // marker from a newer build (same contract as the Swift side).
+    let manifestExists = false;
+    try {
+      await fs.access(manifestPath);
+      manifestExists = true;
+    } catch {
+      manifestExists = false;
+    }
+    if (!manifestExists) {
+      await atomicWriteFile(
         manifestPath,
         stableStringify({
           schemaVersion: 1,
@@ -248,12 +307,14 @@ async function main() {
         "utf8"
       );
       console.log(`Wrote ${manifestPath}`);
+    } else if (!(await readJsonFile(manifestPath))) {
+      console.log(`Warning: ${manifestPath} exists but is not valid JSON — left untouched.`);
     }
     const gitignorePath = path.join(destination, ".gitignore");
     try {
       await fs.access(gitignorePath);
     } catch {
-      await fs.writeFile(gitignorePath, COLLECTION_GITIGNORE, "utf8");
+      await atomicWriteFile(gitignorePath, COLLECTION_GITIGNORE, "utf8");
       console.log(`Wrote ${gitignorePath}`);
     }
   }

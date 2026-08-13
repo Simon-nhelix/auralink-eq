@@ -167,3 +167,57 @@ test("AutoEq path lands in the collection without touching x8", async () => {
     );
   });
 });
+
+test("validation failure leaves no orphan profile in the collection", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection, presets }) => {
+    // An invalid measuredCorrection payload (bad content hash) produces a
+    // validation error. Before the fix, the profile was written BEFORE this
+    // validation ran, leaving an orphan profile with no baseline preset.
+    const result = await registerHeadphoneBaseline(
+      {
+        headphone: "Broken FIR Can",
+        brand: "Broken",
+        model: "FIR Can",
+        type: "open_back",
+      },
+      {
+        getAutoEqCorrection: async () => ({
+          found: true,
+          suggestions: [],
+          alternates: [],
+          correction: {
+            name: "Broken FIR Can",
+            source: "oratory1990",
+            preampDb: -3,
+            bands: [{ type: "bell", frequencyHz: 105, gainDb: -1.2, q: 0.7 }],
+            url: "https://example.test/broken",
+            conversionNotes: [],
+            measuredCorrection: {
+              schemaVersion: 1,
+              measurementId: "broken",
+              sourceFormat: "autoeq_graphic_eq",
+              source: "oratory1990",
+              provenanceURL: "https://example.test/broken",
+              sourcePreampDb: -3,
+              contentHash: "0".repeat(64), // invalid: does not match computed hash
+              channel: "stereo",
+              phaseData: "magnitude_only",
+              usableLowHz: 20,
+              usableHighHz: 20000,
+              points: Array.from({ length: 20 }, (_, i) => ({
+                frequencyHz: 20 * Math.pow(1000, i / 19),
+                gainDb: 0,
+              })),
+            },
+          },
+        }),
+      }
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, "validation_failed");
+    // The critical assertion: no orphan profile and no preset on disk.
+    assert.deepEqual(await fs.readdir(path.join(collection, "headphones")), []);
+    assert.deepEqual(await fs.readdir(path.join(collection, "presets")), []);
+    assert.deepEqual(await fs.readdir(presets), []);
+  });
+});
