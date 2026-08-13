@@ -246,7 +246,9 @@ public final class PresetStore {
     /// All snapshotted prior versions of `id`, newest first. The current
     /// on-disk version is *not* included (it has not been superseded yet).
     public func revisions(of id: String) throws -> [EQPreset] {
-        let revDir = revisionsDirectory.appendingPathComponent(id, isDirectory: true)
+        // Validate: a raw `../` id would read files outside the revisions tree.
+        guard let safeID = CollectionRecordID.parse(id) else { return [] }
+        let revDir = try CollectionRecordID.subdirectory(in: revisionsDirectory, id: safeID)
         guard fileManager.fileExists(atPath: revDir.path) else { return [] }
 
         let urls = try fileManager.contentsOfDirectory(

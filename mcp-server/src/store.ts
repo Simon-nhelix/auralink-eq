@@ -93,15 +93,6 @@ export function requireRecordId(id: string): string {
   return parsed;
 }
 
-/**
- * Sanitizes an ID for filesystem use by replacing invalid characters.
- * Use `requireRecordId` when the ID must be preserved exactly.
- * @deprecated Prefer requireRecordId for strict validation; this is for legacy migration only.
- */
-function sanitizeId(id: string): string {
-  return id.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, ID_MAX_LENGTH);
-}
-
 // MARK: - Directory resolution
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url)); // dist/
@@ -613,7 +604,10 @@ function normalizeProfile(profile: HeadphoneProfile): HeadphoneProfile {
     : [];
 
   return {
-    id: sanitizeId(safeId),
+    // Invalid ids (e.g. path traversal from a hand-edited file) normalize to
+    // empty so the profile is skipped at load and rejected on save — never
+    // silently mangled into a colliding filename.
+    id: parseRecordId(safeId) ?? "",
     brand,
     model,
     type: profile.type,
@@ -660,8 +654,10 @@ export async function saveHeadphoneProfile(
 export async function deleteHeadphoneProfile(
   id: string
 ): Promise<HeadphoneProfile | null> {
-  const normalizedId = sanitizeId(id.trim().toLowerCase());
-  if (normalizedId.length === 0) return null;
+  // Reject invalid ids outright instead of sanitizing them into a possibly
+  // colliding filename (two distinct raw ids could map to one sanitized file).
+  const normalizedId = parseRecordId(id.trim().toLowerCase());
+  if (!normalizedId) return null;
 
   const existing = (await loadHeadphoneProfiles()).find((p) => p.id === normalizedId) ?? null;
   if (!existing) return null;

@@ -119,7 +119,21 @@ async function readCacheFileStale(name: string): Promise<string | null> {
 
 async function writeCacheFile(name: string, content: string): Promise<void> {
   const dir = await ensureCacheDir();
-  await fs.writeFile(path.join(dir, name), content, "utf-8");
+  // Atomic: a crash mid-write must not leave a truncated cache behind —
+  // readers tolerate a missing file (re-download) but a half-written JSON
+  // would poison every offline fallback until the TTL expires.
+  const target = path.join(dir, name);
+  const temp = path.join(
+    dir,
+    `.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+  try {
+    await fs.writeFile(temp, content, "utf-8");
+    await fs.rename(temp, target);
+  } catch (error) {
+    await fs.rm(temp, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 // MARK: - Fetch
