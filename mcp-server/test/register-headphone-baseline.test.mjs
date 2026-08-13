@@ -10,23 +10,19 @@ const dist = path.resolve(here, "..", "dist");
 
 async function withTempEnv(fn) {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "auralink-register-"));
-  const library = path.join(tmp, "library");
-  const runtimeLibrary = path.join(tmp, "runtime-library");
+  const collection = path.join(tmp, "collection");
   const userData = path.join(tmp, "user-data");
   const presets = path.join(tmp, "presets");
   const data = path.join(tmp, "bundled-data");
-  await fs.mkdir(path.join(library, "headphones"), { recursive: true });
-  await fs.mkdir(path.join(library, "presets"), { recursive: true });
-  await fs.mkdir(path.join(runtimeLibrary, "headphones"), { recursive: true });
-  await fs.mkdir(path.join(runtimeLibrary, "presets"), { recursive: true });
+  await fs.mkdir(path.join(collection, "headphones"), { recursive: true });
+  await fs.mkdir(path.join(collection, "presets"), { recursive: true });
   await fs.mkdir(userData, { recursive: true });
   await fs.mkdir(presets, { recursive: true });
   await fs.mkdir(data, { recursive: true });
-  await fs.writeFile(path.join(data, "headphone-profiles.json"), "[]\n");
 
   const prev = { ...process.env };
-  process.env.AURALINK_LIBRARY_DIR = library;
-  process.env.AURALINK_RUNTIME_LIBRARY_DIR = runtimeLibrary;
+  delete process.env.AURALINK_LIBRARY_DIR;
+  process.env.AURALINK_COLLECTION_DIR = collection;
   process.env.AURALINK_USER_DATA_DIR = userData;
   process.env.AURALINK_PRESETS_DIR = presets;
   process.env.AURALINK_DATA_DIR = data;
@@ -40,7 +36,7 @@ async function withTempEnv(fn) {
         reloadPresets: offline,
         ...deps,
       });
-    await fn({ registerHeadphoneBaseline }, { tmp, library, runtimeLibrary, userData, presets, data });
+    await fn({ registerHeadphoneBaseline }, { tmp, collection, userData, presets, data });
   } finally {
     process.env = prev;
     await fs.rm(tmp, { recursive: true, force: true });
@@ -52,8 +48,8 @@ const explicitBands = [
   { type: "bell", frequencyHz: 159, gainDb: -1.2, q: 1.26 },
 ];
 
-test("explicit bands dual-write library JSON only (no seed, no x8)", async () => {
-  await withTempEnv(async ({ registerHeadphoneBaseline }, { library, data }) => {
+test("explicit bands write profile + baseline into the collection (no x8)", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection, presets }) => {
     const result = await registerHeadphoneBaseline({
       headphone: "Symphonium Audio Zenith",
       brand: "Symphonium Audio",
@@ -69,7 +65,8 @@ test("explicit bands dual-write library JSON only (no seed, no x8)", async () =>
 
     assert.equal(result.ok, true);
     assert.equal("x8" in result, false);
-    assert.equal(result.seed?.skipped, true);
+    assert.equal(result.collectionDir, collection);
+    assert.equal(result.preset.inCollection, true);
     assert.match(result.written.headphone, /symphonium-audio-zenith\.json$/);
     assert.match(result.written.preset, /ai_symphonium-audio-zenith_crinacle-ief-2025\.json$/);
 
@@ -81,28 +78,44 @@ test("explicit bands dual-write library JSON only (no seed, no x8)", async () =>
     assert.equal(preset.preampDb, -4.5);
     assert.equal(preset.bands.filter((b) => b.enabled).length, 2);
 
-    const libEntries = await fs.readdir(path.join(library, "headphones"));
-    assert.deepEqual(libEntries, ["symphonium-audio-zenith.json"]);
-    const seed = await fs.readFile(path.join(data, "headphone-profiles.json"), "utf8");
-    assert.equal(seed.trim(), "[]");
+    // Both halves land where they belong: profile + baseline in the collection,
+    // and a working copy so the running app can load it.
+    assert.deepEqual(await fs.readdir(path.join(collection, "headphones")), [
+      "symphonium-audio-zenith.json",
+    ]);
+    await fs.access(
+      path.join(presets, "ai_symphonium-audio-zenith_crinacle-ief-2025.json")
+    );
+  });
+});
+
+test("registration never writes back into the app's bundled data", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { data }) => {
+    const before = await fs.readdir(data);
+    await registerHeadphoneBaseline({
+      headphone: "Symphonium Audio Zenith",
+      type: "iem",
+      bands: explicitBands,
+      credibility: "measured",
+    });
+    assert.deepEqual(await fs.readdir(data), before);
   });
 });
 
 test("explicit bands without type fail closed", async () => {
-  await withTempEnv(async ({ registerHeadphoneBaseline }, { library }) => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection }) => {
     const result = await registerHeadphoneBaseline({
       headphone: "Mystery Can",
       bands: explicitBands,
     });
     assert.equal(result.ok, false);
     assert.equal(result.reason, "type_required");
-    const leftover = await fs.readdir(path.join(library, "headphones"));
-    assert.deepEqual(leftover, []);
+    assert.deepEqual(await fs.readdir(path.join(collection, "headphones")), []);
   });
 });
 
 test("AutoEq miss without bands returns autoeq_not_found", async () => {
-  await withTempEnv(async ({ registerHeadphoneBaseline }, { library }) => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection }) => {
     const result = await registerHeadphoneBaseline(
       { headphone: "Not A Real Headphone" },
       {
@@ -116,13 +129,12 @@ test("AutoEq miss without bands returns autoeq_not_found", async () => {
     assert.equal(result.ok, false);
     assert.equal(result.reason, "autoeq_not_found");
     assert.deepEqual(result.suggestions, ["Sennheiser HD 600"]);
-    const leftover = await fs.readdir(path.join(library, "headphones"));
-    assert.deepEqual(leftover, []);
+    assert.deepEqual(await fs.readdir(path.join(collection, "headphones")), []);
   });
 });
 
-test("AutoEq path does not write seed or x8 by default", async () => {
-  await withTempEnv(async ({ registerHeadphoneBaseline }, { data }) => {
+test("AutoEq path lands in the collection without touching x8", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection }) => {
     const result = await registerHeadphoneBaseline(
       {
         headphone: "Sennheiser HD 600",
@@ -148,9 +160,10 @@ test("AutoEq path does not write seed or x8 by default", async () => {
     );
     assert.equal(result.ok, true);
     assert.equal("x8" in result, false);
-    assert.equal(result.seed.skipped, true);
     assert.equal(result.preset.id, "ai_sennheiser-hd-600_harman-neutral");
-    const seed = await fs.readFile(path.join(data, "headphone-profiles.json"), "utf8");
-    assert.equal(seed.trim(), "[]");
+    assert.equal(result.preset.inCollection, true);
+    await fs.access(
+      path.join(collection, "presets", "ai_sennheiser-hd-600_harman-neutral.json")
+    );
   });
 });

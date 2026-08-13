@@ -73,13 +73,14 @@ export function registerResources(server: McpServer): void {
     }
   );
 
-  // eq://presets — the full shared preset library.
+  // eq://presets — working preset library plus the user's collection.
   server.registerResource(
     "presets",
     "eq://presets",
     {
       title: "Preset library",
-      description: "All saved EQ presets in the shared library (read from disk).",
+      description:
+        "All saved EQ presets: the working library the app loads plus the user's own collection (read from disk).",
       mimeType: MIME_JSON,
     },
     async (uri) => {

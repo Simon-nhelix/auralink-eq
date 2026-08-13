@@ -1,16 +1,23 @@
 /**
  * Local filesystem access for the MCP server.
  *
- * Presets live in the SAME directory the app uses
- * (`~/Library/Application Support/Auralink/presets`, override with
- * `AURALINK_PRESETS_DIR`) so the AI and the app see one shared library. Knowledge
- * data (headphone profiles / target curves / safety rules) is read from
- * `AURALINK_DATA_DIR` (default the bundled `mcp-server/data`), where the app's
- * core-knowledge module copies identical JSON so the server works standalone.
+ * Two roots, mirroring `AuralinkPaths` on the Swift side:
  *
- * Shared git-tracked library lives in the repo `library/` folder
- * (`AURALINK_LIBRARY_DIR` override): per-file headphones and shared presets.
- * Writes dual-write to Application Support (live app) and `library/` (git).
+ * - The **working preset directory** the app loads from
+ *   (`~/Library/Application Support/Auralink/presets`, override with
+ *   `AURALINK_PRESETS_DIR`) so the AI and the app see one live library. Target
+ *   curves and safety rules come from `AURALINK_DATA_DIR` (default the bundled
+ *   `mcp-server/data`), where the app's core-knowledge module copies identical
+ *   JSON so the server works standalone.
+ * - The **user's collection** (`~/auralink-collection`, override with
+ *   `AURALINK_COLLECTION_DIR`): per-file headphone profiles and curated presets,
+ *   typically a git checkout the user owns. This is the only source of headphone
+ *   profiles — Auralink ships none, because a shipped database would impose one
+ *   person's taste on every user.
+ *
+ * Writes into the collection are deliberate: profiles go there because the user
+ * registered them, and presets only via `addPresetToCollection`. Nothing
+ * accumulates in the user's repository as a side effect.
  *
  * Everything degrades gracefully: a missing knowledge file yields an empty list
  * (or the built-in default `SafetyRules`), and a malformed preset file is skipped
@@ -95,118 +102,48 @@ export function userDataDir(): string {
 }
 
 /**
- * Git-tracked shared library root (`<repo>/library` by default).
- * Override with `AURALINK_LIBRARY_DIR`.
+ * The user's own headphone/preset collection root (`~/auralink-collection` by
+ * default). Override with `AURALINK_COLLECTION_DIR`; `AURALINK_LIBRARY_DIR` is
+ * accepted as the pre-split name so existing configs keep working.
+ *
+ * Deliberately not under `~/Documents`: that folder is TCC-protected and an
+ * ad-hoc signed build loses the grant on every rebuild.
  */
-export function libraryDir(): string {
-  const override = process.env.AURALINK_LIBRARY_DIR;
+export function collectionDir(): string {
+  const override =
+    process.env.AURALINK_COLLECTION_DIR ?? process.env.AURALINK_LIBRARY_DIR;
   if (override && override.trim().length > 0) return override.trim();
-  // dist/ → mcp-server/ → repo root → library/
-  return path.resolve(moduleDir, "..", "..", "library");
+  return path.join(os.homedir(), "auralink-collection");
 }
 
-/**
- * Runtime mirror of the shared library under Application Support so the
- * installed app (which cannot see the git checkout) still loads per-file
- * profiles. Override with `AURALINK_RUNTIME_LIBRARY_DIR`.
- */
-export function runtimeLibraryDir(): string {
-  const override = process.env.AURALINK_RUNTIME_LIBRARY_DIR;
-  if (override && override.trim().length > 0) return override.trim();
-  return path.join(
-    os.homedir(),
-    "Library",
-    "Application Support",
-    "Auralink",
-    "library"
-  );
+export function collectionHeadphonesDir(): string {
+  return path.join(collectionDir(), "headphones");
 }
 
-export function runtimeLibraryHeadphonesDir(): string {
-  return path.join(runtimeLibraryDir(), "headphones");
+export function collectionPresetsDir(): string {
+  return path.join(collectionDir(), "presets");
 }
 
-export function runtimeLibraryPresetsDir(): string {
-  return path.join(runtimeLibraryDir(), "presets");
+export function collectionManifestPath(): string {
+  return path.join(collectionDir(), "manifest.json");
 }
 
-export function libraryHeadphonesDir(): string {
-  return path.join(libraryDir(), "headphones");
+function collectionHeadphonePath(id: string): string {
+  return path.join(collectionHeadphonesDir(), `${sanitizeId(id)}.json`);
 }
 
-export function libraryPresetsDir(): string {
-  return path.join(libraryDir(), "presets");
+function collectionPresetPath(id: string): string {
+  return path.join(collectionPresetsDir(), `${sanitizeId(id)}.json`);
 }
 
-function libraryHeadphonePath(id: string): string {
-  return path.join(libraryHeadphonesDir(), `${sanitizeId(id)}.json`);
+async function writeCollectionHeadphone(profile: HeadphoneProfile): Promise<void> {
+  await ensureDir(collectionHeadphonesDir());
+  await fs.writeFile(collectionHeadphonePath(profile.id), stableStringify(profile), "utf8");
 }
 
-function libraryPresetPath(id: string): string {
-  return path.join(libraryPresetsDir(), `${sanitizeId(id)}.json`);
-}
-
-/** True when a preset should be mirrored into the git-tracked library. */
-export function isSharedLibraryPreset(preset: EQPreset): boolean {
-  const id = (preset.id ?? "").toLowerCase();
-  const tags = (preset.tags ?? []).map((t) => t.toLowerCase());
-  if (id.startsWith("audition_") || id.startsWith("live_audition_")) return false;
-  if (tags.includes("audition") || tags.includes("local-only")) return false;
-  if (id.startsWith("ai_")) return true;
-  if (tags.some((t) => ["baseline", "harman-neutral", "measured-fir", "autoeq", "crinacle-ief-2025", "library"].includes(t))) {
-    return true;
-  }
-  if (preset.createdBy === "ai" && tags.includes("baseline")) return true;
-  return false;
-}
-
-async function writeLibraryHeadphone(profile: HeadphoneProfile): Promise<void> {
-  const payload = stableStringify(profile);
-  await ensureDir(libraryHeadphonesDir());
-  await fs.writeFile(libraryHeadphonePath(profile.id), payload, "utf8");
-  // Runtime mirror for the installed app.
-  await ensureDir(runtimeLibraryHeadphonesDir());
-  await fs.writeFile(
-    path.join(runtimeLibraryHeadphonesDir(), `${sanitizeId(profile.id)}.json`),
-    payload,
-    "utf8"
-  );
-}
-
-async function removeLibraryHeadphone(id: string): Promise<void> {
+async function removeCollectionHeadphone(id: string): Promise<void> {
   try {
-    await fs.unlink(libraryHeadphonePath(id));
-  } catch {
-    /* ignore missing */
-  }
-  try {
-    await fs.unlink(path.join(runtimeLibraryHeadphonesDir(), `${sanitizeId(id)}.json`));
-  } catch {
-    /* ignore missing */
-  }
-}
-
-async function writeLibraryPreset(preset: EQPreset): Promise<void> {
-  if (!isSharedLibraryPreset(preset)) return;
-  const payload = stableStringify(preset);
-  await ensureDir(libraryPresetsDir());
-  await fs.writeFile(libraryPresetPath(preset.id), payload, "utf8");
-  await ensureDir(runtimeLibraryPresetsDir());
-  await fs.writeFile(
-    path.join(runtimeLibraryPresetsDir(), `${sanitizeId(preset.id)}.json`),
-    payload,
-    "utf8"
-  );
-}
-
-async function removeLibraryPreset(id: string): Promise<void> {
-  try {
-    await fs.unlink(libraryPresetPath(id));
-  } catch {
-    /* ignore missing */
-  }
-  try {
-    await fs.unlink(path.join(runtimeLibraryPresetsDir(), `${sanitizeId(id)}.json`));
+    await fs.unlink(collectionHeadphonePath(id));
   } catch {
     /* ignore missing */
   }
@@ -228,33 +165,6 @@ async function loadHeadphoneProfilesFromLibraryDir(dir: string): Promise<Headpho
     }
   }
   return out;
-}
-
-async function loadHeadphoneProfilesFromLibrary(): Promise<HeadphoneProfile[]> {
-  return loadHeadphoneProfilesFromLibraryDir(libraryHeadphonesDir());
-}
-
-/** Rebuild bundled aggregate seed files from library/headphones (best-effort). */
-export async function rebuildBundledHeadphoneSeed(): Promise<{ count: number; paths: string[] }> {
-  const profiles = (await loadHeadphoneProfilesFromLibrary())
-    .map(normalizeProfile)
-    .filter((p) => p.id.length > 0)
-    .sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
-  const paths = [
-    path.resolve(moduleDir, "..", "data", "headphone-profiles.json"),
-    path.resolve(moduleDir, "..", "..", "Sources", "AuralinkCore", "Resources", "data", "headphone-profiles.json"),
-  ];
-  const written: string[] = [];
-  for (const p of paths) {
-    try {
-      await ensureDir(path.dirname(p));
-      await fs.writeFile(p, stableStringify(profiles), "utf8");
-      written.push(p);
-    } catch {
-      /* optional path may not exist in published package layouts */
-    }
-  }
-  return { count: profiles.length, paths: written };
 }
 
 async function ensureDir(dir: string): Promise<void> {
@@ -400,37 +310,78 @@ function sanitizeId(id: string): string {
 
 // MARK: - Preset CRUD
 
-/**
- * Load every valid preset on disk (newest-updated first). Malformed files are
- * skipped. Each preset is normalized so callers always see 20 clamped bands.
- */
-export async function loadAllPresets(): Promise<EQPreset[]> {
-  const dir = presetsDir();
+/** Every valid preset in one directory, keyed by id. Malformed files are skipped. */
+async function loadPresetsFromDir(dir: string): Promise<Map<string, EQPreset>> {
+  const byId = new Map<string, EQPreset>();
   let entries: string[];
   try {
     entries = await fs.readdir(dir);
   } catch {
-    return []; // directory doesn't exist yet (app not run) → empty library
+    return byId; // directory doesn't exist yet → nothing to load
   }
-  const presets: EQPreset[] = [];
   for (const entry of entries) {
     if (!entry.toLowerCase().endsWith(".json")) continue;
     const parsed = await readJson<EQPreset>(path.join(dir, entry));
     if (parsed && typeof parsed.id === "string" && Array.isArray(parsed.bands)) {
-      presets.push(normalizePreset(parsed));
+      byId.set(parsed.id, normalizePreset(parsed));
     }
   }
-  presets.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
-  return presets;
+  return byId;
 }
 
-/** Read one preset by id, or null if it doesn't exist / is malformed. */
+/**
+ * Load every valid preset from the working directory and the user's collection
+ * (newest-updated first). On an id collision the working copy wins, matching
+ * `PresetStore.loadAll` on the Swift side.
+ */
+export async function loadAllPresets(): Promise<EQPreset[]> {
+  const fromCollection = await loadPresetsFromDir(collectionPresetsDir());
+  const fromWorking = await loadPresetsFromDir(presetsDir());
+  const byId = new Map([...fromCollection, ...fromWorking]);
+  return [...byId.values()].sort((a, b) =>
+    (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")
+  );
+}
+
+/** Ids currently present in the user's collection. */
+export async function collectionPresetIds(): Promise<string[]> {
+  return [...(await loadPresetsFromDir(collectionPresetsDir())).keys()].sort();
+}
+
+/**
+ * Read one preset by id from the working directory, falling back to the user's
+ * collection. Null if neither has it or the file is malformed.
+ */
 export async function getPreset(id: string): Promise<EQPreset | null> {
-  const parsed = await readJson<EQPreset>(presetFilePath(id));
-  if (!parsed || typeof parsed.id !== "string" || !Array.isArray(parsed.bands)) {
-    return null;
+  for (const file of [presetFilePath(id), collectionPresetPath(id)]) {
+    const parsed = await readJson<EQPreset>(file);
+    if (parsed && typeof parsed.id === "string" && Array.isArray(parsed.bands)) {
+      return normalizePreset(parsed);
+    }
   }
-  return normalizePreset(parsed);
+  return null;
+}
+
+/**
+ * Copy a preset into the user's collection. The only path that writes presets
+ * there, so nothing lands in the user's repository without them asking.
+ */
+export async function addPresetToCollection(id: string): Promise<EQPreset | null> {
+  const preset = await getPreset(id);
+  if (!preset) return null;
+  await ensureDir(collectionPresetsDir());
+  await fs.writeFile(collectionPresetPath(preset.id), stableStringify(preset), "utf8");
+  return preset;
+}
+
+/** Remove a preset from the collection, leaving the working copy alone. */
+export async function removePresetFromCollection(id: string): Promise<boolean> {
+  try {
+    await fs.unlink(collectionPresetPath(id));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -456,8 +407,9 @@ export async function savePreset(preset: EQPreset): Promise<EQPreset> {
     updatedAt: now,
   };
 
+  // Working directory only. Getting into the user's collection takes an explicit
+  // `addPresetToCollection`.
   await fs.writeFile(presetFilePath(saved.id), stableStringify(saved), "utf8");
-  await writeLibraryPreset(saved);
   return saved;
 }
 
@@ -470,7 +422,9 @@ export async function deletePreset(id: string): Promise<EQPreset | null> {
   } catch {
     /* ignore missing file after the successful read */
   }
-  await removeLibraryPreset(id);
+  // Drop the collection copy too, otherwise the preset reappears on next load
+  // and the delete reads as having failed.
+  await removePresetFromCollection(id);
   try {
     await fs.rm(path.join(revisionsDir(), sanitizeId(id)), {
       recursive: true,
@@ -482,56 +436,12 @@ export async function deletePreset(id: string): Promise<EQPreset | null> {
   return preset;
 }
 
-/** True if a preset with this id exists on disk. */
+/** True if a preset with this id exists in the working directory or the collection. */
 export async function presetExists(id: string): Promise<boolean> {
-  try {
-    await fs.access(presetFilePath(id));
-    return true;
-  } catch {
-    return false;
-  }
+  return (await getPreset(id)) != null;
 }
 
 // MARK: - Knowledge data
-
-async function loadHeadphoneProfilesFrom(dir: string): Promise<HeadphoneProfile[]> {
-  const data = await readJson<HeadphoneProfile[]>(
-    path.join(dir, "headphone-profiles.json")
-  );
-  return Array.isArray(data) ? data : [];
-}
-
-async function loadDeletedHeadphoneProfileIds(): Promise<Set<string>> {
-  const ids = await readJson<string[]>(
-    path.join(userDataDir(), "deleted-headphone-profiles.json")
-  );
-  return new Set(
-    Array.isArray(ids)
-      ? ids.map((id) => sanitizeId(String(id).trim().toLowerCase())).filter(Boolean)
-      : []
-  );
-}
-
-async function saveDeletedHeadphoneProfileIds(ids: Set<string>): Promise<void> {
-  await ensureDir(userDataDir());
-  await fs.writeFile(
-    path.join(userDataDir(), "deleted-headphone-profiles.json"),
-    stableStringify([...ids].sort()),
-    "utf8"
-  );
-}
-
-function uniqueDirs(dirs: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const dir of dirs) {
-    const resolved = path.resolve(dir);
-    if (seen.has(resolved)) continue;
-    seen.add(resolved);
-    out.push(resolved);
-  }
-  return out;
-}
 
 function normalizeProfile(profile: HeadphoneProfile): HeadphoneProfile {
   return {
@@ -553,72 +463,34 @@ function normalizeProfile(profile: HeadphoneProfile): HeadphoneProfile {
   };
 }
 
-/** All headphone profiles: bundled seed + git library + user Application Support. */
+/**
+ * All headphone profiles, from the user's collection and nowhere else.
+ *
+ * There is no bundled seed to merge and no tombstone file to subtract: deleting
+ * the file *is* the deletion, because every profile got there because the user
+ * put it there.
+ */
 export async function loadHeadphoneProfiles(): Promise<HeadphoneProfile[]> {
   const byId = new Map<string, HeadphoneProfile>();
-  const deletedIds = await loadDeletedHeadphoneProfileIds();
-  // Order: bundled defaults → git library → user runtime (later wins).
-  for (const dir of uniqueDirs([
-    dataDir(),
-    libraryHeadphonesDir(),
-    runtimeLibraryHeadphonesDir(),
-    userDataDir(),
-  ])) {
-    // library dirs are folders of per-file profiles, not a single JSON.
-    if (
-      path.resolve(dir) === path.resolve(libraryHeadphonesDir()) ||
-      path.resolve(dir) === path.resolve(runtimeLibraryHeadphonesDir())
-    ) {
-      const profiles =
-        path.resolve(dir) === path.resolve(libraryHeadphonesDir())
-          ? await loadHeadphoneProfilesFromLibrary()
-          : await loadHeadphoneProfilesFromLibraryDir(dir);
-      for (const profile of profiles) {
-        const normalized = normalizeProfile(profile);
-        if (normalized.id.length > 0) byId.set(normalized.id, normalized);
-      }
-      continue;
-    }
-    for (const profile of await loadHeadphoneProfilesFrom(dir)) {
-      const normalized = normalizeProfile(profile);
-      if (normalized.id.length > 0) byId.set(normalized.id, normalized);
-    }
+  for (const profile of await loadHeadphoneProfilesFromLibraryDir(collectionHeadphonesDir())) {
+    const normalized = normalizeProfile(profile);
+    if (normalized.id.length > 0) byId.set(normalized.id, normalized);
   }
-  for (const id of deletedIds) byId.delete(id);
   return [...byId.values()].sort((a, b) =>
     `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`)
   );
 }
 
-/** Create or update one user headphone profile. */
+/** Create or update one headphone profile in the user's collection. */
 export async function saveHeadphoneProfile(
   profile: HeadphoneProfile
 ): Promise<HeadphoneProfile> {
   const normalized = normalizeProfile(profile);
-  await ensureDir(userDataDir());
-  const deletedIds = await loadDeletedHeadphoneProfileIds();
-  deletedIds.delete(normalized.id);
-  await saveDeletedHeadphoneProfileIds(deletedIds);
-
-  const current = await loadHeadphoneProfiles();
-  const merged = new Map<string, HeadphoneProfile>();
-  for (const item of current) merged.set(item.id, item);
-  merged.set(normalized.id, normalized);
-
-  const sorted = [...merged.values()].sort((a, b) =>
-    `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`)
-  );
-  await fs.writeFile(
-    path.join(userDataDir(), "headphone-profiles.json"),
-    stableStringify(sorted),
-    "utf8"
-  );
-  // Dual-write shared profile into git-tracked library (per-file).
-  await writeLibraryHeadphone(normalized);
+  await writeCollectionHeadphone(normalized);
   return normalized;
 }
 
-/** Delete/hide one headphone profile. Returns the visible profile before deletion, or null. */
+/** Delete one headphone profile. Returns the profile before deletion, or null. */
 export async function deleteHeadphoneProfile(
   id: string
 ): Promise<HeadphoneProfile | null> {
@@ -628,23 +500,7 @@ export async function deleteHeadphoneProfile(
   const existing = (await loadHeadphoneProfiles()).find((p) => p.id === normalizedId) ?? null;
   if (!existing) return null;
 
-  await ensureDir(userDataDir());
-
-  const userProfiles = await loadHeadphoneProfilesFrom(userDataDir());
-  const keptUserProfiles = userProfiles
-    .map(normalizeProfile)
-    .filter((profile) => profile.id !== normalizedId)
-    .sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
-  await fs.writeFile(
-    path.join(userDataDir(), "headphone-profiles.json"),
-    stableStringify(keptUserProfiles),
-    "utf8"
-  );
-
-  const deletedIds = await loadDeletedHeadphoneProfileIds();
-  deletedIds.add(normalizedId);
-  await saveDeletedHeadphoneProfileIds(deletedIds);
-  await removeLibraryHeadphone(normalizedId);
+  await removeCollectionHeadphone(normalizedId);
   return existing;
 }
 

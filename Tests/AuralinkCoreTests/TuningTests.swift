@@ -4,29 +4,127 @@ import XCTest
 /// Tests for the knowledge layer and the deterministic tuning engine.
 ///
 /// These guard two contracts that the rest of the product (and the MCP server)
-/// rely on: (1) the shipped JSON decodes cleanly into the `Models` types, and
-/// (2) `TuningEngine` is genuinely deterministic and stays inside safety limits.
+/// rely on: (1) profile / curve / rules JSON decodes cleanly into the `Models`
+/// types, and (2) `TuningEngine` is genuinely deterministic and stays inside
+/// safety limits.
+///
+/// Headphone profiles come from inline fixtures written to a temporary collection
+/// directory, not from the app bundle. Auralink ships no headphone database, so
+/// asserting against shipped profiles would be asserting against nothing.
 final class TuningTests: XCTestCase {
+
+    // MARK: Fixtures
+
+    /// Stand-ins for the kinds of profile the engine has to handle: a neutral
+    /// reference can, a treble-peaky one, and a few plain entries the tuning tests
+    /// name by display name.
+    private static let fixtureProfiles: [HeadphoneProfile] = [
+        HeadphoneProfile(
+            id: "sennheiser-hd600",
+            brand: "Sennheiser",
+            model: "HD600",
+            type: .openBack,
+            signature: "Reference-neutral, slightly mid-forward, polite treble; bass rolls off in the sub region.",
+            correctionNotes: [
+                "Sub-bass below ~40 Hz rolls off; a gentle low shelf restores weight without bloat.",
+                "Mild presence bump around 3 kHz can sound forward on bright tracks.",
+            ],
+            harshRegionsHz: [FrequencyRange(lowHz: 2800, highHz: 3600)],
+            suggestedTargetCurveId: "harman-neutral",
+            source: "Test fixture",
+            credibility: .measured
+        ),
+        HeadphoneProfile(
+            id: "beyerdynamic-dt990",
+            brand: "Beyerdynamic",
+            model: "DT990 Pro",
+            type: .openBack,
+            signature: "Aggressive V-shape with a prominent treble peak near 8 kHz.",
+            correctionNotes: ["Strong 8 kHz peak is the defining flaw; cut it firmly."],
+            harshRegionsHz: [
+                FrequencyRange(lowHz: 7000, highHz: 9000),
+                FrequencyRange(lowHz: 5500, highHz: 6500),
+            ],
+            suggestedTargetCurveId: "late-night",
+            source: "Test fixture",
+            credibility: .measured
+        ),
+        HeadphoneProfile(
+            id: "apple-airpods-pro-2",
+            brand: "Apple",
+            model: "AirPods Pro 2",
+            type: .trueWireless,
+            signature: "Consumer-warm with lifted bass and a smoothed treble.",
+            source: "Test fixture",
+            credibility: .community
+        ),
+        HeadphoneProfile(
+            id: "sony-wh-1000xm5",
+            brand: "Sony",
+            model: "WH-1000XM5",
+            type: .closedBack,
+            signature: "Bass-forward tuning with a recessed upper midrange.",
+            source: "Test fixture",
+            credibility: .community
+        ),
+        HeadphoneProfile(
+            id: "hifiman-sundara",
+            brand: "HIFIMAN",
+            model: "Sundara",
+            type: .openBack,
+            signature: "Clean planar presentation, mildly bright.",
+            source: "Test fixture",
+            credibility: .measured
+        ),
+    ]
+
+    private var collectionRoot: URL!
+
+    override func setUpWithError() throws {
+        collectionRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("auralink-tuning-fixtures-\(UUID().uuidString)", isDirectory: true)
+        try writeProfiles(Self.fixtureProfiles, to: fixtureHeadphonesDirectory)
+    }
+
+    override func tearDownWithError() throws {
+        if let collectionRoot {
+            try? FileManager.default.removeItem(at: collectionRoot)
+        }
+        collectionRoot = nil
+    }
 
     // MARK: Helpers
 
-    /// A knowledge base loaded purely from the bundled resources (no on-disk
-    /// override), so these tests exercise the shipped JSON.
+    private var fixtureHeadphonesDirectory: URL {
+        collectionRoot.appendingPathComponent("headphones", isDirectory: true)
+    }
+
+    private func writeProfiles(_ profiles: [HeadphoneProfile], to directory: URL) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        for profile in profiles {
+            try encoder.encode(profile)
+                .write(to: directory.appendingPathComponent("\(profile.id).json"), options: .atomic)
+        }
+    }
+
+    /// Bundled target curves and safety rules, plus the fixture profiles standing in
+    /// for a user's collection.
     private func makeKnowledge() -> KnowledgeBase {
-        KnowledgeBase(dataDirectory: nil)
+        KnowledgeBase(dataDirectory: nil, collectionHeadphonesDirectory: fixtureHeadphonesDirectory)
     }
 
     private func makeEngine(_ kb: KnowledgeBase) -> TuningEngine {
         TuningEngine(knowledge: kb, validator: PresetValidator(rules: kb.safetyRules))
     }
 
+    /// A knowledge base whose collection holds exactly `profiles`.
     private func makeKnowledge(profiles: [HeadphoneProfile]) throws -> (KnowledgeBase, URL) {
-        let directory = FileManager.default.temporaryDirectory
+        let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("auralink-tuning-tests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let data = try JSONEncoder().encode(profiles)
-        try data.write(to: directory.appendingPathComponent("headphone-profiles.json"), options: .atomic)
-        return (KnowledgeBase(dataDirectory: directory), directory)
+        let headphones = root.appendingPathComponent("headphones", isDirectory: true)
+        try writeProfiles(profiles, to: headphones)
+        return (KnowledgeBase(dataDirectory: nil, collectionHeadphonesDirectory: headphones), root)
     }
 
     /// Sum of absolute gain in enabled gain-using bands within [low, high] Hz —
@@ -39,17 +137,41 @@ final class TuningTests: XCTestCase {
 
     // MARK: Knowledge loading
 
-    func testKnowledgeBaseLoadsBundledData() {
+    func testKnowledgeBaseLoadsBundledCurvesAndRules() {
         let kb = makeKnowledge()
-        // Decoding must succeed — these counts guard the JSON schema against the
-        // Codable types. A schema mismatch would yield 0 here.
-        XCTAssertGreaterThanOrEqual(kb.headphoneProfiles.count, 8,
-                                    "Expected at least 8 headphone profiles to decode.")
+        // Target curves and safety rules are app machinery and stay bundled — the
+        // count guards the JSON schema against the Codable types. A schema mismatch
+        // would yield 0 here.
         XCTAssertGreaterThanOrEqual(kb.targetCurves.count, 7,
                                     "Expected at least 7 target curves to decode.")
-        // Safety rules should decode to the shipped defaults.
         XCTAssertEqual(kb.safetyRules.maxBoostDb, 6, accuracy: 0.001)
         XCTAssertEqual(kb.safetyRules.maxAggregateBoostDb, 9, accuracy: 0.001)
+    }
+
+    /// The state a fresh install is in: curves and rules present, zero profiles.
+    func testKnowledgeBaseShipsNoHeadphoneProfiles() {
+        let bundleOnly = KnowledgeBase(dataDirectory: nil, collectionHeadphonesDirectory: nil)
+        XCTAssertTrue(bundleOnly.headphoneProfiles.isEmpty,
+                      "Auralink must ship no headphone profiles; the collection is the user's.")
+        XCTAssertFalse(bundleOnly.targetCurves.isEmpty,
+                       "Target curves are app machinery and must still be bundled.")
+        XCTAssertEqual(bundleOnly.safetyRules.maxBoostDb, 6, accuracy: 0.001)
+        // Lookups on an empty collection answer cleanly rather than trapping.
+        XCTAssertNil(bundleOnly.profile(id: "sennheiser-hd600"))
+        XCTAssertNil(bundleOnly.profileMatching("HD600"))
+    }
+
+    func testKnowledgeBaseLoadsProfilesFromCollection() {
+        let kb = makeKnowledge()
+        XCTAssertEqual(kb.headphoneProfiles.count, Self.fixtureProfiles.count)
+    }
+
+    /// An empty collection directory is a normal state, not an error.
+    func testKnowledgeBaseToleratesMissingCollectionDirectory() {
+        let missing = collectionRoot.appendingPathComponent("does-not-exist", isDirectory: true)
+        let kb = KnowledgeBase(dataDirectory: nil, collectionHeadphonesDirectory: missing)
+        XCTAssertTrue(kb.headphoneProfiles.isEmpty)
+        XCTAssertFalse(kb.targetCurves.isEmpty)
     }
 
     func testProfileLookupById() {
@@ -79,16 +201,30 @@ final class TuningTests: XCTestCase {
         XCTAssertNil(kb.targetCurve(id: "no-such-curve"))
     }
 
-    func testKnowledgeBaseLoadsLibraryDirectory() throws {
+    /// A collection can live anywhere on disk — a git checkout outside Application
+    /// Support is the normal case — and one file per model is the only layout.
+    func testKnowledgeBaseLoadsCollectionFromArbitraryDirectory() throws {
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("auralink-lib-\(UUID().uuidString)", isDirectory: true)
-        let dataDir = root.appendingPathComponent("data", isDirectory: true)
-        let libDir = root.appendingPathComponent("library/headphones", isDirectory: true)
-        try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: libDir, withIntermediateDirectories: true)
+            .appendingPathComponent("auralink-collection-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let headphones = root.appendingPathComponent("headphones", isDirectory: true)
 
-        // Aggregate has one profile
-        let aggregate = [
+        try writeProfiles([
+            HeadphoneProfile(
+                id: "from-collection",
+                brand: "Lib",
+                model: "Two",
+                type: .closedBack,
+                signature: "lib",
+                source: "test",
+                credibility: .measured
+            )
+        ], to: headphones)
+
+        // A stale aggregate next door must not leak back in: per-file is the layout.
+        let dataDir = root.appendingPathComponent("data", isDirectory: true)
+        try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+        try JSONEncoder().encode([
             HeadphoneProfile(
                 id: "from-aggregate",
                 brand: "Agg",
@@ -98,26 +234,13 @@ final class TuningTests: XCTestCase {
                 source: "test",
                 credibility: .estimated
             )
-        ]
-        try JSONEncoder().encode(aggregate).write(to: dataDir.appendingPathComponent("headphone-profiles.json"))
+        ]).write(to: dataDir.appendingPathComponent("headphone-profiles.json"))
 
-        // Library overrides / adds
-        let libraryProfile = HeadphoneProfile(
-            id: "from-library",
-            brand: "Lib",
-            model: "Two",
-            type: .closedBack,
-            signature: "lib",
-            source: "test",
-            credibility: .measured
-        )
-        try JSONEncoder().encode(libraryProfile).write(to: libDir.appendingPathComponent("from-library.json"))
-
-        let kb = KnowledgeBase(dataDirectory: dataDir, libraryHeadphonesDirectory: libDir)
-        XCTAssertNotNil(kb.profile(id: "from-aggregate"))
-        XCTAssertNotNil(kb.profile(id: "from-library"))
-        XCTAssertEqual(kb.profile(id: "from-library")?.credibility, .measured)
-        try? FileManager.default.removeItem(at: root)
+        let kb = KnowledgeBase(dataDirectory: dataDir, collectionHeadphonesDirectory: headphones)
+        XCTAssertNotNil(kb.profile(id: "from-collection"))
+        XCTAssertEqual(kb.profile(id: "from-collection")?.credibility, .measured)
+        XCTAssertNil(kb.profile(id: "from-aggregate"),
+                     "Aggregate headphone-profiles.json is no longer a profile source.")
     }
 
     // MARK: Tuning generation

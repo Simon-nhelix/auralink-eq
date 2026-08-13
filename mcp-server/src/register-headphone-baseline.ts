@@ -1,9 +1,9 @@
 /**
  * Auralink-only headphone baseline registration.
  *
- * Writes a profile + shared preset into Application Support and git-tracked
- * `library/`. Does not commit, does not touch Luxsin X8, and does not rebuild
- * bundled seed JSON unless `rebuildSeed` is explicitly true.
+ * Adding a headphone is an explicit request to put it in the user's collection,
+ * so this writes both the profile and its baseline preset there, plus the working
+ * preset copy the running app loads. Does not commit and does not touch Luxsin X8.
  */
 
 import path from "node:path";
@@ -12,16 +12,15 @@ import { getCorrection, type AutoEqLookup } from "./autoeq.js";
 import { reloadKnowledge, reloadPresets, type ControlResult } from "./control.js";
 import { slugify } from "./helpers.js";
 import {
+  addPresetToCollection,
   bandsFromSpecs,
-  libraryDir,
-  libraryHeadphonesDir,
-  libraryPresetsDir,
+  collectionDir,
+  collectionHeadphonesDir,
+  collectionPresetsDir,
   loadSafetyRules,
   normalizePreset,
-  rebuildBundledHeadphoneSeed,
   saveHeadphoneProfile,
   savePreset,
-  isSharedLibraryPreset,
 } from "./store.js";
 import {
   Credibility,
@@ -73,7 +72,6 @@ export type RegisterHeadphoneBaselineInput = {
   harshRegionsHz?: Array<{ lowHz: number; highHz: number }>;
   credibility?: Credibility;
   refreshAutoEq?: boolean;
-  rebuildSeed?: boolean;
 };
 
 export type RegisterHeadphoneBaselineDeps = {
@@ -84,12 +82,11 @@ export type RegisterHeadphoneBaselineDeps = {
   }) => Promise<AutoEqLookup>;
   reloadKnowledge?: typeof reloadKnowledge;
   reloadPresets?: typeof reloadPresets;
-  rebuildBundledHeadphoneSeed?: typeof rebuildBundledHeadphoneSeed;
 };
 
 export type RegisterHeadphoneBaselineOk = {
   ok: true;
-  libraryDir: string;
+  collectionDir: string;
   written: { headphone: string; preset: string };
   profile: HeadphoneProfile;
   preset: {
@@ -98,12 +95,11 @@ export type RegisterHeadphoneBaselineOk = {
     preampDb: number;
     preferenceBandIndexes: number[];
     tags: string[];
-    sharedLibrary: boolean;
+    inCollection: boolean;
   };
   validation: ValidationResult;
   appKnowledge: Record<string, unknown>;
   appPresetSync: Record<string, unknown>;
-  seed: { skipped: true } | { count: number; paths: string[] };
   autoeq:
     | { skipped: true; reason: "explicit_bands" }
     | {
@@ -218,7 +214,6 @@ export async function registerHeadphoneBaseline(
   const lookupAutoEq = deps.getAutoEqCorrection ?? getCorrection;
   const reloadKnowledgeFn = deps.reloadKnowledge ?? reloadKnowledge;
   const reloadPresetsFn = deps.reloadPresets ?? reloadPresets;
-  const rebuildSeedFn = deps.rebuildBundledHeadphoneSeed ?? rebuildBundledHeadphoneSeed;
 
   if (hasExplicitBands && !input.type) {
     return {
@@ -351,7 +346,7 @@ export async function registerHeadphoneBaseline(
   const chosenPreamp = clampPreamp(rawPreamp);
 
   const presetId = `ai_${profileId}_${slugify(targetCurveId)}${prefTag ? `_${slugify(prefTag)}` : ""}`;
-  const tags = ["ai", "baseline", "library", targetCurveId, profileId];
+  const tags = ["ai", "baseline", targetCurveId, profileId];
   if (!hasExplicitBands) {
     tags.push("autoeq", autoeqSourceTag ?? "autoeq", "measured-fir");
   }
@@ -405,19 +400,17 @@ export async function registerHeadphoneBaseline(
     safety: { autoGainEnabled: false, clippingRisk: validation.clippingRisk },
   };
   const saved = await savePreset(finalPreset);
+  // A headphone with no baseline is useless, so registering one keeps its measured
+  // baseline in the collection alongside the profile.
+  const inCollection = (await addPresetToCollection(saved.id)) != null;
   const appPresetSync = await reloadPresetsFn();
-
-  let seed: RegisterHeadphoneBaselineOk["seed"] = { skipped: true };
-  if (input.rebuildSeed === true) {
-    seed = await rebuildSeedFn();
-  }
 
   return {
     ok: true,
-    libraryDir: libraryDir(),
+    collectionDir: collectionDir(),
     written: {
-      headphone: path.join(libraryHeadphonesDir(), `${profile.id}.json`),
-      preset: path.join(libraryPresetsDir(), `${saved.id}.json`),
+      headphone: path.join(collectionHeadphonesDir(), `${profile.id}.json`),
+      preset: path.join(collectionPresetsDir(), `${saved.id}.json`),
     },
     profile,
     preset: {
@@ -426,16 +419,16 @@ export async function registerHeadphoneBaseline(
       preampDb: saved.preampDb,
       preferenceBandIndexes,
       tags: saved.tags,
-      sharedLibrary: isSharedLibraryPreset(saved),
+      inCollection,
     },
     validation,
     appKnowledge: appSyncPayload(appKnowledge, "knowledge"),
     appPresetSync: appSyncPayload(appPresetSync, "presets"),
-    seed,
     autoeq: autoeqMeta,
     note:
-      "Profile + shared preset dual-written to Application Support and library/. " +
-      "Commit library/headphones and library/presets later if you want them in git. " +
-      "Luxsin X8 is a separate target — use apply_eq_preset/create_eq_preset with target luxsin-x8.",
+      `Profile + baseline preset written to your collection at ${collectionDir()}, ` +
+      "and the baseline is live in the working preset library. Commit the collection " +
+      "when you want it in git. Luxsin X8 is a separate target — use " +
+      "apply_eq_preset/create_eq_preset with target luxsin-x8.",
   };
 }

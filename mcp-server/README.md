@@ -7,9 +7,11 @@ language.
 
 It speaks two backends:
 
-- **Filesystem** — reads and writes the *same* preset library the app uses
-  (`~/Library/Application Support/Auralink/presets`) and reads bundled knowledge
-  data (headphone profiles, target curves, safety rules) from `./data`.
+- **Filesystem** — reads and writes the *same* working preset library the app uses
+  (`~/Library/Application Support/Auralink/presets`), reads the user's own headphone
+  profiles and curated presets from their collection (`~/auralink-collection` by
+  default), and reads bundled target curves and safety rules from `./data`. No
+  headphone data ships; see `../docs/DATA_COLLECTION.md`.
 - **App ControlServer** — a localhost HTTP API the running app exposes
   (`http://127.0.0.1:8765`) for live state and any change to live audio. It
   requires the user-only bearer token created by the app on first launch.
@@ -22,7 +24,7 @@ rollback tools require the app.
 
 ## What it exposes
 
-### Tools (25)
+### Tools (28)
 
 | Tool | Kind | Notes |
 | --- | --- | --- |
@@ -33,12 +35,14 @@ rollback tools require the app.
 | `record_tuning_feedback` | write | Records explicit listening feedback locally. |
 | `get_user_tuning_preferences` | read | Summarizes locally stored feedback. |
 | `list_output_devices` | read | Output devices from the app (requires app). |
-| `list_headphone_profiles` | read | All headphone profiles (offline, from `./data`). |
+| `list_headphone_profiles` | read | All profiles in the user's collection (offline). Empty on a fresh install. |
 | `get_headphone_profile` | read | One profile by slug id (offline). |
-| `upsert_headphone_profile` | write | Validates and saves a local headphone profile. |
-| `delete_headphone_profile` | write | Deletes a user-managed profile. |
-| `list_presets` | read | The shared preset library (offline, from disk). |
+| `upsert_headphone_profile` | write | Validates and saves a profile into the user's collection. |
+| `delete_headphone_profile` | write | Deletes a profile from the collection. |
+| `list_presets` | read | Working library + collection presets, flagged with `inCollection` (offline). |
 | `get_preset` | read | One full preset by id (offline). |
+| `add_preset_to_collection` | write | Copies a preset into the user's collection. Ask first. |
+| `remove_preset_from_collection` | write | Drops a collection entry, keeping the working copy. |
 | `delete_preset` | write | Deletes a local preset and refreshes the app when online. |
 | `create_eq_preset` | write | **Validates before writing**; applies auto-preamp; never touches live audio. |
 | `audition_eq_preset` | **live** | Applies an unsaved, validated preset temporarily after confirmation. |
@@ -91,8 +95,9 @@ npm run dev        # tsc -w  (rebuild on change)
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `AURALINK_PRESETS_DIR` | `~/Library/Application Support/Auralink/presets` | Shared preset library (read/write). |
-| `AURALINK_DATA_DIR` | `./data` (next to this package) | Knowledge data (headphone profiles, target curves, safety rules). |
+| `AURALINK_PRESETS_DIR` | `~/Library/Application Support/Auralink/presets` | Working preset library (read/write). |
+| `AURALINK_COLLECTION_DIR` | `~/auralink-collection` | The user's own headphone profiles and curated presets. Must match the app's setting. `AURALINK_LIBRARY_DIR` is accepted as the pre-split name. |
+| `AURALINK_DATA_DIR` | `./data` (next to this package) | Bundled target curves and safety rules. |
 | `AURALINK_CONTROL_URL` | `http://127.0.0.1:8765` | Base URL of the app's ControlServer. |
 | `AURALINK_CONTROL_TOKEN_FILE` | `~/Library/Application Support/Auralink/control-token` | Shared capability file created by the app. |
 | `AURALINK_CONTROL_TOKEN` | unset | Explicit bearer capability for controlled development environments. |

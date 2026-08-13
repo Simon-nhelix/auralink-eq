@@ -6,6 +6,10 @@ import {
   getPreset,
   savePreset,
   deletePreset,
+  addPresetToCollection,
+  removePresetFromCollection,
+  collectionPresetIds,
+  collectionDir,
   loadHeadphoneProfiles,
   getHeadphoneProfile,
   saveHeadphoneProfile,
@@ -532,8 +536,10 @@ export function registerTools(server: McpServer): void {
     {
       title: "List headphone profiles",
       description:
-        "Lists all known headphone profiles (id, brand, model, type, signature, credibility) from the " +
-        "bundled knowledge data. Use this to pick the right profile id before tuning. Works offline.",
+        "Lists the headphone profiles in the user's own collection (id, brand, model, type, signature, " +
+        "credibility). Use this to pick the right profile id before tuning. Works offline. Auralink ships " +
+        "no headphone database, so an empty list means the user has not added anything yet — call " +
+        "get_autoeq_correction to look a model up rather than treating it as an error.",
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
@@ -548,7 +554,19 @@ export function registerTools(server: McpServer): void {
         credibility: p.credibility,
         suggestedTargetCurveId: p.suggestedTargetCurveId,
       }));
-      return jsonResult({ count: summary.length, profiles: summary });
+      return jsonResult({
+        count: summary.length,
+        collectionDir: collectionDir(),
+        profiles: summary,
+        ...(summary.length === 0
+          ? {
+              note:
+                "The user's collection has no headphone profiles yet. This is the normal state for a " +
+                "fresh install — Auralink ships no headphone database. Ask which model they use, then " +
+                "call get_autoeq_correction and register_headphone_baseline.",
+            }
+          : {}),
+      });
     }
   );
 
@@ -586,9 +604,9 @@ export function registerTools(server: McpServer): void {
     {
       title: "Add or update headphone profile",
       description:
-        "Creates or updates a user headphone/earphone profile in the shared knowledge base. Use this after " +
+        "Creates or updates a headphone/earphone profile in the user's own collection. Use this after " +
         "the AI client has read a product page, review, measurement graph, or user notes and extracted a " +
-        "tonal signature. This writes knowledge only; it does not create or apply an EQ preset.",
+        "tonal signature. This writes one profile file only; it does not create or apply an EQ preset.",
       inputSchema: {
         id: z
           .string()
@@ -686,8 +704,8 @@ export function registerTools(server: McpServer): void {
     {
       title: "Delete headphone profile",
       description:
-        "Deletes or hides a headphone/earphone profile from the shared knowledge base. Use when the user says " +
-        "a model was added by mistake or asks to remove it. The running app is asked to reload knowledge afterward.",
+        "Deletes a headphone/earphone profile from the user's collection. Use when the user says a model " +
+        "was added by mistake or asks to remove it. The running app is asked to reload knowledge afterward.",
       inputSchema: {
         id: z.string().min(1).describe("Profile id to delete, e.g. 'timeear-nh60'."),
       },
@@ -735,9 +753,10 @@ export function registerTools(server: McpServer): void {
     {
       title: "List presets",
       description:
-        "Lists every saved EQ preset in the shared library (newest-updated first): id, name, headphone, " +
-        "goal, createdBy (user/ai), version, tags, clipping risk. Reads from the same directory the app " +
-        "uses, so it works whether or not the app is running.",
+        "Lists every saved EQ preset (newest-updated first): id, name, headphone, goal, createdBy " +
+        "(user/ai), version, tags, clipping risk, and whether it is in the user's own collection. " +
+        "Reads the working preset directory the app uses plus the collection, so it works whether or " +
+        "not the app is running.",
       inputSchema: {
         headphone: z
           .string()
@@ -747,17 +766,25 @@ export function registerTools(server: McpServer): void {
           .enum(["user", "ai"])
           .optional()
           .describe("Optional filter by author."),
+        inCollection: z
+          .boolean()
+          .optional()
+          .describe("Optional filter: true for collection presets only, false for working-only ones."),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
-    async ({ headphone, createdBy }) => {
+    async ({ headphone, createdBy, inCollection }) => {
       let presets = await loadAllPresets();
+      const collectionIds = new Set(await collectionPresetIds());
       if (headphone) {
         const needle = headphone.toLowerCase();
         presets = presets.filter((p) => (p.headphone ?? "").toLowerCase().includes(needle));
       }
       if (createdBy) {
         presets = presets.filter((p) => p.createdBy === createdBy);
+      }
+      if (inCollection !== undefined) {
+        presets = presets.filter((p) => collectionIds.has(p.id) === inCollection);
       }
       const summary = presets.map((p) => ({
         id: p.id,
@@ -770,8 +797,69 @@ export function registerTools(server: McpServer): void {
         preampDb: p.preampDb,
         clippingRisk: p.safety.clippingRisk,
         updatedAt: p.updatedAt,
+        inCollection: collectionIds.has(p.id),
       }));
-      return jsonResult({ count: summary.length, presets: summary });
+      return jsonResult({
+        count: summary.length,
+        collectionDir: collectionDir(),
+        presets: summary,
+      });
+    }
+  );
+
+  // add_preset_to_collection / remove_preset_from_collection — the only way a
+  // preset enters or leaves the user's own (often git-tracked) collection. There is
+  // deliberately no heuristic that promotes presets automatically.
+  server.registerTool(
+    "add_preset_to_collection",
+    {
+      title: "Add preset to your collection",
+      description:
+        "Copies a saved preset into the user's own collection directory so it is kept and shared " +
+        "(typically a git checkout). Ask before doing this: everything else stays machine-local. " +
+        "Does not change sound.",
+      inputSchema: {
+        id: z.string().min(1).describe("Preset id to add. Use list_presets to discover ids."),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ id }) => {
+      const preset = await addPresetToCollection(id);
+      if (!preset) {
+        return errorResult(`No preset with id '${id}'. Call list_presets to see valid ids.`);
+      }
+      return jsonResult({
+        added: true,
+        id: preset.id,
+        name: preset.name,
+        collectionDir: collectionDir(),
+        note: "Commit your collection when you want this in git.",
+      });
+    }
+  );
+
+  server.registerTool(
+    "remove_preset_from_collection",
+    {
+      title: "Remove preset from your collection",
+      description:
+        "Removes a preset from the user's collection directory, leaving the working copy the app " +
+        "loads untouched. Does not change sound.",
+      inputSchema: {
+        id: z.string().min(1).describe("Preset id to remove from the collection."),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id }) => {
+      const removed = await removePresetFromCollection(id);
+      return jsonResult({
+        removed,
+        id,
+        collectionDir: collectionDir(),
+        note: removed
+          ? "Working copy kept; only the collection entry was removed."
+          : "That id was not in the collection.",
+      });
     }
   );
 
@@ -828,9 +916,14 @@ export function registerTools(server: McpServer): void {
       const appPresetSync = await reloadPresets();
       let fallbackApply: unknown = { applied: false, skipped: true };
       if (stateBefore.online && stateBefore.data?.currentPresetId === id) {
-        const flat = await getPreset("preset_flat");
+        // Fall back to any bypass-shaped preset: `preset_flat` is seeded by the app
+        // but a user with their own collection may have renamed or removed it.
+        const flat =
+          (await getPreset("preset_flat")) ??
+          (await loadAllPresets()).find((p) => p.bands.every((b) => !b.enabled)) ??
+          null;
         if (flat) {
-          const res = await applyPreset("preset_flat", true);
+          const res = await applyPreset(flat.id, true);
           fallbackApply = res.online
             ? {
                 online: true,
@@ -838,14 +931,21 @@ export function registerTools(server: McpServer): void {
                 needsConfirm: res.data?.needsConfirm === true,
                 message:
                   res.data?.ok === true
-                    ? "Deleted preset was current, so Auralink loaded Flat."
-                    : "Deleted preset was current, but the app did not load Flat.",
+                    ? `Deleted preset was current, so Auralink loaded ${flat.name}.`
+                    : `Deleted preset was current, but the app did not load ${flat.name}.`,
               }
             : {
                 online: false,
                 applied: false,
                 message: res.error,
               };
+        } else {
+          fallbackApply = {
+            applied: false,
+            skipped: true,
+            message:
+              "Deleted preset was current and no bypass preset exists to fall back to. Disable EQ or load another preset.",
+          };
         }
       }
 
@@ -1292,17 +1392,17 @@ export function registerTools(server: McpServer): void {
 
   // get_autoeq_correction — measured parametric correction from AutoEq (read).
 
-  // register_headphone_baseline — Auralink-only profile + shared baseline into library/.
+  // register_headphone_baseline — profile + baseline preset into the user's collection.
   server.registerTool(
     "register_headphone_baseline",
     {
-      title: "Register headphone baseline into git library",
+      title: "Register headphone baseline into your collection",
       description:
-        "One-shot Auralink registration: upsert a headphone profile and save a shared baseline preset " +
-        "(dual-written to Application Support and git-tracked library/). AutoEq lookup when bands are omitted; " +
-        "pass bands + type when AutoEq has no hit (squig.link, Super* Review, IEF 2025, …). " +
-        "Does not commit, does not write Luxsin X8, does not rebuild bundled seed JSON unless rebuildSeed:true. " +
-        "Do not create scripts/ for this. X8 is a separate hardware target via apply_eq_preset/create_eq_preset.",
+        "One-shot Auralink registration: upsert a headphone profile and save its baseline preset into " +
+        "the user's own collection, plus the working preset library the running app loads. AutoEq lookup " +
+        "when bands are omitted; pass bands + type when AutoEq has no hit (squig.link, Super* Review, " +
+        "IEF 2025, …). Does not commit and does not write Luxsin X8. Do not create scripts/ for this. " +
+        "X8 is a separate hardware target via apply_eq_preset/create_eq_preset.",
       inputSchema: {
         headphone: z
           .string()
@@ -1352,10 +1452,6 @@ export function registerTools(server: McpServer): void {
         correctionNotes: z.array(z.string()).optional().describe("Optional correction notes override/extension."),
         harshRegionsHz: z.array(frequencyRangeSchema).optional(),
         refreshAutoEq: z.boolean().default(false).describe("Force re-download of AutoEq correction."),
-        rebuildSeed: z
-          .boolean()
-          .default(false)
-          .describe("Rebuild bundled headphone-profiles.json seed files. Default false — release/bundle step only."),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
@@ -1378,7 +1474,6 @@ export function registerTools(server: McpServer): void {
           correctionNotes: args.correctionNotes,
           harshRegionsHz: args.harshRegionsHz,
           refreshAutoEq: args.refreshAutoEq,
-          rebuildSeed: args.rebuildSeed,
         });
         return jsonResult(result);
       } catch (err) {

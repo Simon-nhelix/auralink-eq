@@ -3,14 +3,16 @@ import Foundation
 /// The read-only knowledge layer behind every tuning decision.
 ///
 /// `KnowledgeBase` loads headphone profiles, target curves, and safety rules.
-/// Headphone profiles are merged from, in ascending override order:
 ///
-/// 1. Bundled `data/headphone-profiles.json` (factory seed)
-/// 2. Caller `dataDirectory/headphone-profiles.json` (Application Support aggregate)
-/// 3. Per-file `libraryHeadphonesDirectory/{id}.json` (shared library — preferred)
+/// Headphone profiles come from exactly one place: per-file
+/// `collectionHeadphonesDirectory/{id}.json` in the user's own collection.
+/// Auralink ships no headphone data — a shipped database would push one person's
+/// hearing and taste onto everyone. A user with an empty collection names their
+/// headphone and the MCP layer fetches a public AutoEq measurement on demand.
 ///
-/// Target curves and safety rules still use the aggregate JSON path
-/// (`dataDirectory` then bundle).
+/// Target curves and safety rules *are* app machinery (`TuningEngine` refers to
+/// curve ids directly), so they keep the aggregate JSON path: `dataDirectory`
+/// then the bundle.
 ///
 /// If a source is missing or fails to decode, it is skipped rather than crashing —
 /// the app degrades to "no profiles" rather than failing to launch.
@@ -26,19 +28,16 @@ public final class KnowledgeBase {
 
     /// Loads the knowledge base.
     /// - Parameters:
-    ///   - dataDirectory: aggregate JSON directory (typically `AuralinkPaths.dataDirectory`)
-    ///   - libraryHeadphonesDirectory: per-file profile directory (typically
-    ///     `AuralinkPaths.libraryHeadphonesDirectory`). Pass `nil` to skip.
-    public init(dataDirectory: URL?, libraryHeadphonesDirectory: URL? = nil) {
+    ///   - dataDirectory: aggregate JSON directory for curves and rules (typically
+    ///     `AuralinkPaths.dataDirectory`)
+    ///   - collectionHeadphonesDirectory: the user's per-file profile directory
+    ///     (typically `AuralinkPaths.collectionHeadphonesDirectory`). Pass `nil`
+    ///     for no headphone profiles at all.
+    public init(dataDirectory: URL?, collectionHeadphonesDirectory: URL? = nil) {
         let decoder = JSONDecoder()
 
         self.profiles = KnowledgeBase.loadProfiles(
-            dataDirectory: dataDirectory,
-            libraryHeadphonesDirectory: libraryHeadphonesDirectory ?? dataDirectory.map {
-                $0.deletingLastPathComponent()
-                    .appendingPathComponent("library", isDirectory: true)
-                    .appendingPathComponent("headphones", isDirectory: true)
-            },
+            collectionHeadphonesDirectory: collectionHeadphonesDirectory,
             decoder: decoder
         )
 
@@ -115,99 +114,37 @@ public final class KnowledgeBase {
 
     // MARK: Seeding (for the MCP server / first run)
 
-    /// Copies the bundled JSON files into `dir` for any file that is missing, so
-    /// an external process (the MCP server) can read the same knowledge data
-    /// from a stable on-disk location. Existing files are never overwritten.
-    /// Also expands the bundled headphone aggregate into per-file library
-    /// entries when the library directory is empty.
-    public func seedDataDirectory(_ dir: URL, libraryHeadphonesDirectory: URL? = nil) {
+    /// Copies the bundled target curves and safety rules into `dir` for any file
+    /// that is missing, so an external process (the MCP server) reads the same
+    /// values the app uses. Existing files are never overwritten.
+    ///
+    /// Headphone profiles are deliberately absent: nothing seeds the user's
+    /// collection, because Auralink has no headphone data to give it.
+    public func seedDataDirectory(_ dir: URL) {
         let fm = FileManager.default
         if !fm.fileExists(atPath: dir.path) {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        for file in ["headphone-profiles", "target-curves", "safety-rules"] {
+        for file in ["target-curves", "safety-rules"] {
             let destination = dir.appendingPathComponent("\(file).json")
             guard !fm.fileExists(atPath: destination.path) else { continue }
             guard let source = KnowledgeBase.bundledURL(for: file) else { continue }
             try? fm.copyItem(at: source, to: destination)
-        }
-
-        // Seed per-file library from the aggregate when the library is empty.
-        let libDir = libraryHeadphonesDirectory
-            ?? dir.deletingLastPathComponent()
-                .appendingPathComponent("library", isDirectory: true)
-                .appendingPathComponent("headphones", isDirectory: true)
-        seedLibraryHeadphonesIfEmpty(libDir, aggregateDirectory: dir)
-    }
-
-    /// Writes one profile per file under `libraryHeadphonesDirectory` when that
-    /// directory has no `*.json` files yet. Uses the already-merged profile list
-    /// when available, otherwise decodes the aggregate seed.
-    public func seedLibraryHeadphonesIfEmpty(_ libraryDir: URL, aggregateDirectory: URL?) {
-        let fm = FileManager.default
-        if !fm.fileExists(atPath: libraryDir.path) {
-            try? fm.createDirectory(at: libraryDir, withIntermediateDirectories: true)
-        }
-        let existing = (try? fm.contentsOfDirectory(atPath: libraryDir.path))?
-            .filter { $0.lowercased().hasSuffix(".json") } ?? []
-        guard existing.isEmpty else { return }
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-
-        var sourceProfiles = profiles
-        if sourceProfiles.isEmpty {
-            let decoder = JSONDecoder()
-            sourceProfiles = KnowledgeBase.load(
-                [HeadphoneProfile].self,
-                file: "headphone-profiles",
-                dataDirectory: aggregateDirectory,
-                decoder: decoder
-            ) ?? []
-        }
-        for profile in sourceProfiles {
-            let id = profile.id.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !id.isEmpty else { continue }
-            let url = libraryDir.appendingPathComponent("\(id).json")
-            guard let data = try? encoder.encode(profile) else { continue }
-            try? data.write(to: url, options: .atomic)
         }
     }
 
     // MARK: - Loading helpers
 
     private static func loadProfiles(
-        dataDirectory: URL?,
-        libraryHeadphonesDirectory: URL?,
+        collectionHeadphonesDirectory: URL?,
         decoder: JSONDecoder
     ) -> [HeadphoneProfile] {
+        guard let dir = collectionHeadphonesDirectory else { return [] }
+
         var byId: [String: HeadphoneProfile] = [:]
-
-        // 1. Bundled aggregate
-        if let url = bundledURL(for: "headphone-profiles"),
-           let bundled = decode([HeadphoneProfile].self, at: url, decoder: decoder) {
-            for p in bundled where !p.id.isEmpty {
-                byId[p.id] = p
-            }
+        for p in loadProfilesFromLibraryDirectory(dir, decoder: decoder) where !p.id.isEmpty {
+            byId[p.id] = p
         }
-
-        // 2. Application Support aggregate (may include user-only entries)
-        if let dir = dataDirectory {
-            let url = dir.appendingPathComponent("headphone-profiles.json")
-            if let disk = decode([HeadphoneProfile].self, at: url, decoder: decoder) {
-                for p in disk where !p.id.isEmpty {
-                    byId[p.id] = p
-                }
-            }
-        }
-
-        // 3. Per-file library (preferred shared source of truth)
-        if let libDir = libraryHeadphonesDirectory {
-            for p in loadProfilesFromLibraryDirectory(libDir, decoder: decoder) where !p.id.isEmpty {
-                byId[p.id] = p
-            }
-        }
-
         return byId.values.sorted {
             "\($0.brand) \($0.model)".localizedCaseInsensitiveCompare("\($1.brand) \($1.model)") == .orderedAscending
         }

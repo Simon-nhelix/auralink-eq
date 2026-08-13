@@ -28,6 +28,12 @@ dist/
 # Generated planning documents (keep reviewable docs in Markdown)
 docs/*.docx
 
+# Headphone profiles and curated presets belong to the user, not to this app.
+# They live in a collection repository of their own (see docs/DATA_COLLECTION.md);
+# this entry keeps a local checkout or leftover from ever landing back here.
+/library/
+/auralink-collection/
+
 # Agent tooling (local sessions, subagent artifacts)
 .codex/
 .pi-subagents/

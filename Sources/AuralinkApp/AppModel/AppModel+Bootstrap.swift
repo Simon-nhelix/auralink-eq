@@ -5,17 +5,11 @@ extension AppModel {
     // MARK: Lifecycle
 
     func bootstrap() {
-        // Publish the bundled knowledge data to a stable on-disk location so the
-        // external MCP server can read the same profiles/curves/rules the app uses.
-        knowledge.seedDataDirectory(
-            AuralinkPaths.dataDirectory,
-            libraryHeadphonesDirectory: AuralinkPaths.libraryHeadphonesDirectory
-        )
-        // Expand aggregate → per-file library on first run / empty library.
-        knowledge.seedLibraryHeadphonesIfEmpty(
-            AuralinkPaths.libraryHeadphonesDirectory,
-            aggregateDirectory: AuralinkPaths.dataDirectory
-        )
+        // Publish the bundled target curves and safety rules to a stable on-disk
+        // location so the external MCP server reads the same values the app uses.
+        // Nothing seeds headphone profiles: the collection is the user's to fill.
+        knowledge.seedDataDirectory(AuralinkPaths.dataDirectory)
+        CollectionManifest.ensureExists(at: AuralinkPaths.collectionManifestFile)
         startFileWatchers()
         loadPresets()
         refreshDevices()
@@ -48,13 +42,31 @@ extension AppModel {
         }
         recomputeResponse()
         statusMessage = restoredDanglingOutput
+            ?? collectionStatusMessage()
             ?? "Auralink is ready. Audio routing is stopped until you start it."
+    }
+
+    /// Surfaces the two collection states the user has to act on: profiles left
+    /// behind in the pre-split location, and a collection written by a newer build.
+    func collectionStatusMessage() -> String? {
+        if AuralinkPaths.needsCollectionMigration {
+            return "Your headphone profiles are still in the old location. "
+                + "Run scripts/migrate-collection.mjs to move them into "
+                + AuralinkPaths.collectionDirectory.path
+        }
+        if let manifest = CollectionManifest.read(from: AuralinkPaths.collectionManifestFile),
+           manifest.isFromNewerBuild {
+            return "This collection was written by a newer Auralink "
+                + "(schema \(manifest.schemaVersion)); some entries may not load."
+        }
+        return nil
     }
 
     func startFileWatchers() {
         presetsWatcher?.cancel()
         knowledgeWatcher?.cancel()
-        libraryWatcher?.cancel()
+        collectionHeadphonesWatcher?.cancel()
+        collectionPresetsWatcher?.cancel()
 
         presetsWatcher = makeDirectoryWatcher(url: AuralinkPaths.presetsDirectory) { [weak self] in
             Task { @MainActor in self?.schedulePresetReloadFromDisk() }
@@ -62,8 +74,16 @@ extension AppModel {
         knowledgeWatcher = makeDirectoryWatcher(url: AuralinkPaths.dataDirectory) { [weak self] in
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
-        libraryWatcher = makeDirectoryWatcher(url: AuralinkPaths.libraryHeadphonesDirectory) { [weak self] in
+        collectionHeadphonesWatcher = makeDirectoryWatcher(
+            url: AuralinkPaths.collectionHeadphonesDirectory
+        ) { [weak self] in
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
+        }
+        // A `git pull` in the collection changes presets too, so watch both halves.
+        collectionPresetsWatcher = makeDirectoryWatcher(
+            url: AuralinkPaths.collectionPresetsDirectory
+        ) { [weak self] in
+            Task { @MainActor in self?.schedulePresetReloadFromDisk() }
         }
     }
 
@@ -117,7 +137,7 @@ extension AppModel {
     func reloadKnowledge() -> (profileCount: Int, targetCurveCount: Int) {
         let kb = KnowledgeBase(
             dataDirectory: AuralinkPaths.dataDirectory,
-            libraryHeadphonesDirectory: AuralinkPaths.libraryHeadphonesDirectory
+            collectionHeadphonesDirectory: AuralinkPaths.collectionHeadphonesDirectory
         )
         let val = PresetValidator(rules: kb.safetyRules)
         self.knowledge = kb
@@ -133,6 +153,7 @@ extension AppModel {
         do {
             presets = (try store.loadAll()).map { $0.normalized() }
                 .sorted { $0.updatedAt > $1.updatedAt }
+            refreshCollectionMembership()
         } catch {
             lastError = "Couldn't load presets: \(error.localizedDescription)"
         }

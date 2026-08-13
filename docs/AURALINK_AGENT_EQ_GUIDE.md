@@ -2,9 +2,11 @@
 
 This is the operational guide an AI agent should read before controlling Auralink EQ through MCP. It is derived from `docs/auralink_eq_mcp_tuning_knowledge_base.docx`, then adapted to Auralink's actual product workflow:
 
-- Auralink is not the AI. Auralink is the local audio engine, validator, preset library, headphone knowledge base, and live audition/apply endpoint.
+- Auralink is not the AI. Auralink is the local audio engine, validator, preset library, headphone knowledge layer, and live audition/apply endpoint.
 - The AI agent reads links, measurements, reviews, user notes, and current app state, then emits explicit parametric EQ bands. When AutoEq supplies dense `GraphicEQ` data, the agent also forwards the returned `measuredCorrection` payload unchanged.
 - The app validates and plays the result. The user decides what deserves to be saved.
+- **Auralink ships no headphone database.** Every profile and curated preset lives in the user's own collection directory (`~/auralink-collection` by default; see `docs/DATA_COLLECTION.md`). An empty headphone list is the expected state on a fresh install, not a defect — look models up with `get_autoeq_correction` instead of assuming data should already be there.
+- Nothing enters that collection on its own. `register_headphone_baseline` puts a headphone and its baseline there because the user asked for the headphone; everything else needs an explicit `add_preset_to_collection`.
 
 ## Product Workflow
 

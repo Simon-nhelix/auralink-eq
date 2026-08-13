@@ -10,11 +10,24 @@ import Foundation
 ///
 /// The same directory layout is shared with the MCP server, which reads/writes
 /// the very same files — hence the stable, human-readable JSON encoding.
+///
+/// Two sources, one list:
+///
+/// - `directory` is the working library. Everything the engine loads and every
+///   audition lands here, and it is machine-local.
+/// - `collectionPresetsDirectory` is the user's own curated collection, typically
+///   a git checkout they share. It is a **read source**; a preset only lands there
+///   through the explicit `addToCollection`, never as a side effect of saving.
+///
+/// On an id collision the working copy wins, so a local edit always takes
+/// precedence over the collection's version of the same preset.
 public final class PresetStore {
     /// Folder holding the current `<id>.json` for every preset.
     public let directory: URL
     /// Folder holding `<id>/v<n>.json` snapshots of superseded versions.
     public let revisionsDirectory: URL
+    /// The user's curated collection, or nil when no collection is configured.
+    public let collectionPresetsDirectory: URL?
 
     private let fileManager: FileManager
 
@@ -22,9 +35,10 @@ public final class PresetStore {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    public init(directory: URL, revisionsDirectory: URL) {
+    public init(directory: URL, revisionsDirectory: URL, collectionPresetsDirectory: URL? = nil) {
         self.directory = directory
         self.revisionsDirectory = revisionsDirectory
+        self.collectionPresetsDirectory = collectionPresetsDirectory
         self.fileManager = .default
 
         let enc = JSONEncoder()
@@ -41,38 +55,88 @@ public final class PresetStore {
 
     public convenience init() {
         self.init(directory: AuralinkPaths.presetsDirectory,
-                  revisionsDirectory: AuralinkPaths.revisionsDirectory)
+                  revisionsDirectory: AuralinkPaths.revisionsDirectory,
+                  collectionPresetsDirectory: AuralinkPaths.collectionPresetsDirectory)
     }
 
     // MARK: - Loading
 
-    /// Loads every preset, normalizing each one (exactly 20 clamped bands,
-    /// clamped preamp). If the directory is empty (first run), it seeds the
-    /// three factory presets and returns those instead.
+    /// Loads every preset from the working library and the user's collection,
+    /// normalizing each one (exactly 20 clamped bands, clamped preamp). If the
+    /// working directory is empty (first run), the factory presets are seeded
+    /// first so `preset_flat` always exists as a bypass.
     public func loadAll() throws -> [EQPreset] {
         try ensureDirectory(directory)
 
-        let urls = try presetFileURLs()
-        if urls.isEmpty {
-            return try seedFactoryPresets()
+        var workingURLs = try presetFileURLs()
+        if workingURLs.isEmpty {
+            try seedFactoryPresets()
+            workingURLs = try presetFileURLs()
         }
 
-        var presets: [EQPreset] = []
-        for url in urls {
+        // Collection first, working library second: the later write wins, so a
+        // local edit shadows the collection's copy of the same id.
+        var byId: [String: EQPreset] = [:]
+        for url in collectionPresetFileURLs() + workingURLs {
             // Skip files that fail to decode rather than failing the whole load:
             // a single corrupt preset shouldn't sink the library.
             guard let preset = try? load(from: url) else { continue }
-            presets.append(preset.normalized())
+            guard !preset.id.isEmpty else { continue }
+            byId[preset.id] = preset.normalized()
         }
         // Stable, name-then-id order for deterministic UI listing.
-        return presets.sorted { ($0.name, $0.id) < ($1.name, $1.id) }
+        return byId.values.sorted { ($0.name, $0.id) < ($1.name, $1.id) }
     }
 
-    /// Returns the current on-disk preset with `id`, or nil if absent.
+    /// Returns the preset with `id` from the working library, falling back to the
+    /// user's collection. Nil if neither has it.
     public func get(id: String) throws -> EQPreset? {
         let url = presetURL(for: id)
-        guard fileManager.fileExists(atPath: url.path) else { return nil }
-        return try load(from: url).normalized()
+        if fileManager.fileExists(atPath: url.path) {
+            return try load(from: url).normalized()
+        }
+        if let collectionURL = collectionPresetURL(for: id),
+           fileManager.fileExists(atPath: collectionURL.path) {
+            return try load(from: collectionURL).normalized()
+        }
+        return nil
+    }
+
+    // MARK: - Collection membership
+
+    /// Ids currently present in the user's collection. Used to mark which presets
+    /// are shared rather than machine-local.
+    public func collectionPresetIDs() -> Set<String> {
+        var ids: Set<String> = []
+        for url in collectionPresetFileURLs() {
+            guard let preset = try? load(from: url), !preset.id.isEmpty else { continue }
+            ids.insert(preset.id)
+        }
+        return ids
+    }
+
+    /// Copies `id` into the user's collection. This is the only path that writes
+    /// there, so nothing accumulates in the user's repository unless they say so.
+    @discardableResult
+    public func addToCollection(id: String) throws -> EQPreset {
+        guard let collectionURL = collectionPresetURL(for: id) else {
+            throw PresetStoreError.noCollectionConfigured
+        }
+        guard let preset = try get(id: id) else {
+            throw PresetStoreError.notFound(id)
+        }
+        try write(preset, to: collectionURL)
+        return preset
+    }
+
+    /// Removes `id` from the collection, leaving the working copy alone.
+    public func removeFromCollection(id: String) throws {
+        guard let collectionURL = collectionPresetURL(for: id) else {
+            throw PresetStoreError.noCollectionConfigured
+        }
+        if fileManager.fileExists(atPath: collectionURL.path) {
+            try fileManager.removeItem(at: collectionURL)
+        }
     }
 
     // MARK: - Saving
@@ -87,7 +151,12 @@ public final class PresetStore {
         var toWrite = preset.normalized()
         let url = presetURL(for: toWrite.id)
 
-        if let existing = try? load(from: url) {
+        // A collection preset being edited for the first time has no working copy
+        // yet; continue its version from the collection so history stays linear.
+        let existingOnDisk = (try? load(from: url)) ?? collectionPresetURL(for: toWrite.id)
+            .flatMap { try? load(from: $0) }
+
+        if let existing = existingOnDisk {
             // Snapshot the version currently on disk before we overwrite it.
             try snapshot(existing)
             toWrite.version = existing.version + 1
@@ -109,10 +178,18 @@ public final class PresetStore {
     // MARK: - Deleting
 
     /// Removes the current preset file *and* its revision history.
+    ///
+    /// Also drops the collection copy, if any: leaving it behind would make the
+    /// preset reappear on the next `loadAll` and read as a failed delete. The
+    /// collection is typically a git checkout, so the removal stays recoverable.
     public func delete(id: String) throws {
         let url = presetURL(for: id)
         if fileManager.fileExists(atPath: url.path) {
             try fileManager.removeItem(at: url)
+        }
+        if let collectionURL = collectionPresetURL(for: id),
+           fileManager.fileExists(atPath: collectionURL.path) {
+            try fileManager.removeItem(at: collectionURL)
         }
         let revDir = revisionsDirectory.appendingPathComponent(id, isDirectory: true)
         if fileManager.fileExists(atPath: revDir.path) {
@@ -183,8 +260,8 @@ public final class PresetStore {
     /// imported preset (not yet saved — caller decides via `save`).
     public func importPreset(from url: URL) throws -> EQPreset {
         var imported = try load(from: url).normalized()
-        let existing = presetURL(for: imported.id)
-        if fileManager.fileExists(atPath: existing.path) {
+        let collides = ((try? get(id: imported.id)) ?? nil) != nil
+        if collides {
             imported.id = freshID(base: "preset")
         }
         return imported
@@ -295,6 +372,26 @@ public final class PresetStore {
         ).filter { $0.pathExtension.lowercased() == "json" }
     }
 
+    /// Current-version file URL inside the user's collection, or nil when no
+    /// collection is configured.
+    private func collectionPresetURL(for id: String) -> URL? {
+        collectionPresetsDirectory?.appendingPathComponent("\(id).json")
+    }
+
+    /// All `*.json` files in the collection. A missing or unreadable collection
+    /// yields an empty list — the user may simply not have cloned one.
+    private func collectionPresetFileURLs() -> [URL] {
+        guard let dir = collectionPresetsDirectory,
+              fileManager.fileExists(atPath: dir.path),
+              let urls = try? fileManager.contentsOfDirectory(
+                  at: dir,
+                  includingPropertiesForKeys: nil,
+                  options: [.skipsHiddenFiles]
+              )
+        else { return [] }
+        return urls.filter { $0.pathExtension.lowercased() == "json" }
+    }
+
     private func load(from url: URL) throws -> EQPreset {
         let data = try Data(contentsOf: url)
         return try decoder.decode(EQPreset.self, from: data)
@@ -323,10 +420,14 @@ public final class PresetStore {
 /// Errors thrown by `PresetStore` for caller-facing conditions.
 public enum PresetStoreError: Error, LocalizedError, Equatable {
     case notFound(String)
+    case noCollectionConfigured
 
     public var errorDescription: String? {
         switch self {
-        case .notFound(let id): return "No preset found with id \"\(id)\"."
+        case .notFound(let id):
+            return "No preset found with id \"\(id)\"."
+        case .noCollectionConfigured:
+            return "No preset collection is configured. Set one up before adding presets to it."
         }
     }
 }

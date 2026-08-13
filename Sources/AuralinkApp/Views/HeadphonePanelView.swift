@@ -119,12 +119,18 @@ struct HeadphonePanelView: View {
     }
 
     private var noProfileCard: some View {
-        AuraCard {
+        // An empty collection is the normal state on a fresh install — Auralink ships
+        // no headphone data — so say what to do about it instead of pointing at a
+        // list that has nothing in it.
+        let collectionIsEmpty = model.headphoneProfiles.isEmpty
+        return AuraCard {
             VStack(alignment: .leading, spacing: 6) {
-                Text("No headphone assigned")
+                Text(collectionIsEmpty ? "Your collection is empty" : "No headphone assigned")
                     .font(Theme.Typo.headline)
                     .foregroundStyle(Theme.Palette.textPrimary)
-                Text("Pick a headphone below to load a visible baseline correction. The graph and active band table will update immediately.")
+                Text(collectionIsEmpty
+                     ? "Auralink ships no headphone database — the collection is yours to build. Ask your AI assistant to add a model by name and it will fetch a public AutoEq measurement for it."
+                     : "Pick a headphone below to load a visible baseline correction. The graph and active band table will update immediately.")
                     .font(Theme.Typo.caption)
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
