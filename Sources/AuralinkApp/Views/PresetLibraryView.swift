@@ -163,6 +163,7 @@ struct PresetLibraryView: View {
     private func row(_ preset: EQPreset) -> some View {
         let isCurrent = preset.id == model.currentPreset.id
         let isRenaming = renamingId == preset.id
+        let inCollection = model.collectionPresetIDs.contains(preset.id)
         return AuraCard(padding: 10) {
             HStack(alignment: .center, spacing: Theme.Metrics.gap) {
                 VStack(alignment: .leading, spacing: 5) {
@@ -187,6 +188,9 @@ struct PresetLibraryView: View {
                             .font(Theme.Typo.caption)
                             .foregroundStyle(Theme.Palette.textTertiary)
                         createdByBadge(preset.createdBy)
+                        if inCollection {
+                            AuraTag("Collection", tint: Theme.Palette.success)
+                        }
                     }
                 }
                 Spacer(minLength: 0)
@@ -217,6 +221,12 @@ struct PresetLibraryView: View {
             Button("Rename") { beginRename(preset) }
             Button("Duplicate") { model.duplicate(preset) }
             Button("Export…") { export(preset) }
+            Divider()
+            if inCollection {
+                Button("Remove from My Collection") { model.removeFromCollection(preset) }
+            } else {
+                Button("Add to My Collection") { model.addToCollection(preset) }
+            }
             Divider()
             Button("Delete", role: .destructive) { model.delete(preset) }
         }

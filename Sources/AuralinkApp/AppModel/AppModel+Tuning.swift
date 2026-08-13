@@ -351,6 +351,30 @@ extension AppModel {
         } catch { lastError = "Delete failed: \(error.localizedDescription)" }
     }
 
+    /// Copies a preset into the user's collection. Explicit by design: nothing
+    /// reaches the collection — often a git checkout they share — as a side effect
+    /// of saving or auditioning.
+    func addToCollection(_ preset: EQPreset) {
+        do {
+            try store.addToCollection(id: preset.id)
+            refreshCollectionMembership()
+            statusMessage = "\"\(preset.name)\" added to your collection."
+        } catch { lastError = "Couldn't add to collection: \(error.localizedDescription)" }
+    }
+
+    func removeFromCollection(_ preset: EQPreset) {
+        do {
+            try store.removeFromCollection(id: preset.id)
+            refreshCollectionMembership()
+            loadPresets()
+            statusMessage = "\"\(preset.name)\" removed from your collection."
+        } catch { lastError = "Couldn't remove from collection: \(error.localizedDescription)" }
+    }
+
+    func refreshCollectionMembership() {
+        collectionPresetIDs = store.collectionPresetIDs()
+    }
+
     func rename(_ preset: EQPreset, to name: String) {
         var p = preset; p.name = name
         do { _ = try store.save(p); loadPresets() }

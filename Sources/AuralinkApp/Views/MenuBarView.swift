@@ -16,6 +16,7 @@ struct MenuBarView: View {
     @State private var tuningQuery = ""
     @State private var tuneCommand = ""
     @State private var appearNonce = 0
+    @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 11) {
@@ -39,7 +40,16 @@ struct MenuBarView: View {
         .padding(14)
         .frame(width: Theme.Metrics.popoverWidth)
         .background(Theme.Palette.bg)
-        .background(MenuBarWindowAnchor(nonce: appearNonce))
+        .background(
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: MenuBarContentHeightKey.self,
+                    value: geometry.size.height
+                )
+            }
+        )
+        .onPreferenceChange(MenuBarContentHeightKey.self) { contentHeight = $0 }
+        .background(MenuBarWindowAnchor(nonce: appearNonce, contentHeight: contentHeight))
         .onAppear { appearNonce &+= 1 }
         .onDisappear {
             tuningPickerExpanded = false
@@ -353,6 +363,7 @@ struct MenuBarView: View {
             presets: model.presets,
             currentProfile: currentHeadphoneProfile,
             currentPresetId: model.currentPreset.id,
+            listHeight: tuningPickerListHeight,
             presetsForProfile: { model.presets(for: $0) },
             onSelectHeadphone: { profile in
                 model.applyHeadphoneProfile(profile)
@@ -363,6 +374,19 @@ struct MenuBarView: View {
                 closeTuningPicker()
             }
         )
+    }
+
+    /// Keep the headphone search list inside the visible screen when a status
+    /// notice is also taking vertical space in the menubar popover.
+    private var tuningPickerListHeight: CGFloat {
+        // Reclaim roughly the notice banner height so opening search with a
+        // notice present does not push the popover past the screen edges.
+        let preferred: CGFloat = currentNotice == nil ? 190 : 138
+        let screenHeight = NSScreen.main?.visibleFrame.height ?? 900
+        let noticeAllowance: CGFloat = currentNotice == nil ? 0 : 52
+        // Everything in the expanded popover except the scrollable result list.
+        let chrome: CGFloat = 390 + noticeAllowance
+        return min(preferred, max(110, screenHeight - chrome - 8))
     }
 
     private var currentHeadphoneProfile: HeadphoneProfile? {
@@ -687,29 +711,54 @@ struct AuraWaveformMark: View {
 
 // MARK: - Menu-bar window position guard
 
-/// Corrects the occasional detached `MenuBarExtra(.window)` placement without
-/// touching windows that macOS anchored correctly.
+private struct MenuBarContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+/// Keeps `MenuBarExtra(.window)` pinned under the menu bar when its SwiftUI
+/// content grows or shrinks (status notice dismiss, headphone search expand).
+/// Without this, macOS often leaves the window bottom-fixed so a shorter
+/// layout floats with empty space above it, and a taller layout clips.
 private struct MenuBarWindowAnchor: NSViewRepresentable {
     let nonce: Int
+    let contentHeight: CGFloat
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        guard context.coordinator.lastNonce != nonce else { return }
+        let heightChanged = abs(context.coordinator.lastHeight - contentHeight) > 0.5
+        let appeared = context.coordinator.lastNonce != nonce
+        guard appeared || heightChanged else { return }
         context.coordinator.lastNonce = nonce
+        context.coordinator.lastHeight = contentHeight
+        let preferredHeight = contentHeight
+        // Wait until SwiftUI has committed layout; then pin using the measured
+        // content height so a lagging MenuBarExtra frame cannot leave a gap.
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }
-            Self.snapUnderMenuBarIfDetached(window)
+            Self.pinUnderMenuBar(
+                window,
+                preferredContentHeight: preferredHeight > 1 ? preferredHeight : nil,
+                force: heightChanged
+            )
         }
     }
 
     final class Coordinator {
         var lastNonce = -1
+        var lastHeight: CGFloat = -1
     }
 
-    private static func snapUnderMenuBarIfDetached(_ window: NSWindow) {
+    private static func pinUnderMenuBar(
+        _ window: NSWindow,
+        preferredContentHeight: CGFloat?,
+        force: Bool
+    ) {
         let mouse = NSEvent.mouseLocation
         var screen: NSScreen?
         for candidate in NSScreen.screens where NSMouseInRect(mouse, candidate.frame, false) {
@@ -720,17 +769,31 @@ private struct MenuBarWindowAnchor: NSViewRepresentable {
         guard let screen else { return }
 
         let visible = screen.visibleFrame
-        let frame = window.frame
+        var frame = window.frame
+        if let preferredContentHeight {
+            // Borderless MenuBarExtra windows track content size 1:1.
+            frame.size.height = preferredContentHeight
+        }
+        let maxHeight = max(120, visible.height - 4)
+        if frame.height > maxHeight {
+            frame.size.height = maxHeight
+        }
+
         let topGap = visible.maxY - frame.maxY
         let onActiveScreen = NSPointInRect(
             NSPoint(x: frame.midX, y: frame.maxY - 1),
             screen.frame
         )
-        guard topGap > 24 || !onActiveScreen else { return }
+        let sizeChanged = abs(frame.height - window.frame.height) > 0.5
+        // Re-pin when floating below the bar, overflowing above it, off-screen,
+        // resized, or after an explicit content-height change (notice / search).
+        guard force || sizeChanged || topGap > 2 || topGap < -2 || !onActiveScreen else { return }
 
         let margin: CGFloat = 8
         var originX = mouse.x - frame.width / 2
         originX = min(max(originX, visible.minX + margin), visible.maxX - frame.width - margin)
-        window.setFrameOrigin(NSPoint(x: originX, y: visible.maxY - frame.height - 2))
+        let pinnedY = visible.maxY - frame.height - 2
+        frame.origin = NSPoint(x: originX, y: max(visible.minY + 2, pinnedY))
+        window.setFrame(frame, display: true)
     }
 }

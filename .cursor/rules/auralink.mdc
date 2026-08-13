@@ -1,0 +1,43 @@
+---
+description: Auralink EQ layout, safety, and engine contracts that must not be reintroduced as bugs
+alwaysApply: true
+---
+
+# Auralink EQ
+
+macOS menubar system-wide EQ: BlackHole capture → 20-band EQ → real output. Local MCP (`mcp-server/`) reads state and applies tunings.
+
+**Golden rules**
+- The app may be carrying live audio. Ask before killing/restarting it, then restore routing through the app UI.
+- Treat user-provided hardware and routing details as ground truth.
+- Never print, commit, or transmit `~/Library/Application Support/Auralink/control-token`.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `Sources/AuralinkApp` | Menubar app, `AudioRoutingEngine`, `AppModel`, `ControlServer`, Views |
+| `Sources/AuralinkCore` | DSP, presets, knowledge, response math |
+| `Sources/AuralinkRT` | C lock-free SPSC ring + RT atomics (`alk_*`) |
+| `mcp-server/` | MCP client of the HTTP API (`npm run build` inside) |
+| `scripts/bundle-app.sh` | Release `.app` bundle |
+
+```bash
+swift build && swift test
+./scripts/bundle-app.sh   # ask before restarting a running build
+```
+
+Control API is `http://127.0.0.1:8765` (bearer token above). Use MCP for normal control.
+
+## Engine contracts (violating these reintroduces fixed bugs)
+
+- Measured FIR is data- and quality-gated, never an IIR copy. Fail closed to Standard IIR.
+- FIR render-state ownership is RT-critical: retire discarded states on the C11 SPSC queue; no callback ARC/CoW/allocation. `EQProcessor` control is one serialized thread (MainActor).
+- Live apply `audible:true` requires expected preset/generation = requested = committed, routing active, system output through Auralink, EQ enabled. Control `ok` is not audible.
+- No per-sample drift correction. Varispeed P-servo on the telemetry thread only.
+- Capture via `AVAudioSinkNode`, never an input tap.
+- Build the graph at `settledCaptureRate`; never hard-fail start on a rate mismatch.
+- Keep output AU retry-pin, sentinel, and feedback breaker. Recreate both `AVAudioEngine`s on every start.
+- Routed output switch is a verified transaction (`performRoutedOutputSwitch`); pickers read `OutputPickerSnapshot`.
+- Do not reintroduce `@Published` on AppModel. Coalesce telemetry into one `audioState` write per tick.
+- Realtime threads: no Swift locks, no allocation, C atomics only.

@@ -155,8 +155,12 @@ paths**:
 - `AURALINK_PRESETS_DIR` — the shared preset directory. Defaults to the same
   Application Support location the app uses, so you normally don't need to set
   it; expand `~` to an absolute path if your environment doesn't.
-- `AURALINK_DATA_DIR` — the knowledge data (headphone profiles, target curves,
-  safety rules). The repo ships an identical copy under `mcp-server/data`.
+- `AURALINK_DATA_DIR` — the bundled knowledge data (target curves, safety rules).
+  The repo ships an identical copy under `mcp-server/data`.
+- `AURALINK_COLLECTION_DIR` — your headphone profiles and curated presets. Defaults
+  to `~/auralink-collection` for both the app and the server, so you normally don't
+  need to set it. Set it only if you keep your collection elsewhere, and set it for
+  both. See [DATA_COLLECTION.md](DATA_COLLECTION.md).
 
 ### Step 3 — Restart Claude Desktop and verify
 

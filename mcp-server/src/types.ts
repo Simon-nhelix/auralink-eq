@@ -74,6 +74,13 @@ export const HEADPHONE_TYPES: readonly HeadphoneType[] = [
 /** Trust level of a profile's characterization. Mirrors Swift `Credibility`. */
 export type Credibility = "measured" | "manufacturer" | "community" | "estimated";
 
+export const CREDIBILITIES: readonly Credibility[] = [
+  "measured",
+  "manufacturer",
+  "community",
+  "estimated",
+];
+
 /** Target curve category. Mirrors Swift `TargetCategory`. */
 export type TargetCategory = "genre" | "purpose" | "reference";
 

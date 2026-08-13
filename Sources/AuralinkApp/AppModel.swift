@@ -68,6 +68,9 @@ final class AppModel: ObservableObject {
     var currentPreset: EQPreset = .flat() { willSet { uiChanged() } }
     /// All saved presets (the library).
     var presets: [EQPreset] = [] { willSet { uiChanged() } }
+    /// Ids of presets kept in the user's own collection, so rows can show which
+    /// ones are shared rather than machine-local.
+    var collectionPresetIDs: Set<String> = [] { willSet { uiChanged() } }
     var outputDevices: [OutputDevice] = [] { willSet { uiChanged() } }
     /// Stable UI snapshot for output pickers. SwiftUI views must use this
     /// instead of reading live HAL/audioState fields directly; output switching
@@ -157,7 +160,8 @@ final class AppModel: ObservableObject {
     let fileWatchQueue = DispatchQueue(label: "com.auralink.eq.file-watch")
     var presetsWatcher: DispatchSourceFileSystemObject?
     var knowledgeWatcher: DispatchSourceFileSystemObject?
-    var libraryWatcher: DispatchSourceFileSystemObject?
+    var collectionHeadphonesWatcher: DispatchSourceFileSystemObject?
+    var collectionPresetsWatcher: DispatchSourceFileSystemObject?
     var pendingPresetReload: Task<Void, Never>?
     var pendingKnowledgeReload: Task<Void, Never>?
     var recomputeTask: Task<Void, Never>?
@@ -372,13 +376,17 @@ final class AppModel: ObservableObject {
         } catch {
             NSLog("Auralink: could not create data directories: \(error.localizedDescription)")
         }
-        let kb = KnowledgeBase(dataDirectory: AuralinkPaths.dataDirectory, libraryHeadphonesDirectory: AuralinkPaths.libraryHeadphonesDirectory)
+        let kb = KnowledgeBase(
+            dataDirectory: AuralinkPaths.dataDirectory,
+            collectionHeadphonesDirectory: AuralinkPaths.collectionHeadphonesDirectory
+        )
         let val = PresetValidator(rules: kb.safetyRules)
         self.knowledge = kb
         self.validator = val
         self.tuner = TuningEngine(knowledge: kb, validator: val)
         self.store = PresetStore(directory: AuralinkPaths.presetsDirectory,
-                                 revisionsDirectory: AuralinkPaths.revisionsDirectory)
+                                 revisionsDirectory: AuralinkPaths.revisionsDirectory,
+                                 collectionPresetsDirectory: AuralinkPaths.collectionPresetsDirectory)
         self.devices = AudioDeviceManager()
         self.engine = AudioRoutingEngine()
 
@@ -389,7 +397,8 @@ final class AppModel: ObservableObject {
     deinit {
         presetsWatcher?.cancel()
         knowledgeWatcher?.cancel()
-        libraryWatcher?.cancel()
+        collectionHeadphonesWatcher?.cancel()
+        collectionPresetsWatcher?.cancel()
         recomputeTask?.cancel()
         pendingEngineApplyTask?.cancel()
         pendingPresetReload?.cancel()

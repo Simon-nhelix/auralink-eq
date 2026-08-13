@@ -19,8 +19,9 @@ Sources/AuralinkCore/        # pure logic, no UI/audio-hardware. Unit-tested.
   DSP/           Biquad, EQProcessor, FrequencyResponse, MeasuredFIRDesigner,
                  PartitionedFIRConvolver (legacy FIRDesigner fixtures remain) [agent: core-dsp]
   Presets/       PresetStore, PresetValidator                             [agent: core-preset]
-  Knowledge/     KnowledgeBase, TuningEngine                              [agent: core-knowledge]
-  Resources/data/  headphone-profiles.json, target-curves.json, safety-rules.json [core-knowledge]
+  Knowledge/     KnowledgeBase, TuningEngine, CollectionManifest          [agent: core-knowledge]
+  Resources/data/  target-curves.json, safety-rules.json                  [core-knowledge]
+                 (no headphone data ships; profiles live in the user's collection)
 Sources/AuralinkRT/              # C11 SPSC audio ring, atomic telemetry, opaque-state retirement queue
 Sources/AuralinkApp/
   AppModel.swift (DONE — contract), Views/DesignSystem/* (DONE)
@@ -178,12 +179,17 @@ regions, apply preference keyword nudges, clamp to `maxBoostDb`/`avoidHarshTrebl
 build `intent`/`changes` from the diff vs base. Must be pure (no randomness).
 
 ### JSON data schema  [core-knowledge authors these files]
-`Resources/data/headphone-profiles.json` = `[HeadphoneProfile]`, `target-curves.json` = `[TargetCurve]`,
-`safety-rules.json` = `SafetyRules`. Encode with the same field names as the Swift Codable types
-(BandType/etc. use snake_case raw values). Provide ≥8 real headphones (Sennheiser HD600, HD650,
-Beyerdynamic DT770/DT990, AirPods Max, Sony WH-1000XM5, HIFIMAN Sundara, Audeze, Apple AirPods Pro 2)
-and ≥7 target curves (rock, vocal-focus, fps-footstep, late-night, bass-boost, podcast, harman-neutral).
+`Resources/data/target-curves.json` = `[TargetCurve]`, `safety-rules.json` = `SafetyRules`. Encode with
+the same field names as the Swift Codable types (BandType/etc. use snake_case raw values). Provide ≥7
+target curves (rock, vocal-focus, fps-footstep, late-night, bass-boost, podcast, harman-neutral) —
+`TuningEngine.inferCurveId` refers to these ids directly, so they are app machinery, not content.
 **Also copy identical files into `mcp-server/data/`** so the MCP server has them standalone.
+
+**No headphone data ships.** `[HeadphoneProfile]` files (`{id}.json`, one per model) live only in the
+user's own collection directory, alongside their curated presets — see `docs/DATA_COLLECTION.md`. A
+bundled headphone database would present one person's measurements and taste as factory truth. The app
+must stay fully usable with zero profiles; `get_autoeq_correction` supplies public measurements on
+demand.
 
 ---
 

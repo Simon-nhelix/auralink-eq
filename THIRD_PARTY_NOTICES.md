@@ -27,10 +27,11 @@ those upstream measurements.
 
 ### Headphone and preference-target references
 
-The bundled headphone profiles are short editorial summaries, not copies of
-third-party measurement databases. Their `source` fields identify the
-manufacturer or measurement communities that informed the summary. Runtime
-AutoEq corrections keep their exact upstream source and result URL.
+No headphone profiles are bundled. Profiles live in each user's own collection
+directory (see `docs/DATA_COLLECTION.md`), and their `source` fields identify the
+manufacturer or measurement communities that informed each entry. Runtime AutoEq
+corrections keep their exact upstream source and result URL. Content a user adds to
+their own collection is theirs; none of it is distributed with Auralink.
 
 The advisory `Crinacle IEF Preference 2025` hint is based on the filter
 parameters described in [The New 2025 IEF Target](https://crinacle.com/2025/02/05/the-new-2025-ief-target/).

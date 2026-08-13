@@ -28,10 +28,15 @@ license the original Auralink source, documentation, icon, and UI screenshots.
   `7ae0f56d53074872b028649617a22bbb4232feb7`. AutoEq is MIT-licensed; its full
   license text is included at `third_party/licenses/AutoEq-LICENSE` and the
   measurement provenance is recorded in `THIRD_PARTY_NOTICES.md`.
-- Bundled headphone profiles are short project-authored editorial summaries,
-  not copied measurement databases. The IEF preference entry records two
-  factual filter parameters from the attributed public article and does not
-  redistribute its graphs, article text, or target dataset.
+- No headphone profiles or baseline presets are bundled. That data moved out of
+  this repository into user-owned collection directories
+  (`docs/DATA_COLLECTION.md`), which removes measurement-derived content from the
+  distributed source entirely and narrows the publication boundary accordingly.
+  What remains under `Sources/AuralinkCore/Resources/data` is `target-curves.json`
+  and `safety-rules.json`: project-authored band hints and engineering limits. The
+  IEF target-curve entry records two factual filter parameters from the attributed
+  public article and does not redistribute its graphs, article text, or dataset.
+  A user's own collection is their content to license; nothing in it ships here.
 - The Auralink icon and UI screenshots contain project artwork and UI only;
   they do not embed third-party logos or photographs.
 - BlackHole is referenced as a separately installed audio driver. Its GPL-3.0

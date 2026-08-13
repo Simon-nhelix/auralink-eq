@@ -148,6 +148,11 @@ function resolveServerConfig(cwd: string) {
     presetsDir: process.env.AURALINK_PRESETS_DIR
       ? resolve(expandHome(process.env.AURALINK_PRESETS_DIR))
       : undefined,
+    // Forwarded so the server and the app agree on which collection is in play.
+    // Unset means both fall back to the same ~/auralink-collection default.
+    collectionDir: process.env.AURALINK_COLLECTION_DIR
+      ? resolve(expandHome(process.env.AURALINK_COLLECTION_DIR))
+      : undefined,
   };
 }
 
@@ -314,6 +319,9 @@ class AuralinkMcpClient {
         AURALINK_CONTROL_URL: this.config.controlUrl,
         AURALINK_DATA_DIR: this.config.dataDir,
         ...(this.config.presetsDir ? { AURALINK_PRESETS_DIR: this.config.presetsDir } : {}),
+        ...(this.config.collectionDir
+          ? { AURALINK_COLLECTION_DIR: this.config.collectionDir }
+          : {}),
       },
     });
 

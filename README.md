@@ -26,8 +26,15 @@ device, runs it through the EQ DSP, and plays it out to your real output device
 
 macOS has no system-wide EQ. Per-app equalizers don't help YouTube, games, and
 calls all at once, and they don't know anything about your specific headphones.
-Auralink EQ fixes both: one global EQ for everything, and a knowledge base of
-real headphone profiles + target curves that an AI can reason over.
+Auralink EQ fixes both: one global EQ for everything, and a knowledge layer of
+headphone profiles + target curves that an AI can reason over.
+
+**Auralink ships no headphone database.** The profiles and presets belong to you and
+live in a collection directory of your own — see
+[docs/DATA_COLLECTION.md](docs/DATA_COLLECTION.md). A fresh install has an empty
+headphone list on purpose; name a model and the MCP layer fetches a public AutoEq
+measurement for it on demand. Bundling one person's measurements and taste would
+present them as factory truth, and they aren't.
 
 ---
 
@@ -70,9 +77,9 @@ preset/knowledge data.
    │   DSP/           Biquad · EQProcessor · FrequencyResponse · TruePeakEstimator │
    │                  MeasuredFIRDesigner · PartitionedFIRConvolver                 │
    │   Presets/       PresetStore · PresetValidator                                │
-   │   Knowledge/     KnowledgeBase · TuningEngine                                 │
-   │   Resources/data headphone-profiles.json · target-curves.json ·              │
-   │                  safety-rules.json                                            │
+   │   Knowledge/     KnowledgeBase · TuningEngine · CollectionManifest            │
+   │   Resources/data target-curves.json · safety-rules.json                       │
+   │                  (no headphone data — that lives in your collection)          │
    └──────────────────────────────────────────────────────────────────────────-─┘
 
    Signal path:  System audio ─► [BlackHole virtual device] ─► capture
@@ -115,8 +122,8 @@ Sources/
     Models/                     Data contract (EQBand, EQPreset, …).
     DSP/                        Biquad, EQProcessor, FrequencyResponse.
     Presets/                    PresetStore, PresetValidator.
-    Knowledge/                  KnowledgeBase, TuningEngine.
-    Resources/data/             Bundled headphone/target/safety JSON.
+    Knowledge/                  KnowledgeBase, TuningEngine, CollectionManifest.
+    Resources/data/             Bundled target-curve / safety JSON (no headphone data).
     AuralinkPaths.swift         Canonical on-disk locations.
     ControlAuthorization.swift  Local ControlServer capability management.
   AuralinkRT/                   C11 lock-free ring, meters, and DSP-state retirement queue.
@@ -132,13 +139,21 @@ Tests/AuralinkCoreTests/        DSP, preset, and tuning unit tests.
 mcp-server/                     Node + TypeScript MCP server (+ data/ copy).
 .pi/extensions/auralink-mcp.ts  Project-local Pi bridge for the MCP server.
 scripts/bundle-app.sh           Build + assemble the runnable .app.
-docs/                           BUILD_SPEC.md (interface contract), SETUP.md.
+scripts/migrate-collection.mjs  One-time move into a user-owned collection.
+docs/                           BUILD_SPEC.md (interface contract), SETUP.md,
+                                DATA_COLLECTION.md (your headphone data).
 README.md                       This file.
 ```
 
-State and shared data live under `~/Library/Application Support/Auralink`
-(`presets/`, `revisions/`, `data/`, and a private `control-token`) — see
-`AuralinkPaths.swift`. Never copy the control token into an issue or config file.
+Two roots, with different owners — see `AuralinkPaths.swift`:
+
+- `~/Library/Application Support/Auralink` is machine-local app state: the working
+  `presets/`, `revisions/`, seeded `data/`, and a private `control-token`. Never copy
+  the control token into an issue or config file.
+- `~/auralink-collection` (override with `AURALINK_COLLECTION_DIR`) is **your**
+  headphone profiles and curated presets. Auralink never ships content here and only
+  writes to it when you ask. It is meant to be a git repository you own — see
+  [docs/DATA_COLLECTION.md](docs/DATA_COLLECTION.md).
 
 ---
 
@@ -214,10 +229,11 @@ it automatically from Application Support.
 If the app is offline, read and validate tools still work (the validation /
 clipping math is mirrored in TypeScript).
 
-- **Tools:** 25 read, authoring, feedback, routing, and live-apply tools. These
+- **Tools:** 28 read, authoring, feedback, routing, and live-apply tools. These
   include AutoEq lookup with provenance/cache, response verification, preset and
-  headphone-profile management, live audition/apply/rollback, routing control,
-  and tuning preference memory. See **[mcp-server/README.md](mcp-server/README.md)**
+  headphone-profile management, collection membership, live audition/apply/rollback,
+  routing control, and tuning preference memory.
+  See **[mcp-server/README.md](mcp-server/README.md)**
   for the complete list.
 - **Resources:** `eq://current-state`, `eq://presets`, `eq://headphones/{id}`,
   `eq://target-curves`, `eq://safety-rules`.
@@ -249,7 +265,7 @@ the MCP section of **[docs/SETUP.md](docs/SETUP.md)**.
   64–8192-frame steady callbacks, renderer transitions, FIR gain/bypass ramps,
   cold preparation time, and retained-heap growth.
 - **AI / MCP control: implemented for alpha evaluation.** The authenticated
-  localhost control server and Node MCP server expose 25 tools plus resources,
+  localhost control server and Node MCP server expose 28 tools plus resources,
   prompts, offline validation, AutoEq lookup, and optional Luxsin X8 control.
 
 ## Privacy, security, and licensing

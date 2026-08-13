@@ -10,6 +10,7 @@ final class PresetTests: XCTestCase {
     private var root: URL!
     private var presetsDir: URL!
     private var revisionsDir: URL!
+    private var collectionPresetsDir: URL!
     private var store: PresetStore!
 
     override func setUpWithError() throws {
@@ -18,9 +19,13 @@ final class PresetTests: XCTestCase {
             .appendingPathComponent("AuralinkPresetTests-\(UUID().uuidString)", isDirectory: true)
         presetsDir = root.appendingPathComponent("presets", isDirectory: true)
         revisionsDir = root.appendingPathComponent("revisions", isDirectory: true)
+        collectionPresetsDir = root.appendingPathComponent("collection/presets", isDirectory: true)
         try FileManager.default.createDirectory(at: presetsDir, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: revisionsDir, withIntermediateDirectories: true)
-        store = PresetStore(directory: presetsDir, revisionsDirectory: revisionsDir)
+        try FileManager.default.createDirectory(at: collectionPresetsDir, withIntermediateDirectories: true)
+        store = PresetStore(directory: presetsDir,
+                            revisionsDirectory: revisionsDir,
+                            collectionPresetsDirectory: collectionPresetsDir)
     }
 
     override func tearDownWithError() throws {
@@ -30,6 +35,7 @@ final class PresetTests: XCTestCase {
         root = nil
         presetsDir = nil
         revisionsDir = nil
+        collectionPresetsDir = nil
         store = nil
         try super.tearDownWithError()
     }
@@ -241,6 +247,170 @@ final class PresetTests: XCTestCase {
         let reloaded = try store.loadAll()
         XCTAssertEqual(reloaded.count, 3)
         XCTAssertEqual(Set(reloaded.map(\.name)), names)
+    }
+
+    // MARK: - Collection
+
+    /// Writes a preset straight into the collection directory, standing in for a
+    /// `git clone` the user brought with them.
+    private func seedCollectionPreset(_ preset: EQPreset) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(preset.normalized())
+            .write(to: collectionPresetsDir.appendingPathComponent("\(preset.id).json"), options: .atomic)
+    }
+
+    /// The gap that made a cloned collection useless before: presets that exist only
+    /// in the collection have to show up in the app's list.
+    func testLoadAllIncludesCollectionPresets() throws {
+        try seedCollectionPreset(makePreset(id: "preset_from_collection", name: "From Collection"))
+        _ = try store.save(makePreset(id: "preset_local", name: "Local"))
+
+        let all = try store.loadAll()
+        XCTAssertTrue(all.contains { $0.id == "preset_from_collection" })
+        XCTAssertTrue(all.contains { $0.id == "preset_local" })
+    }
+
+    func testGetFindsCollectionOnlyPreset() throws {
+        try seedCollectionPreset(makePreset(id: "preset_collection_only", name: "Collection Only"))
+        let found = try store.get(id: "preset_collection_only")
+        XCTAssertEqual(found?.name, "Collection Only")
+    }
+
+    func testWorkingCopyWinsOverCollectionOnIdCollision() throws {
+        try seedCollectionPreset(makePreset(id: "preset_shared", name: "Collection Version"))
+        _ = try store.save(makePreset(id: "preset_shared", name: "Local Edit"))
+
+        let all = try store.loadAll()
+        let matches = all.filter { $0.id == "preset_shared" }
+        XCTAssertEqual(matches.count, 1, "A colliding id must appear once, not twice.")
+        XCTAssertEqual(matches.first?.name, "Local Edit")
+    }
+
+    /// Editing a collection preset continues its version instead of restarting at 1.
+    func testSavingCollectionPresetContinuesItsVersion() throws {
+        var seeded = makePreset(id: "preset_versioned", name: "Seeded")
+        seeded.version = 7
+        try seedCollectionPreset(seeded)
+
+        let saved = try store.save(makePreset(id: "preset_versioned", name: "Edited"))
+        XCTAssertEqual(saved.version, 8)
+        XCTAssertEqual(try store.previousRevision(of: "preset_versioned")?.version, 7)
+    }
+
+    /// Nothing reaches the user's collection as a side effect of saving.
+    func testSaveDoesNotWriteIntoCollection() throws {
+        _ = try store.save(makePreset(id: "preset_not_shared", name: "Private"))
+        XCTAssertTrue(store.collectionPresetIDs().isEmpty)
+    }
+
+    func testAddToCollectionIsExplicitAndReversible() throws {
+        _ = try store.save(makePreset(id: "preset_promote", name: "Promote Me"))
+        XCTAssertFalse(store.collectionPresetIDs().contains("preset_promote"))
+
+        try store.addToCollection(id: "preset_promote")
+        XCTAssertTrue(store.collectionPresetIDs().contains("preset_promote"))
+
+        try store.removeFromCollection(id: "preset_promote")
+        XCTAssertFalse(store.collectionPresetIDs().contains("preset_promote"))
+        // Removing from the collection leaves the working copy alone.
+        XCTAssertNotNil(try store.get(id: "preset_promote"))
+    }
+
+    func testAddToCollectionThrowsWhenUnknownId() throws {
+        XCTAssertThrowsError(try store.addToCollection(id: "preset_missing")) { error in
+            XCTAssertEqual(error as? PresetStoreError, .notFound("preset_missing"))
+        }
+    }
+
+    func testAddToCollectionThrowsWithoutConfiguredCollection() throws {
+        let bare = PresetStore(directory: presetsDir, revisionsDirectory: revisionsDir)
+        _ = try bare.save(makePreset(id: "preset_bare", name: "Bare"))
+        XCTAssertThrowsError(try bare.addToCollection(id: "preset_bare")) { error in
+            XCTAssertEqual(error as? PresetStoreError, .noCollectionConfigured)
+        }
+    }
+
+    /// A delete has to stick: leaving the collection copy behind would resurrect the
+    /// preset on the next load and read as a failed delete.
+    func testDeleteRemovesCollectionCopyToo() throws {
+        _ = try store.save(makePreset(id: "preset_gone", name: "Gone"))
+        try store.addToCollection(id: "preset_gone")
+
+        try store.delete(id: "preset_gone")
+        XCTAssertNil(try store.get(id: "preset_gone"))
+        XCTAssertFalse(try store.loadAll().contains { $0.id == "preset_gone" })
+    }
+
+    func testCollectionPresetsAreToleratedWhenDirectoryMissing() throws {
+        let absent = root.appendingPathComponent("no-collection/presets", isDirectory: true)
+        let storeWithoutDir = PresetStore(directory: presetsDir,
+                                          revisionsDirectory: revisionsDir,
+                                          collectionPresetsDirectory: absent)
+        XCTAssertTrue(storeWithoutDir.collectionPresetIDs().isEmpty)
+        XCTAssertNoThrow(try storeWithoutDir.loadAll())
+    }
+
+    // MARK: - Path traversal protection
+
+    func testSaveRejectsPathTraversalID() throws {
+        let evil = makePreset(id: "../manifest", name: "Evil")
+        XCTAssertThrowsError(try store.save(evil)) { error in
+            XCTAssertEqual(error as? PresetStoreError, .invalidID("../manifest"))
+        }
+        // Nothing should have been written outside the presets directory.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("manifest.json").path))
+    }
+
+    func testDeleteRejectsPathTraversalID() throws {
+        // Create a decoy file outside the presets directory.
+        let decoy = root.appendingPathComponent("decoy.txt")
+        try "important".write(to: decoy, atomically: true, encoding: .utf8)
+
+        XCTAssertThrowsError(try store.delete(id: "../decoy")) { error in
+            XCTAssertEqual(error as? PresetStoreError, .invalidID("../decoy"))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: decoy.path),
+                      "Delete with traversal ID must not touch files outside the store")
+    }
+
+    func testGetReturnsNilForInvalidID() throws {
+        XCTAssertNil(try store.get(id: "../manifest"))
+        XCTAssertNil(try store.get(id: ".."))
+        XCTAssertNil(try store.get(id: ""))
+    }
+
+    func testLoadAllSkipsRecordsWithInvalidIDs() throws {
+        // Write a preset file with a path-traversal embedded ID directly.
+        let evil = makePreset(id: "../escape", name: "Evil")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(evil).write(
+            to: presetsDir.appendingPathComponent("evil.json"), options: .atomic)
+
+        _ = try store.save(makePreset(id: "preset_good", name: "Good"))
+        let all = try store.loadAll()
+        XCTAssertTrue(all.contains { $0.id == "preset_good" })
+        XCTAssertFalse(all.contains { $0.id == "../escape" },
+                       "Records with path-traversal IDs must be skipped")
+    }
+
+    func testCollectionRecordIDValidation() {
+        XCTAssertTrue(CollectionRecordID.isValid("preset_flat"))
+        XCTAssertTrue(CollectionRecordID.isValid("ai_sennheiser-hd600_harman-neutral"))
+        XCTAssertTrue(CollectionRecordID.isValid("v1.2.3"))
+        XCTAssertFalse(CollectionRecordID.isValid("../manifest"))
+        XCTAssertFalse(CollectionRecordID.isValid(".."))
+        XCTAssertFalse(CollectionRecordID.isValid(""))
+        XCTAssertFalse(CollectionRecordID.isValid(".hidden"))
+        XCTAssertFalse(CollectionRecordID.isValid("-leading-dash"))
+        XCTAssertFalse(CollectionRecordID.isValid("trailing-dot."))
+        XCTAssertFalse(CollectionRecordID.isValid("has space"))
+        XCTAssertFalse(CollectionRecordID.isValid("has/slash"))
+        XCTAssertFalse(CollectionRecordID.isValid("a..b"))
+        XCTAssertFalse(CollectionRecordID.isValid(String(repeating: "x", count: 129)))
     }
 
     // MARK: - Validator

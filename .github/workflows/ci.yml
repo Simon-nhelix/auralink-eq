@@ -45,9 +45,32 @@ jobs:
       - name: Verify bundled data parity
         working-directory: .
         run: |
-          cmp mcp-server/data/headphone-profiles.json Sources/AuralinkCore/Resources/data/headphone-profiles.json
           cmp mcp-server/data/target-curves.json Sources/AuralinkCore/Resources/data/target-curves.json
           cmp mcp-server/data/safety-rules.json Sources/AuralinkCore/Resources/data/safety-rules.json
+
+      - name: Verify no headphone data ships
+        working-directory: .
+        # Headphone profiles and curated presets belong to the user's own collection.
+        # Shipping them would present one person's measurements and taste as factory
+        # truth, which is exactly what this repository stopped doing.
+        run: |
+          for stale in \
+            mcp-server/data/headphone-profiles.json \
+            Sources/AuralinkCore/Resources/data/headphone-profiles.json \
+            library
+          do
+            if [ -e "$stale" ]; then
+              echo "::error::$stale is back. Headphone data must live in the user's collection (docs/DATA_COLLECTION.md)."
+              exit 1
+            fi
+          done
+
+      - name: Test legacy-to-collection migration
+        working-directory: .
+        # The migration script is the only code that preserves pre-split user
+        # data; it is exercised end-to-end against scratch fixtures (first run,
+        # idempotency, no-clobber conflicts, invalid ids, corrupt manifest).
+        run: node --test scripts/migrate-collection.test.mjs
 
   release-app:
     name: Build Auralink EQ.app artifact
