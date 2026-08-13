@@ -27,8 +27,10 @@ Now:
 
 ## MCP
 
-- `register_headphone_baseline` — measured AutoEq lookup → profile + preset +
-  optional Luxsin X8 import-only write, all dual-written to `library/`.
+- `register_headphone_baseline` — AutoEq lookup **or** explicit `bands` → profile +
+  shared preset dual-written to Application Support and `library/`. Does not
+  commit, does not write Luxsin X8, does not rebuild bundled seed JSON unless
+  `rebuildSeed:true` (release/bundle only).
 - Profile upsert / preset create also dual-write shared entries into `library/`.
 
 Override root with `AURALINK_LIBRARY_DIR` if needed (defaults to this folder
