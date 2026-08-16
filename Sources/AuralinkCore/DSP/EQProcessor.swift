@@ -442,6 +442,7 @@ public final class EQProcessor {
             ? measuredFIRCache.design(for: normalized, sampleRate: sampleRate)
             : nil
         let resolvedMode: EQRenderMode = measuredResult == nil ? .standardIIR : .hqFIR
+        let measuredQuality = measuredResult?.quality ?? MeasuredFIRDesigner.lastEvaluatedQuality
         let preferenceIndexes = Set(normalized.correction?.preferenceBandIndexes ?? [])
         var left = Chain()
         var right = Chain()
@@ -483,7 +484,7 @@ public final class EQProcessor {
                 partitionSize: partition
             ),
             renderMode: resolvedMode,
-            measuredQuality: measuredResult?.quality,
+            measuredQuality: measuredQuality,
             generation: generation
         )
     }

@@ -191,6 +191,9 @@ final class AppModel: ObservableObject {
     var recoveryDeferredWhileBackgrounded = false
     /// The reason string for the deferred recovery, surfaced when it finally runs.
     var deferredRecoveryReason: String? = nil
+    /// Last authenticated ControlServer request. `mcpConnected` expires after this.
+    var lastMCPActivityAt: Date? = nil
+    static let mcpActivityTimeout: TimeInterval = 30
 
     // MARK: Self-recovery (hardware monitor + telemetry watchdog)
 
@@ -317,8 +320,8 @@ final class AppModel: ObservableObject {
             ))
             lines.append("trace: \(Self.sparkline(errs, width: 60))")
             // Mark the event moment on the strip.
-            if let firstAt = window.first?.at, windowEnd > firstAt {
-                let span = window.last!.at.timeIntervalSince(firstAt)
+            if let firstAt = window.first?.at, let lastAt = window.last?.at, windowEnd > firstAt {
+                let span = lastAt.timeIntervalSince(firstAt)
                 if span > 0 {
                     let pos = Int(event.at.timeIntervalSince(firstAt) / span * 59.0)
                     lines.append(String(repeating: " ", count: max(0, min(59, pos)) + 7) + "^ event")

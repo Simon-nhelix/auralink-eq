@@ -60,3 +60,24 @@ test("validation reports low-bass, narrow-treble, and headroom warnings", () => 
   assert.match(messages, /narrow boosted treble/);
   assert.match(messages, /Estimated peak/);
 });
+
+test("clipping risk uses the stored preamp, not autoGainEnabled", () => {
+  const preset = {
+    id: "stale-autogain",
+    name: "Stale",
+    headphone: "Test",
+    goal: "parity",
+    preampDb: 0,
+    bands: [
+      { index: 1, type: "low_shelf", frequencyHz: 80, gainDb: 8, q: 0.7, channel: "stereo", enabled: true },
+    ],
+    safety: { autoGainEnabled: true, clippingRisk: "low" },
+    createdBy: "ai",
+    version: 1,
+    tags: [],
+    createdAt: "",
+    updatedAt: "",
+  };
+  const result = validatePreset(preset, DEFAULT_SAFETY_RULES);
+  assert.equal(result.clippingRisk, "high");
+});

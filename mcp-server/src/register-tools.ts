@@ -923,22 +923,42 @@ export function registerTools(server: McpServer): void {
           (await loadAllPresets()).find((p) => p.bands.every((b) => !b.enabled)) ??
           null;
         if (flat) {
-          const res = await applyPreset(flat.id, true);
-          fallbackApply = res.online
-            ? {
-                online: true,
-                applied: res.data?.ok === true,
-                needsConfirm: res.data?.needsConfirm === true,
-                message:
-                  res.data?.ok === true
-                    ? `Deleted preset was current, so Auralink loaded ${flat.name}.`
-                    : `Deleted preset was current, but the app did not load ${flat.name}.`,
-              }
-            : {
-                online: false,
-                applied: false,
-                message: res.error,
-              };
+          // Deleting a preset is not live-audio confirmation. Ask the app's
+          // permission mode whether Flat may be applied, then verify audible.
+          const res = await applyPreset(flat.id, false);
+          if (!res.online) {
+            fallbackApply = {
+              online: false,
+              applied: false,
+              message: res.error,
+            };
+          } else if (res.data?.needsConfirm === true) {
+            fallbackApply = {
+              online: true,
+              applied: false,
+              needsConfirm: true,
+              message:
+                `Deleted preset was current. Pass apply_eq_preset('${flat.id}', confirmed:true) to load ${flat.name}.`,
+            };
+          } else {
+            const requestAccepted = res.data?.ok === true;
+            const verification = await verifyAuralinkLiveRequest(
+              requestAccepted,
+              flat.id,
+              res.data?.requestedRenderGeneration
+            );
+            fallbackApply = {
+              online: true,
+              applied: verification.audible,
+              requestAccepted,
+              audible: verification.audible,
+              needsConfirm: false,
+              verification,
+              message: verification.audible
+                ? `Deleted preset was current, so Auralink loaded ${flat.name}.`
+                : `Deleted preset was current, but live audio did not switch to ${flat.name}.`,
+            };
+          }
         } else {
           fallbackApply = {
             applied: false,
@@ -1794,7 +1814,12 @@ export function registerTools(server: McpServer): void {
       title: "Route system audio",
       description:
         "Sets macOS system output to the virtual capture device so Mac sound actually passes through Auralink EQ.",
-      inputSchema: {},
+      inputSchema: {
+        confirmed: z
+          .boolean()
+          .default(false)
+          .describe("Set true only when the user explicitly asked for this live-audio change."),
+      },
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -1802,11 +1827,21 @@ export function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async () => {
-      const res = await routeSystemAudio();
+    async ({ confirmed }) => {
+      if (!confirmed) {
+        return jsonResult({
+          online: true,
+          routed: false,
+          needsConfirm: true,
+          message:
+            "System audio was not routed. Pass confirmed:true only when the user explicitly asked to hear through Auralink.",
+        });
+      }
+      const res = await routeSystemAudio(true);
       return jsonResult({
         online: res.online,
         routed: res.data?.ok === true,
+        needsConfirm: res.data?.needsConfirm === true,
         message: res.online
           ? res.data?.message ??
             (res.data?.ok === true
@@ -1823,7 +1858,12 @@ export function registerTools(server: McpServer): void {
       title: "Restore system audio",
       description:
         "Restores macOS system output from the virtual capture device back to a real output device.",
-      inputSchema: {},
+      inputSchema: {
+        confirmed: z
+          .boolean()
+          .default(false)
+          .describe("Set true only when the user explicitly asked for this live-audio change."),
+      },
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -1831,11 +1871,21 @@ export function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async () => {
-      const res = await restoreSystemAudio();
+    async ({ confirmed }) => {
+      if (!confirmed) {
+        return jsonResult({
+          online: true,
+          restored: false,
+          needsConfirm: true,
+          message:
+            "System audio was not restored. Pass confirmed:true only when the user explicitly asked to leave Auralink.",
+        });
+      }
+      const res = await restoreSystemAudio(true);
       return jsonResult({
         online: res.online,
         restored: res.data?.ok === true,
+        needsConfirm: res.data?.needsConfirm === true,
         message: res.online
           ? res.data?.message ??
             (res.data?.ok === true
@@ -1852,7 +1902,12 @@ export function registerTools(server: McpServer): void {
       title: "Stop audio routing",
       description:
         "Stops Auralink's live capture/render routing engine. Use when the user wants to stop processing or remove the macOS microphone/capture indicator.",
-      inputSchema: {},
+      inputSchema: {
+        confirmed: z
+          .boolean()
+          .default(false)
+          .describe("Set true only when the user explicitly asked for this live-audio change."),
+      },
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -1860,11 +1915,21 @@ export function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async () => {
-      const res = await stopRouting();
+    async ({ confirmed }) => {
+      if (!confirmed) {
+        return jsonResult({
+          online: true,
+          stopped: false,
+          needsConfirm: true,
+          message:
+            "Audio routing was not stopped. Pass confirmed:true only when the user explicitly asked to stop processing.",
+        });
+      }
+      const res = await stopRouting(true);
       return jsonResult({
         online: res.online,
         stopped: res.data?.ok === true,
+        needsConfirm: res.data?.needsConfirm === true,
         message: res.online
           ? res.data?.message ??
             (res.data?.ok === true
@@ -1892,6 +1957,10 @@ export function registerTools(server: McpServer): void {
           .optional()
           .describe("Optional final id. Usually omit so the current audition id is kept."),
         tags: z.array(z.string()).default([]).describe("Optional tags to add, e.g. liked, user-approved."),
+        confirmed: z
+          .boolean()
+          .default(false)
+          .describe("Set true when the user explicitly asked to save this preset."),
       },
       annotations: {
         readOnlyHint: false,
@@ -1900,8 +1969,16 @@ export function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ name, id, tags }) => {
-      const res = await saveCurrentPreset({ name, id, tags });
+    async ({ name, id, tags, confirmed }) => {
+      if (!confirmed) {
+        return jsonResult({
+          saved: false,
+          needsConfirm: true,
+          message:
+            "Preset was not saved. Pass confirmed:true only when the user asked to keep this audition.",
+        });
+      }
+      const res = await saveCurrentPreset({ name, id, tags, confirmed: true });
       if (!res.online) {
         return jsonResult({
           saved: false,
@@ -1910,11 +1987,19 @@ export function registerTools(server: McpServer): void {
           hint: "Open or rebuild the Auralink app, then retry save_current_preset.",
         });
       }
-      if (!res.data) {
+      if (res.data?.needsConfirm === true) {
         return jsonResult({
           saved: false,
           online: true,
-          message: res.error ?? "The app returned no saved preset.",
+          needsConfirm: true,
+          message: res.data.message ?? "The app requires confirmation before saving a preset.",
+        });
+      }
+      if (!res.data || res.data.ok === false) {
+        return jsonResult({
+          saved: false,
+          online: true,
+          message: res.error ?? res.data?.message ?? "The app returned no saved preset.",
         });
       }
       return jsonResult({
@@ -2019,7 +2104,12 @@ export function registerTools(server: McpServer): void {
       description:
         "DESTRUCTIVE: reverts the live system audio to the previously applied preset through the running " +
         "Auralink app. Requires the app to be running; fails gracefully if it is offline.",
-      inputSchema: {},
+      inputSchema: {
+        confirmed: z
+          .boolean()
+          .default(false)
+          .describe("Set true only when the user explicitly asked to revert live audio."),
+      },
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -2027,8 +2117,16 @@ export function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async () => {
-      const res = await rollbackPreset();
+    async ({ confirmed }) => {
+      if (!confirmed) {
+        return jsonResult({
+          rolledBack: false,
+          needsConfirm: true,
+          message:
+            "Live audio was not rolled back. Pass confirmed:true only when the user explicitly asked to revert.",
+        });
+      }
+      const res = await rollbackPreset(true);
       if (!res.online) {
         return jsonResult({
           rolledBack: false,

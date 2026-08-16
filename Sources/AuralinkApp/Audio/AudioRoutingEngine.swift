@@ -11,7 +11,7 @@ struct AudioEngineDebugSnapshot: Codable {
     var stateIsRunning: Bool
     var inputEngineRunning: Bool
     var outputEngineRunning: Bool
-    var inputTapInstalled: Bool
+    var inputSinkInstalled: Bool
     var selectedOutputName: String?
     var selectedOutputUID: String?
     var sampleRate: Double
@@ -129,7 +129,7 @@ public final class AudioRoutingEngine {
     /// rate by a few ppm to hold the ring fill at the target (see class doc).
     private var varispeedNode: AVAudioUnitVarispeed?
     private var inputSinkNode: AVAudioSinkNode?
-    private var inputTapInstalled = false
+    private var inputSinkInstalled = false
 
     private let devices = AudioDeviceManager()
 
@@ -331,7 +331,7 @@ public final class AudioRoutingEngine {
         sourceNode = nil
         varispeedNode = nil
         inputSinkNode = nil
-        inputTapInstalled = false
+        inputSinkInstalled = false
         installConfigurationObservers()
     }
 
@@ -492,7 +492,7 @@ public final class AudioRoutingEngine {
             routingActivityToken = nil
         }
 
-        inputTapInstalled = false
+        inputSinkInstalled = false
         if inputEngine.isRunning { inputEngine.stop() }
         if outputEngine.isRunning { outputEngine.stop() }
         if let node = sourceNode {
@@ -611,7 +611,7 @@ public final class AudioRoutingEngine {
             stateIsRunning: stateRunning,
             inputEngineRunning: inputEngine.isRunning,
             outputEngineRunning: outputEngine.isRunning,
-            inputTapInstalled: inputTapInstalled,
+            inputSinkInstalled: inputSinkInstalled,
             selectedOutputName: output?.name,
             selectedOutputUID: output?.uid,
             sampleRate: sr,
@@ -908,7 +908,7 @@ public final class AudioRoutingEngine {
         inputSinkNode = sink
         inputEngine.attach(sink)
         inputEngine.connect(inputNode, to: sink, format: format)
-        inputTapInstalled = true
+        inputSinkInstalled = true
         inputEngine.prepare()
         // Re-assert the capture binding after prepare for the same reason as
         // the output side: AU re-initialization on a reused engine can revert

@@ -119,13 +119,18 @@ extension AppModel {
         next.ringReadFrames = telemetry.ringReadFrames
         next.ringAvailableFrames = telemetry.ringAvailableFrames
         next.clippingDetected = telemetry.clipping
-        next.routingActive = telemetry.running
+        // A tick queued before stop() must not resurrect a torn-down path.
+        next.routingActive = routingRequested && telemetry.running
         next.hqCorrectionMode = telemetry.running && telemetry.measuredFIRActive
         next.hqCorrectionRequested = telemetry.measuredFIRRequested
         next.requestedRenderGeneration = telemetry.requestedRenderGeneration
         next.committedRenderGeneration = telemetry.committedRenderGeneration
         next.underrunsTotal += telemetry.underruns
         next.resyncsTotal += telemetry.resyncs
+        if next.mcpConnected {
+            let stale = lastMCPActivityAt.map { Date().timeIntervalSince($0) > Self.mcpActivityTimeout } ?? true
+            if stale { next.mcpConnected = false }
+        }
 
         if clippingEventCooldownTicks > 0 {
             clippingEventCooldownTicks -= 1
@@ -533,6 +538,7 @@ extension AppModel {
     }
 
     func noteMCPActivity() {
+        lastMCPActivityAt = Date()
         audioState.mcpConnected = true
     }
 

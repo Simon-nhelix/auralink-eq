@@ -175,7 +175,7 @@ public final class TuningEngine {
 makeTuning algorithm: start from target curve hints (or parse goalText keywords: rock/vocal/bass/
 bright/warm/footstep/late-night), map hints to bands, scale by headphone correctionNotes & harsh
 regions, apply preference keyword nudges, clamp to `maxBoostDb`/`avoidHarshTreble`, set name
-"<Headphone> – <Goal>", createdBy=.ai, run validator, set safety.clippingRisk + preampDb=autoPreamp,
+"<Headphone> – <Goal>", createdBy=.ai, run validator, set safety.clippingRisk (suggestedPreampDb is reported; live-audition workflow keeps the baseline preamp unless the user asks for auto headroom),
 build `intent`/`changes` from the diff vs base. Must be pure (no randomness).
 
 ### JSON data schema  [core-knowledge authors these files]
@@ -251,9 +251,10 @@ Endpoints (JSON, 127.0.0.1 only):
 - `GET /state` → `AudioState` (+ currentPreset id/name, requested/active render mode, requested/committed DSP generation, and measured-FIR status)
 - `GET /devices` → `[OutputDevice]`
 - `GET /presets` → `[EQPreset]`   ·  `GET /preset?id=` → `EQPreset`
-- `POST /apply` body `{ "id": "..." }` → applies preset (respects permissionMode; returns {ok, needsConfirm})
-- `POST /rollback` → `{ok:false}` when no target exists; otherwise target id/name + requested render generation
-- `POST /preset` body `EQPreset` → save (create/update)
+- `POST /apply` body `{ "id": "...", "confirmed"? }` → applies preset (respects permissionMode; returns {ok, needsConfirm})
+- `POST /rollback` body `{ "confirmed"? }` → `{ok:false, needsConfirm}` unless allowed; otherwise target id/name + requested render generation
+- `POST /preset` body `EQPreset` or `{preset, confirmed?}` → save (create/update; respects permissionMode)
+- `POST /route-system-audio`, `/restore-system-audio`, `/stop-routing`, `/select-output` require `confirmed` unless permissionMode is `full_control`
 - `POST /validate` body `EQPreset` → `ValidationResult`
 All endpoints require `Authorization: Bearer <capability>`. The app creates the
 capability at `~/Library/Application Support/Auralink/control-token` with mode

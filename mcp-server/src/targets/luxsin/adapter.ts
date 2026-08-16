@@ -336,14 +336,30 @@ function mapState(state: X8DeviceState, peq: X8PeqDb): AudioState {
     currentPresetName: active?.name,
     needsVirtualDevice: false,
     loopbackDriverInstalled: false,
-    audioInputPermission: "",
     systemOutputRoutedToAuralink: false,
     sampleRate,
     bufferFrames: 0,
     latencyMs: 0,
     routingActive: state.dsp_enable === 1,
     clippingDetected: false,
-  } as AudioState;
+    preClipPeakDb: -120,
+    estimatedTruePeakDb: -120,
+    clippingEventsTotal: 0,
+    lastClippingPeakDb: -120,
+    outputPeakDb: -120,
+    capturePeakDb: -120,
+    captureCallbacks: 0,
+    renderCallbacks: 0,
+    capturedFrames: 0,
+    renderedFrames: 0,
+    ringReadFrames: 0,
+    ringAvailableFrames: 0,
+    underrunsTotal: 0,
+    resyncsTotal: 0,
+    mcpConnected: false,
+    permissionMode: "ask_before_write",
+    audioInputPermission: "unknown",
+  };
 }
 
 function parseSampleRate(audioFormat?: string): number {

@@ -17,16 +17,10 @@ struct AIResultView: View {
     var body: some View {
         // Defensive: if the proposal vanished, render nothing rather than crash.
         if let result = model.pendingProposal {
-            ZStack {
-                // Dimmed backdrop. Tapping it does nothing (force an explicit choice).
-                Color.black.opacity(0.55)
-                    .ignoresSafeArea()
-
-                card(for: result)
-                    .frame(maxWidth: 540)
-                    .padding(Theme.Metrics.pad)
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            card(for: result)
+                .frame(maxWidth: 540)
+                .padding(Theme.Metrics.pad)
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -243,6 +237,12 @@ struct AIResultView: View {
 
             HStack(spacing: Theme.Metrics.gap) {
                 Button {
+                    if let proposal = model.pendingProposal {
+                        model.auditionTransientPreset(
+                            proposal.preset,
+                            message: "Comparing the proposal against the previous preset."
+                        )
+                    }
                     model.toggleAB()
                 } label: {
                     Label(model.comparingBefore ? "A/B: Before" : "Compare A/B",

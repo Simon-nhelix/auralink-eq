@@ -110,10 +110,13 @@ extension AppModel {
             statusMessage = "Measured FIR unavailable: this preset has no valid dense measured baseline."
             return
         }
-        guard engine.setRenderMode(.hqFIR), let quality = engine.measuredFIRQuality() else {
+        guard engine.setRenderMode(.hqFIR),
+              let quality = engine.measuredFIRQuality(),
+              quality.eligible else {
             audioState.hqCorrectionRequested = false
             audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
-            measuredFIRRejectionReason = "Measured FIR is locked at this sample rate because it did not improve target accuracy enough."
+            measuredFIRRejectionReason = engine.measuredFIRQuality()?.rejectionReason
+                ?? "Measured FIR is locked at this sample rate because it did not improve target accuracy enough."
             statusMessage = measuredFIRRejectionReason
             return
         }
@@ -449,10 +452,12 @@ extension AppModel {
     func requestTuning(_ request: AITuningRequest) {
         isTuning = true
         captureBeforeSnapshot()
-        // The in-app tuner is deterministic and synchronous; wrap to keep UI snappy.
-        let result = tuner.makeTuning(request: request, basePreset: currentPreset)
-        pendingProposal = result
-        isTuning = false
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let result = self.tuner.makeTuning(request: request, basePreset: self.currentPreset)
+            self.pendingProposal = result
+            self.isTuning = false
+        }
     }
 
     func makeWarmer() {
@@ -496,9 +501,10 @@ extension AppModel {
         cancelScheduledEngineApply()
         let generation = engine.apply(preset: preset)
         audioState.requestedRenderGeneration = generation
-        if measuredFIRRequested, engine.measuredFIRQuality() == nil {
+        if measuredFIRRequested, engine.measuredFIRQuality()?.eligible != true {
             audioState.hqCorrectionRequested = false
-            measuredFIRRejectionReason = "Measured FIR is locked because the updated preset did not pass its quality gate."
+            measuredFIRRejectionReason = engine.measuredFIRQuality()?.rejectionReason
+                ?? "Measured FIR is locked because the updated preset did not pass its quality gate."
             _ = engine.setRenderMode(.standardIIR)
             audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
             statusMessage = measuredFIRRejectionReason
@@ -515,9 +521,10 @@ extension AppModel {
                 self.pendingEngineApplyTask = nil
                 let generation = self.engine.apply(preset: self.currentPreset)
                 self.audioState.requestedRenderGeneration = generation
-                if self.measuredFIRRequested, self.engine.measuredFIRQuality() == nil {
+                if self.measuredFIRRequested, self.engine.measuredFIRQuality()?.eligible != true {
                     self.audioState.hqCorrectionRequested = false
-                    self.measuredFIRRejectionReason = "Measured FIR is locked because the edit did not pass its quality gate."
+                    self.measuredFIRRejectionReason = self.engine.measuredFIRQuality()?.rejectionReason
+                        ?? "Measured FIR is locked because the edit did not pass its quality gate."
                     _ = self.engine.setRenderMode(.standardIIR)
                     self.audioState.requestedRenderGeneration = self.engine.requestedRenderStateGeneration()
                     self.statusMessage = self.measuredFIRRejectionReason

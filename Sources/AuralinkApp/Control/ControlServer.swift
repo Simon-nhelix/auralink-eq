@@ -16,17 +16,17 @@ import AuralinkCore
 /// - `GET  /presets`      → [EQPreset]
 /// - `GET  /preset?id=…`  → EQPreset
 /// - `POST /apply` {id, confirmed?} → { ok, needsConfirm }
-/// - `POST /select-output` {uid} → { ok, message }
+/// - `POST /select-output` {uid, confirmed?} → { ok, needsConfirm, message }
 /// - `POST /audition-preset` {preset, confirmed?} → { ok, needsConfirm, saved:false }
-/// - `POST /save-current-preset` {name?, id?, tags?} → saved EQPreset
-/// - `POST /rollback`     → { ok }
-/// - `POST /preset` <EQPreset> → saved EQPreset
+/// - `POST /save-current-preset` {name?, id?, tags?, confirmed?} → saved EQPreset or {ok, needsConfirm}
+/// - `POST /rollback` {confirmed?} → { ok, needsConfirm }
+/// - `POST /preset` {preset, confirmed?} or a bare EQPreset → saved EQPreset or {ok, needsConfirm}
 /// - `POST /validate` <EQPreset> → ValidationResult
-/// - `POST /reload-presets` → { ok, presetCount }
-/// - `POST /reload-knowledge` → { ok, profileCount, targetCurveCount }
-/// - `POST /route-system-audio` → { ok }
-/// - `POST /restore-system-audio` → { ok }
-/// - `POST /stop-routing` → { ok }
+/// - `POST /reload-presets` → { ok, presetCount }  (disk reread; not gated)
+/// - `POST /reload-knowledge` → { ok, profileCount, targetCurveCount }  (disk reread; not gated)
+/// - `POST /route-system-audio` {confirmed?} → { ok, needsConfirm }
+/// - `POST /restore-system-audio` {confirmed?} → { ok, needsConfirm }
+/// - `POST /stop-routing` {confirmed?} → { ok, needsConfirm }
 /// - `GET  /debug`       → internal routing diagnostics
 // Note: `ControlServer` is internal (not `public`) because it consumes the
 // app-internal `AppModel`. It is only ever instantiated from `AuralinkApp`
@@ -152,6 +152,9 @@ final class ControlServer {
               ControlAuthorization.isAuthorized(headers: request.headers, token: bearerToken) else {
             return error(401, "missing or invalid control authorization")
         }
+        if request.headers["transfer-encoding"] != nil {
+            return error(400, "chunked transfer-encoding is not supported")
+        }
         if request.method == "POST" {
             let contentType = request.headers["content-type"]?.lowercased() ?? ""
             guard contentType == "application/json" || contentType.hasPrefix("application/json;") else {
@@ -208,22 +211,7 @@ final class ControlServer {
             return handleSaveCurrentPreset(body: request.body)
 
         case ("POST", "/rollback"):
-            if let target = model.rollback() {
-                return json(RollbackResponse(
-                    ok: true,
-                    presetId: target.id,
-                    presetName: target.name,
-                    requestedRenderGeneration: model.audioState.requestedRenderGeneration,
-                    message: "Rollback request accepted; verify realtime commit state."
-                ))
-            }
-            return json(RollbackResponse(
-                ok: false,
-                presetId: nil,
-                presetName: nil,
-                requestedRenderGeneration: model.audioState.requestedRenderGeneration,
-                message: "Nothing to roll back."
-            ))
+            return handleRollback(body: request.body)
 
         case ("POST", "/preset"):
             return handleSavePreset(body: request.body)
@@ -235,6 +223,7 @@ final class ControlServer {
             model.loadPresets()
             return json(PresetsReloadResponse(
                 ok: true,
+                needsConfirm: false,
                 presetCount: model.presets.count,
                 message: "Preset library refreshed."
             ))
@@ -243,32 +232,20 @@ final class ControlServer {
             let counts = model.reloadKnowledge()
             return json(KnowledgeReloadResponse(
                 ok: true,
+                needsConfirm: false,
                 profileCount: counts.profileCount,
                 targetCurveCount: counts.targetCurveCount,
                 message: model.statusMessage
             ))
 
         case ("POST", "/route-system-audio"):
-            model.routeMacSoundThroughAuralink()
-            return json(SimpleOK(
-                ok: model.systemEQActive,
-                message: model.lastError ?? model.statusMessage
-            ))
+            return handleRouteSystemAudio(body: request.body)
 
         case ("POST", "/restore-system-audio"):
-            model.restoreMacSoundOutput()
-            return json(SimpleOK(
-                ok: !model.systemOutputRoutedToAuralink,
-                message: model.lastError ?? model.statusMessage
-            ))
+            return handleRestoreSystemAudio(body: request.body)
 
         case ("POST", "/stop-routing"):
-            model.stopRouting()
-            model.refreshDevices()
-            return json(SimpleOK(
-                ok: !model.audioState.routingActive,
-                message: model.lastError ?? model.statusMessage
-            ))
+            return handleStopRouting(body: request.body)
 
         default:
             return error(404, "no route for \(request.method) \(request.path)")
@@ -278,19 +255,44 @@ final class ControlServer {
     // MARK: - POST handlers
 
     @MainActor
+    private func gate(_ kind: ControlWriteKind, confirmed: Bool?) -> ControlWriteDecision {
+        model.audioState.permissionMode.decision(for: kind, confirmed: confirmed == true)
+    }
+
+    @MainActor
+    private func forbiddenWrite() -> HTTPResponse {
+        error(403, "permission mode is read-only; writes are not allowed")
+    }
+
+    @MainActor
     /// Re-points the live path at another real output device by UID.
     private func handleSelectOutput(body: Data) -> HTTPResponse {
-        struct SelectBody: Decodable { let uid: String }
+        struct SelectBody: Decodable {
+            let uid: String
+            let confirmed: Bool?
+        }
         guard let req = try? decoder.decode(SelectBody.self, from: body) else {
             return error(400, "expected { \"uid\": \"…\" }")
         }
-        let accepted = model.selectOutputDevice(uid: req.uid)
-        return json(SimpleOK(
-            ok: accepted,
-            message: accepted
-                ? "Output switch accepted."
-                : (model.lastError ?? model.statusMessage ?? "Output switch rejected.")
-        ))
+        switch gate(.applyLive, confirmed: req.confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(SimpleOK(
+                ok: false,
+                needsConfirm: true,
+                message: "The app requires confirmation before switching the live output."
+            ))
+        case .allow:
+            let accepted = model.selectOutputDevice(uid: req.uid)
+            return json(SimpleOK(
+                ok: accepted,
+                needsConfirm: false,
+                message: accepted
+                    ? "Output switch accepted."
+                    : (model.lastError ?? model.statusMessage ?? "Output switch rejected.")
+            ))
+        }
     }
 
     @MainActor
@@ -310,23 +312,23 @@ final class ControlServer {
             return error(404, "preset \(req.id) not found")
         }
 
-        // Honor the user's permission mode: when applying needs confirmation, we
-        // do NOT touch live audio — we report needsConfirm so the MCP client can
-        // surface a prompt (or the user confirms in-app).
-        if model.audioState.permissionMode.allowsAutonomousApply || req.confirmed == true {
+        switch gate(.applyLive, confirmed: req.confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(ApplyResponse(
+                ok: false,
+                needsConfirm: true,
+                presetId: preset.id,
+                requestedRenderGeneration: nil
+            ))
+        case .allow:
             model.load(preset: preset, audition: true)
             return json(ApplyResponse(
                 ok: true,
                 needsConfirm: false,
                 presetId: preset.id,
                 requestedRenderGeneration: model.audioState.requestedRenderGeneration
-            ))
-        } else {
-            return json(ApplyResponse(
-                ok: false,
-                needsConfirm: true,
-                presetId: preset.id,
-                requestedRenderGeneration: nil
             ))
         }
     }
@@ -341,7 +343,22 @@ final class ControlServer {
             return error(400, "expected { \"preset\": <EQPreset>, \"confirmed\": true|false }")
         }
 
-        if model.audioState.permissionMode.allowsAutonomousApply || req.confirmed == true {
+        switch gate(.applyLive, confirmed: req.confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(AuditionResponse(
+                ok: false,
+                needsConfirm: true,
+                saved: false,
+                presetId: req.preset.id,
+                presetName: req.preset.name,
+                activeBands: req.preset.activeBands.count,
+                clippingRisk: nil,
+                requestedRenderGeneration: nil,
+                message: "The app requires confirmation before auditioning live audio."
+            ))
+        case .allow:
             let preset = req.preset.normalized()
             let validation = model.validator.validate(preset)
             model.auditionTransientPreset(
@@ -360,18 +377,6 @@ final class ControlServer {
                 message: model.statusMessage
             ))
         }
-
-        return json(AuditionResponse(
-            ok: false,
-            needsConfirm: true,
-            saved: false,
-            presetId: req.preset.id,
-            presetName: req.preset.name,
-            activeBands: req.preset.activeBands.count,
-            clippingRisk: nil,
-            requestedRenderGeneration: nil,
-            message: "The app requires confirmation before auditioning live audio."
-        ))
     }
 
     @MainActor
@@ -380,27 +385,164 @@ final class ControlServer {
             let name: String?
             let id: String?
             let tags: [String]?
+            let confirmed: Bool?
         }
-        let req = (try? decoder.decode(SaveBody.self, from: body)) ?? SaveBody(name: nil, id: nil, tags: nil)
-        do {
-            let saved = try model.saveLoadedPreset(name: req.name, id: req.id, extraTags: req.tags ?? [])
-            return json(saved)
-        } catch {
-            return self.error(500, "save current preset failed: \(error.localizedDescription)")
+        let req = (try? decoder.decode(SaveBody.self, from: body)) ?? SaveBody(name: nil, id: nil, tags: nil, confirmed: nil)
+        switch gate(.createPreset, confirmed: req.confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(SimpleOK(
+                ok: false,
+                needsConfirm: true,
+                message: "The app requires confirmation before saving a preset."
+            ))
+        case .allow:
+            do {
+                let saved = try model.saveLoadedPreset(name: req.name, id: req.id, extraTags: req.tags ?? [])
+                return json(saved)
+            } catch {
+                return self.error(500, "save current preset failed: \(error.localizedDescription)")
+            }
         }
     }
 
     @MainActor
     private func handleSavePreset(body: Data) -> HTTPResponse {
-        guard let preset = try? decoder.decode(EQPreset.self, from: body) else {
+        struct Wrapped: Decodable {
+            let preset: EQPreset
+            let confirmed: Bool?
+        }
+        let wrapped = try? decoder.decode(Wrapped.self, from: body)
+        let preset = wrapped?.preset ?? (try? decoder.decode(EQPreset.self, from: body))
+        guard let preset else {
             return error(400, "invalid EQPreset JSON")
         }
-        do {
-            let saved = try model.store.save(preset.normalized())
-            model.loadPresets()
-            return json(saved)
-        } catch {
-            return self.error(500, "save failed: \(error.localizedDescription)")
+        switch gate(.createPreset, confirmed: wrapped?.confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(SimpleOK(
+                ok: false,
+                needsConfirm: true,
+                message: "The app requires confirmation before saving a preset."
+            ))
+        case .allow:
+            do {
+                let saved = try model.store.save(preset.normalized())
+                model.loadPresets()
+                return json(saved)
+            } catch {
+                return self.error(500, "save failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    @MainActor
+    private func handleRollback(body: Data) -> HTTPResponse {
+        struct ConfirmBody: Decodable { let confirmed: Bool? }
+        let confirmed = (try? decoder.decode(ConfirmBody.self, from: body))?.confirmed
+        switch gate(.applyLive, confirmed: confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(RollbackResponse(
+                ok: false,
+                needsConfirm: true,
+                presetId: nil,
+                presetName: nil,
+                requestedRenderGeneration: nil,
+                message: "The app requires confirmation before rolling back live audio."
+            ))
+        case .allow:
+            if let target = model.rollback() {
+                return json(RollbackResponse(
+                    ok: true,
+                    needsConfirm: false,
+                    presetId: target.id,
+                    presetName: target.name,
+                    requestedRenderGeneration: model.audioState.requestedRenderGeneration,
+                    message: "Rollback request accepted; verify realtime commit state."
+                ))
+            }
+            return json(RollbackResponse(
+                ok: false,
+                needsConfirm: false,
+                presetId: nil,
+                presetName: nil,
+                requestedRenderGeneration: model.audioState.requestedRenderGeneration,
+                message: "Nothing to roll back."
+            ))
+        }
+    }
+
+    @MainActor
+    private func handleRouteSystemAudio(body: Data) -> HTTPResponse {
+        struct ConfirmBody: Decodable { let confirmed: Bool? }
+        let confirmed = (try? decoder.decode(ConfirmBody.self, from: body))?.confirmed
+        switch gate(.applyLive, confirmed: confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(SimpleOK(
+                ok: false,
+                needsConfirm: true,
+                message: "The app requires confirmation before routing system audio."
+            ))
+        case .allow:
+            model.routeMacSoundThroughAuralink()
+            return json(SimpleOK(
+                ok: model.systemEQActive,
+                needsConfirm: false,
+                message: model.lastError ?? model.statusMessage
+            ))
+        }
+    }
+
+    @MainActor
+    private func handleRestoreSystemAudio(body: Data) -> HTTPResponse {
+        struct ConfirmBody: Decodable { let confirmed: Bool? }
+        let confirmed = (try? decoder.decode(ConfirmBody.self, from: body))?.confirmed
+        switch gate(.applyLive, confirmed: confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(SimpleOK(
+                ok: false,
+                needsConfirm: true,
+                message: "The app requires confirmation before restoring system audio."
+            ))
+        case .allow:
+            model.restoreMacSoundOutput()
+            return json(SimpleOK(
+                ok: !model.systemOutputRoutedToAuralink,
+                needsConfirm: false,
+                message: model.lastError ?? model.statusMessage
+            ))
+        }
+    }
+
+    @MainActor
+    private func handleStopRouting(body: Data) -> HTTPResponse {
+        struct ConfirmBody: Decodable { let confirmed: Bool? }
+        let confirmed = (try? decoder.decode(ConfirmBody.self, from: body))?.confirmed
+        switch gate(.applyLive, confirmed: confirmed) {
+        case .forbidden:
+            return forbiddenWrite()
+        case .needsConfirm:
+            return json(SimpleOK(
+                ok: false,
+                needsConfirm: true,
+                message: "The app requires confirmation before stopping audio routing."
+            ))
+        case .allow:
+            model.stopRouting()
+            model.refreshDevices()
+            return json(SimpleOK(
+                ok: !model.audioState.routingActive,
+                needsConfirm: false,
+                message: model.lastError ?? model.statusMessage
+            ))
         }
     }
 
@@ -451,11 +593,13 @@ private struct DebugResponse: Encodable {
 
 private struct SimpleOK: Encodable {
     let ok: Bool
+    let needsConfirm: Bool?
     let message: String?
 }
 
 private struct KnowledgeReloadResponse: Encodable {
     let ok: Bool
+    let needsConfirm: Bool?
     let profileCount: Int
     let targetCurveCount: Int
     let message: String?
@@ -463,6 +607,7 @@ private struct KnowledgeReloadResponse: Encodable {
 
 private struct PresetsReloadResponse: Encodable {
     let ok: Bool
+    let needsConfirm: Bool?
     let presetCount: Int
     let message: String?
 }
@@ -476,6 +621,7 @@ private struct ApplyResponse: Encodable {
 
 private struct RollbackResponse: Encodable {
     let ok: Bool
+    let needsConfirm: Bool?
     let presetId: String?
     let presetName: String?
     let requestedRenderGeneration: UInt64?

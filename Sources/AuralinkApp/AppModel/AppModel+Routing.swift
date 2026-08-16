@@ -358,7 +358,7 @@ extension AppModel {
         return snapshot.stateIsRunning
             && snapshot.inputEngineRunning
             && snapshot.outputEngineRunning
-            && snapshot.inputTapInstalled
+            && snapshot.inputSinkInstalled
     }
 
     func restoreMacSoundOutput() {

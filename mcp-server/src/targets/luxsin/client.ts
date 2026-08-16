@@ -161,7 +161,11 @@ export class LuxsinClient {
   /** GET ?action=setting&<key>=<val> — write a single setting. */
   async setSetting(key: string, value: string | number): Promise<{ ok: true }> {
     await this.ensureReachable();
-    await this.request({ method: "GET", path: `?action=setting&${key}=${encodeURIComponent(String(value))}` });
+    const encodedKey = encodeURIComponent(String(key));
+    await this.request({
+      method: "GET",
+      path: `?action=setting&${encodedKey}=${encodeURIComponent(String(value))}`,
+    });
     return { ok: true };
   }
 
@@ -235,10 +239,16 @@ export class LuxsinClient {
     }
   }
 
+  private gateChain: Promise<void> = Promise.resolve();
+
   private async gate(): Promise<void> {
-    const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minGapMs) await sleep(this.minGapMs - elapsed);
-    this.lastRequestAt = Date.now();
+    const run = this.gateChain.then(async () => {
+      const elapsed = Date.now() - this.lastRequestAt;
+      if (elapsed < this.minGapMs) await sleep(this.minGapMs - elapsed);
+      this.lastRequestAt = Date.now();
+    });
+    this.gateChain = run.catch(() => {});
+    await run;
   }
 }
 

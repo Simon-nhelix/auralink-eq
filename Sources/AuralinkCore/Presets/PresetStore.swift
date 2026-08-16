@@ -173,8 +173,7 @@ public final class PresetStore {
 
         // A collection preset being edited for the first time has no working copy
         // yet; continue its version from the collection so history stays linear.
-        let existingOnDisk = (try? load(from: url)) ?? collectionPresetURL(for: safeID)
-            .flatMap { try? load(from: $0) }
+        let existingOnDisk = try loadExistingForSave(workingURL: url, safeID: safeID)
 
         if let existing = existingOnDisk {
             // Snapshot the version currently on disk before we overwrite it.
@@ -422,6 +421,29 @@ public final class PresetStore {
               )
         else { return [] }
         return urls.filter { $0.pathExtension.lowercased() == "json" }
+    }
+
+    /// Prefer the working copy; if it exists but is unreadable, snapshot the raw
+    /// bytes into revisions so the overwrite remains recoverable.
+    private func loadExistingForSave(workingURL: URL, safeID: String) throws -> EQPreset? {
+        if fileManager.fileExists(atPath: workingURL.path) {
+            do {
+                return try load(from: workingURL)
+            } catch {
+                try snapshotCorruptWorkingCopy(at: workingURL, id: safeID)
+                return nil
+            }
+        }
+        return collectionPresetURL(for: safeID).flatMap { try? load(from: $0) }
+    }
+
+    private func snapshotCorruptWorkingCopy(at url: URL, id: String) throws {
+        let revDir = try CollectionRecordID.subdirectory(in: revisionsDirectory, id: id)
+        try ensureDirectory(revDir)
+        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+        let dest = revDir.appendingPathComponent("corrupt-\(stamp).json")
+        if fileManager.fileExists(atPath: dest.path) { return }
+        try fileManager.copyItem(at: url, to: dest)
     }
 
     private func load(from url: URL) throws -> EQPreset {

@@ -12,6 +12,7 @@
 
 import { createHash } from "node:crypto";
 
+import { normalizePreset } from "./store.js";
 import {
   BandType,
   EQBand,
@@ -348,9 +349,10 @@ export function responseCurve(
   sampleRate: number,
   renderMode: EQResponseRenderMode = "standard_iir"
 ): ResponsePoint[] {
+  const normalized = normalizePreset(preset);
   return frequencies.map((f) => ({
     frequencyHz: f,
-    magnitudeDb: renderMagnitudeDbNoPreamp(preset, f, sampleRate, "stereo", renderMode) + preset.preampDb,
+    magnitudeDb: renderMagnitudeDbNoPreamp(normalized, f, sampleRate, "stereo", renderMode) + normalized.preampDb,
   }));
 }
 
@@ -362,9 +364,10 @@ export function responseCurveForChannel(
   channel: Exclude<BandChannel, "stereo">,
   renderMode: EQResponseRenderMode = "standard_iir"
 ): ResponsePoint[] {
+  const normalized = normalizePreset(preset);
   return frequencies.map((f) => ({
     frequencyHz: f,
-    magnitudeDb: renderMagnitudeDbNoPreamp(preset, f, sampleRate, channel, renderMode) + preset.preampDb,
+    magnitudeDb: renderMagnitudeDbNoPreamp(normalized, f, sampleRate, channel, renderMode) + normalized.preampDb,
   }));
 }
 
@@ -454,6 +457,7 @@ export function validatePreset(
   sampleRate: number = 48_000,
   rendererScope: ValidationRendererScope = "all"
 ): ValidationResult {
+  preset = normalizePreset(preset);
   const issues: ValidationIssue[] = [];
 
   if (rendererScope === "all" && preset.correction?.measuredCorrection) {
@@ -533,9 +537,7 @@ export function validatePreset(
     });
   }
 
-  const effectivePreamp = preset.safety.autoGainEnabled
-    ? autoPreamp(preset, rules, sampleRate, rendererScope)
-    : preset.preampDb;
+  const effectivePreamp = preset.preampDb;
   const peakAfterPreamp = peakDb + effectivePreamp;
 
   let clippingRisk: ClippingRisk;

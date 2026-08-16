@@ -146,7 +146,25 @@ async function fetchText(url: string): Promise<string> {
     if (!res.ok) {
       throw new Error(`AutoEq fetch failed: ${res.status} ${res.statusText} for ${url}`);
     }
-    return await res.text();
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType && !/text\/|json|markdown|octet-stream/i.test(contentType)) {
+      throw new Error(`AutoEq fetch returned unexpected content-type ${contentType} for ${url}`);
+    }
+    const reader = res.body?.getReader();
+    if (!reader) return await res.text();
+    const maxBytes = 10 * 1024 * 1024;
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > maxBytes) {
+        throw new Error(`AutoEq fetch exceeded ${maxBytes} bytes for ${url}`);
+      }
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks).toString("utf8");
   } finally {
     clearTimeout(timer);
   }
@@ -188,7 +206,12 @@ function parseIndexLine(line: string): AutoEqEntry | null {
 
   // The first path segment is the source directory; prefer the human-readable
   // "by …" suffix when present.
-  const firstSegment = decodeURIComponent(target.split("/")[0] ?? "");
+  let firstSegment = target.split("/")[0] ?? "";
+  try {
+    firstSegment = decodeURIComponent(firstSegment);
+  } catch {
+    /* keep the raw segment if the cached index has a bad escape */
+  }
   return {
     name,
     encodedRelPath: target,

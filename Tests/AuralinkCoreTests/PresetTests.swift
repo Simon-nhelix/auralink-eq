@@ -375,6 +375,22 @@ final class PresetTests: XCTestCase {
                       "Delete with traversal ID must not touch files outside the store")
     }
 
+    func testSaveSnapshotsCorruptWorkingCopyBeforeOverwrite() throws {
+        let first = try store.save(makePreset(id: "preset_corrupt", name: "Good", gainDb: 2))
+        let url = presetsDir.appendingPathComponent("preset_corrupt.json")
+        try Data("{not-json".utf8).write(to: url, options: .atomic)
+
+        let saved = try store.save(makePreset(id: "preset_corrupt", name: "Recovered", gainDb: 3))
+        XCTAssertEqual(saved.name, "Recovered")
+        XCTAssertEqual(saved.version, 1)
+
+        let revDir = revisionsDir.appendingPathComponent("preset_corrupt", isDirectory: true)
+        let snapshots = try FileManager.default.contentsOfDirectory(atPath: revDir.path)
+        XCTAssertTrue(snapshots.contains { $0.hasPrefix("corrupt-") },
+                      "Corrupt working copy must be snapshotted before overwrite. Had: \(snapshots)")
+        XCTAssertEqual(first.id, "preset_corrupt")
+    }
+
     func testGetReturnsNilForInvalidID() throws {
         XCTAssertNil(try store.get(id: "../manifest"))
         XCTAssertNil(try store.get(id: ".."))

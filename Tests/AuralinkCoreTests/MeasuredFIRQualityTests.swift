@@ -264,6 +264,8 @@ final class MeasuredFIRQualityTests: XCTestCase {
             correction: correction
         )
         XCTAssertNil(MeasuredFIRDesigner.design(for: preset, sampleRate: 48_000))
+        XCTAssertEqual(MeasuredFIRDesigner.lastEvaluatedQuality?.eligible, false)
+        XCTAssertNotNil(MeasuredFIRDesigner.lastEvaluatedQuality?.rejectionReason)
     }
 
     private func makeHD600Preset() throws -> EQPreset {
