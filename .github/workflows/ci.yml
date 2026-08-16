@@ -84,7 +84,7 @@ jobs:
       - name: Bundle release app
         run: ./scripts/bundle-app.sh
       - name: Upload app artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Auralink-EQ-app
           path: build/Auralink EQ.app
