@@ -159,15 +159,40 @@ public enum FrequencyResponse {
     ) -> [ResponsePoint] {
         let sr = sampleRate > 0 ? sampleRate : 48_000
         let normalized = preset.normalized()
+        guard renderMode == .hqFIR,
+              let correction = normalized.correction,
+              correction.sourceConfidence == .measured,
+              let payload = correction.measuredCorrection?.normalized(),
+              payload.isFIREligible else {
+            return frequencies.map { frequency in
+                ResponsePoint(
+                    frequencyHz: frequency,
+                    magnitudeDb: magnitudeDb(
+                        ofNormalized: normalized,
+                        atHz: frequency,
+                        sampleRate: sr,
+                        channel: channel
+                    ) + normalized.preampDb
+                )
+            }
+        }
+        let preferenceIndexes = Set(correction.preferenceBandIndexes)
+        let strength = correction.correctionStrength
         return frequencies.map { frequency in
-            let db = magnitudeDb(
-                of: normalized,
+            let measured = MeasuredFIRDesigner.targetMagnitudeDbUnchecked(
+                of: payload,
+                atHz: frequency,
+                sampleRate: sr,
+                strength: strength
+            )
+            let preference = magnitudeDb(
+                ofNormalized: normalized,
                 atHz: frequency,
                 sampleRate: sr,
                 channel: channel,
-                renderMode: renderMode
-            ) + normalized.preampDb
-            return ResponsePoint(frequencyHz: frequency, magnitudeDb: db)
+                includedBandIndexes: preferenceIndexes
+            )
+            return ResponsePoint(frequencyHz: frequency, magnitudeDb: measured + preference + normalized.preampDb)
         }
     }
 }

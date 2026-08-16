@@ -14,13 +14,15 @@
  *   GET  /preset?id=… → EQPreset
  *   POST /apply     { id, confirmed? } → { ok, needsConfirm }
  *   POST /audition-preset { preset, confirmed? } → { ok, needsConfirm, saved:false }
- *   POST /save-current-preset { name?, id?, tags? } → saved EQPreset
- *   POST /rollback              → { ok, … }
- *   POST /preset    EQPreset    → saved EQPreset
+ *   POST /save-current-preset { name?, id?, tags?, confirmed? } → saved EQPreset or { ok, needsConfirm }
+ *   POST /rollback  { confirmed? } → { ok, needsConfirm, … }
+ *   POST /preset    EQPreset | { preset, confirmed? } → saved EQPreset or { ok, needsConfirm }
  *   POST /validate  EQPreset    → ValidationResult
- *   POST /reload-presets        → { ok, presetCount }
- *   POST /reload-knowledge      → { ok, profileCount, targetCurveCount }
- *   POST /stop-routing          → { ok, … }
+ *   POST /reload-presets { confirmed? } → { ok, needsConfirm, presetCount }
+ *   POST /reload-knowledge { confirmed? } → { ok, needsConfirm, profileCount, targetCurveCount }
+ *   POST /route-system-audio { confirmed? } → { ok, needsConfirm }
+ *   POST /restore-system-audio { confirmed? } → { ok, needsConfirm }
+ *   POST /stop-routing { confirmed? } → { ok, needsConfirm }
  */
 
 import { promises as fs } from "node:fs";
@@ -115,7 +117,16 @@ async function request<T>(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const controlToken = await resolveControlToken();
+    let controlToken: string;
+    try {
+      controlToken = await resolveControlToken();
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      return {
+        online: false,
+        error: `Control token is unavailable (${reason}). Launch Auralink EQ first.`,
+      };
+    }
     const isPost = init?.method?.toUpperCase() === "POST";
     const res = await fetch(url, {
       ...init,
@@ -144,8 +155,18 @@ async function request<T>(
 
     // Some POSTs may return an empty body; tolerate that.
     const text = await res.text();
-    const data = text.length > 0 ? (JSON.parse(text) as T) : (undefined as T);
-    return { online: true, status: res.status, data };
+    if (text.length === 0) {
+      return { online: true, status: res.status, data: undefined as T };
+    }
+    try {
+      return { online: true, status: res.status, data: JSON.parse(text) as T };
+    } catch {
+      return {
+        online: true,
+        status: res.status,
+        error: "malformed response body",
+      };
+    }
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     return {
@@ -228,7 +249,8 @@ export function saveCurrentPreset(options: {
   name?: string;
   id?: string;
   tags?: string[];
-}): Promise<ControlResult<EQPreset>> {
+  confirmed?: boolean;
+}): Promise<ControlResult<EQPreset & { ok?: boolean; needsConfirm?: boolean; message?: string }>> {
   return request("/save-current-preset", {
     method: "POST",
     body: JSON.stringify(options),
@@ -236,43 +258,80 @@ export function saveCurrentPreset(options: {
 }
 
 /** POST /reload-knowledge — make the running app re-read headphone/target data. */
-export function reloadKnowledge(): Promise<
-  ControlResult<{ ok: boolean; profileCount: number; targetCurveCount: number; message?: string }>
+export function reloadKnowledge(
+  confirmed = false
+): Promise<
+  ControlResult<{
+    ok: boolean;
+    needsConfirm?: boolean;
+    profileCount: number;
+    targetCurveCount: number;
+    message?: string;
+  }>
 > {
-  return request("/reload-knowledge", { method: "POST" });
+  return request("/reload-knowledge", {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
 }
 
 /** POST /reload-presets — make the running app re-read preset files. */
-export function reloadPresets(): Promise<
-  ControlResult<{ ok: boolean; presetCount: number; message?: string }>
+export function reloadPresets(
+  confirmed = false
+): Promise<
+  ControlResult<{ ok: boolean; needsConfirm?: boolean; presetCount: number; message?: string }>
 > {
-  return request("/reload-presets", { method: "POST" });
+  return request("/reload-presets", {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
 }
 
 /** POST /rollback — revert to the previously applied preset. */
-export function rollbackPreset(): Promise<
+export function rollbackPreset(
+  confirmed = false
+): Promise<
   ControlResult<{
     ok: boolean;
+    needsConfirm?: boolean;
     message?: string;
     presetId?: string;
     presetName?: string;
     requestedRenderGeneration?: number;
   }>
 > {
-  return request("/rollback", { method: "POST" });
+  return request("/rollback", {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
 }
 
 /** POST /route-system-audio — set macOS output to the virtual capture device. */
-export function routeSystemAudio(): Promise<ControlResult<{ ok: boolean; message?: string }>> {
-  return request("/route-system-audio", { method: "POST" });
+export function routeSystemAudio(
+  confirmed = false
+): Promise<ControlResult<{ ok: boolean; needsConfirm?: boolean; message?: string }>> {
+  return request("/route-system-audio", {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
 }
 
 /** POST /restore-system-audio — restore macOS output to a real device. */
-export function restoreSystemAudio(): Promise<ControlResult<{ ok: boolean; message?: string }>> {
-  return request("/restore-system-audio", { method: "POST" });
+export function restoreSystemAudio(
+  confirmed = false
+): Promise<ControlResult<{ ok: boolean; needsConfirm?: boolean; message?: string }>> {
+  return request("/restore-system-audio", {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
 }
 
 /** POST /stop-routing — stop capture/render engines without changing saved presets. */
-export function stopRouting(): Promise<ControlResult<{ ok: boolean; message?: string }>> {
-  return request("/stop-routing", { method: "POST" });
+export function stopRouting(
+  confirmed = false
+): Promise<ControlResult<{ ok: boolean; needsConfirm?: boolean; message?: string }>> {
+  return request("/stop-routing", {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
 }

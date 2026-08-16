@@ -13,7 +13,7 @@ public enum ControlAuthorization {
 
     /// Returns an explicit environment token or loads/creates the shared token
     /// file. Tokens contain only bearer-safe characters and at least 256 bits of
-    /// UUID-derived randomness when generated here.
+    /// UUID-derived randomness (~244 bits) when generated here.
     public static func loadOrCreateToken(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileURL: URL? = nil

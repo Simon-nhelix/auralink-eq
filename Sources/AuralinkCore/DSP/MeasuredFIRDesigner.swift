@@ -66,6 +66,12 @@ public enum MeasuredFIRDesigner {
     /// Candidate temporal supports. The shortest design meeting every absolute
     /// and PEQ-superiority gate wins; taps are rounded to whole FFT partitions.
     private static let candidateSupportMs = [21.333, 42.667, 85.333]
+    /// Last ineligible quality summary from `design(for:)` (nil after a success).
+    public private(set) static var lastEvaluatedQuality: MeasuredFIRQualitySummary?
+
+    static func restoreEvaluatedQuality(_ quality: MeasuredFIRQualitySummary?) {
+        lastEvaluatedQuality = quality
+    }
 
     public static func partitionSize(for sampleRate: Double) -> Int {
         let sr = sampleRate > 0 ? sampleRate : 48_000
@@ -93,10 +99,11 @@ public enum MeasuredFIRDesigner {
         )
     }
 
-    /// Caller has already verified the immutable payload once. Synthesis calls
-    /// this for every FFT bin, so repeating canonical SHA-256 here would turn a
-    /// millisecond design into minutes of redundant hashing.
-    private static func targetMagnitudeDbUnchecked(
+    /// Caller has already verified the immutable payload once. Synthesis and
+    /// response-curve sampling call this for every frequency, so repeating the
+    /// canonical SHA-256 here would turn a millisecond sweep into seconds of
+    /// redundant hashing.
+    static func targetMagnitudeDbUnchecked(
         of payload: MeasuredCorrectionPayload,
         atHz frequencyHz: Double,
         sampleRate: Double,
@@ -120,6 +127,7 @@ public enum MeasuredFIRDesigner {
         for preset: EQPreset,
         sampleRate: Double
     ) -> MeasuredStereoFIRResult? {
+        lastEvaluatedQuality = nil
         let normalized = preset.normalized()
         guard let correction = normalized.correction,
               correction.sourceConfidence == .measured,
@@ -251,7 +259,7 @@ public enum MeasuredFIRDesigner {
             }
             lastFailure = quality
         }
-        _ = lastFailure
+        lastEvaluatedQuality = lastFailure
         return nil
     }
 
@@ -475,8 +483,13 @@ public final class MeasuredFIRDesignCache {
         var baselineFingerprint: String
     }
 
+    private struct Cached {
+        var result: MeasuredStereoFIRResult?
+        var quality: MeasuredFIRQualitySummary?
+    }
+
     private let maxEntries: Int
-    private var storage: [Key: MeasuredStereoFIRResult] = [:]
+    private var storage: [Key: Cached] = [:]
     private var order: [Key] = []
 
     public init(maxEntries: Int = 6) {
@@ -504,10 +517,12 @@ public final class MeasuredFIRDesignCache {
         )
         if let cached = storage[key] {
             touch(key)
-            return cached
+            MeasuredFIRDesigner.restoreEvaluatedQuality(cached.quality)
+            return cached.result
         }
-        guard let result = MeasuredFIRDesigner.design(for: normalized, sampleRate: sampleRate) else { return nil }
-        storage[key] = result
+        let result = MeasuredFIRDesigner.design(for: normalized, sampleRate: sampleRate)
+        let quality = result?.quality ?? MeasuredFIRDesigner.lastEvaluatedQuality
+        storage[key] = Cached(result: result, quality: quality)
         order.append(key)
         evictIfNeeded()
         return result

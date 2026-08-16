@@ -347,6 +347,38 @@ final class TuningTests: XCTestCase {
                      "Aggregate headphone-profiles.json is no longer a profile source.")
     }
 
+    func testKnowledgeBaseSkipsInvalidProfileIDs() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("auralink-invalid-profile-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let headphones = root.appendingPathComponent("headphones", isDirectory: true)
+        try FileManager.default.createDirectory(at: headphones, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        let evil = HeadphoneProfile(
+            id: "../manifest",
+            brand: "Bad",
+            model: "Traversal",
+            type: .iem,
+            signature: "x",
+            source: "test",
+            credibility: .estimated
+        )
+        let good = HeadphoneProfile(
+            id: "valid-profile",
+            brand: "Good",
+            model: "One",
+            type: .iem,
+            signature: "x",
+            source: "test",
+            credibility: .estimated
+        )
+        try encoder.encode(evil).write(to: headphones.appendingPathComponent("evil.json"), options: .atomic)
+        try encoder.encode(good).write(to: headphones.appendingPathComponent("valid-profile.json"), options: .atomic)
+        let kb = KnowledgeBase(dataDirectory: nil, collectionHeadphonesDirectory: headphones)
+        XCTAssertNil(kb.profile(id: "../manifest"))
+        XCTAssertNotNil(kb.profile(id: "valid-profile"))
+    }
+
     // MARK: Tuning generation
 
     func testMakeTuningHD600Rock() {

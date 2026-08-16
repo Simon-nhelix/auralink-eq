@@ -95,6 +95,10 @@ extension AppModel {
 
                 // 3. Reuse the same verified start path as normal System EQ start.
                 guard startSystemEQSilently(isRetry: false, outputOverride: target) else {
+                    // startSystemEQSilently restores the system default to `target`
+                    // on failure; keep the picker/engine on that same device so the
+                    // next Start System EQ does not flip-flop back to the old one.
+                    publishCommittedOutput(target)
                     return false
                 }
                 statusMessage = "Output switched to \(target.name)."

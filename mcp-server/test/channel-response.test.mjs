@@ -90,10 +90,10 @@ test("shelf validation labels the existing parameter as Q", async () => {
       },
     ],
   };
-  const result = validatePreset(preset, DEFAULT_SAFETY_RULES, fixture.sampleRate);
+  const result = validatePreset(preset, { ...DEFAULT_SAFETY_RULES, qMin: 0.5, qMax: 2.0 }, fixture.sampleRate);
   const qIssue = result.issues.find((issue) => issue.bandIndex === 1 && issue.severity === "error");
 
   assert.ok(qIssue);
-  assert.match(qIssue.message, /Q 11\.00/);
+  assert.match(qIssue.message, /Q 10\.00/);
   assert.doesNotMatch(qIssue.message, /slope/i);
 });

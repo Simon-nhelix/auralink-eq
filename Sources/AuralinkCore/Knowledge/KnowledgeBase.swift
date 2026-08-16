@@ -122,6 +122,8 @@ public final class KnowledgeBase {
         /// Files whose on-disk content differs from what the app last seeded
         /// (user-modified) — kept as-is, caller may want to surface this.
         public var keptUserModified: [String] = []
+        /// Files that should have been written but were not (disk full, permissions).
+        public var failed: [String] = []
     }
 
     /// Sidecar recording the SHA-256 of what the app last seeded, so upgrades
@@ -170,17 +172,23 @@ public final class KnowledgeBase {
 
             if diskData == nil {
                 // Fresh seed.
-                try? bundleData.write(to: destination, options: [.atomic])
-                recorded[file] = bundleHash
-                result.refreshed.append(file)
+                if writeSeededFile(bundleData, to: destination) {
+                    recorded[file] = bundleHash
+                    result.refreshed.append(file)
+                } else {
+                    result.failed.append(file)
+                }
                 continue
             }
 
             if recordedHash == nil {
                 // Pre-tracking install: treat as app-owned and converge on the bundle.
                 if diskHash != bundleHash {
-                    try? bundleData.write(to: destination, options: [.atomic])
-                    result.refreshed.append(file)
+                    if writeSeededFile(bundleData, to: destination) {
+                        result.refreshed.append(file)
+                    } else {
+                        result.failed.append(file)
+                    }
                 }
                 recorded[file] = bundleHash
                 continue
@@ -189,9 +197,12 @@ public final class KnowledgeBase {
             if diskHash == recordedHash {
                 // Untouched since seeding: safe to upgrade.
                 if diskHash != bundleHash {
-                    try? bundleData.write(to: destination, options: [.atomic])
-                    recorded[file] = bundleHash
-                    result.refreshed.append(file)
+                    if writeSeededFile(bundleData, to: destination) {
+                        recorded[file] = bundleHash
+                        result.refreshed.append(file)
+                    } else {
+                        result.failed.append(file)
+                    }
                 }
             } else {
                 // User (or another process) modified the file after seeding: keep it.
@@ -201,6 +212,15 @@ public final class KnowledgeBase {
 
         Self.saveSeedHashes(recorded, to: dir)
         return result
+    }
+
+    private func writeSeededFile(_ data: Data, to destination: URL) -> Bool {
+        do {
+            try data.write(to: destination, options: [.atomic])
+            return true
+        } catch {
+            return false
+        }
     }
 
     private static func sha256Hex(_ data: Data) -> String {
@@ -233,7 +253,8 @@ public final class KnowledgeBase {
         guard let dir = collectionHeadphonesDirectory else { return [] }
 
         var byId: [String: HeadphoneProfile] = [:]
-        for p in loadProfilesFromLibraryDirectory(dir, decoder: decoder) where !p.id.isEmpty {
+        for p in loadProfilesFromLibraryDirectory(dir, decoder: decoder) {
+            guard CollectionRecordID.parse(p.id) == p.id else { continue }
             byId[p.id] = p
         }
         return byId.values.sorted {

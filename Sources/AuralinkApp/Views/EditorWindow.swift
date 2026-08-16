@@ -131,7 +131,14 @@ struct EditorWindow: View {
                 .contentShape(Rectangle())
                 .onTapGesture { /* modal: ignore taps outside */ }
 
-            AIResultView()
+            AIResultView(onEditManually: {
+                guard let proposal = model.pendingProposal else { return }
+                model.auditionTransientPreset(
+                    proposal.preset,
+                    message: "Editing \"\(proposal.preset.name)\" in the band table."
+                )
+                model.pendingProposal = nil
+            })
                 .frame(maxWidth: 460)
                 .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
         }
