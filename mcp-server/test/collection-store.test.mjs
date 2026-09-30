@@ -291,6 +291,102 @@ test("a missing collection directory is tolerated, not fatal", async () => {
   });
 });
 
+test("malformed preset metadata is isolated without hiding healthy records", async () => {
+  await withTempEnv(async (store, { presets, collection }) => {
+    const healthy = samplePreset(store, { id: "healthy" });
+    await fs.writeFile(path.join(presets, "healthy.json"), JSON.stringify(healthy));
+    const badFields = [
+      { correction: { measuredCorrection: {} } },
+      { correction: { measuredCorrection: { measurementId: 3 } } },
+      { bands: [null] },
+      { bands: [{ index: 1, type: "invalid" }] },
+      { updatedAt: 123 },
+      { tags: "not an array" },
+      { id: "../unsafe" },
+      { safety: { autoGainEnabled: "false", clippingRisk: "low" } },
+    ];
+    for (const [i, fields] of badFields.entries()) {
+      const bad = { ...healthy, id: `bad_${i}`, ...fields };
+      const dir = i % 2 ? presets : path.join(collection, "presets");
+      await fs.writeFile(path.join(dir, `bad_${i}.json`), JSON.stringify(bad));
+    }
+    assert.deepEqual((await store.loadAllPresets()).map(p => p.id), ["healthy"]);
+    assert.deepEqual(await store.collectionPresetIds(), []);
+    assert.equal(await store.getPreset("bad_0"), null);
+    assert.equal(await store.getPreset("bad_1"), null);
+  });
+});
+
+test("a malformed working copy falls back to a valid collection copy", async () => {
+  await withTempEnv(async (store, { presets, collection }) => {
+    const valid = samplePreset(store);
+    await fs.writeFile(path.join(collection, "presets", `${valid.id}.json`), JSON.stringify(valid));
+    await fs.writeFile(path.join(presets, `${valid.id}.json`), JSON.stringify({ ...valid, correction: { measuredCorrection: {} } }));
+    assert.equal((await store.getPreset(valid.id)).name, valid.name);
+    assert.deepEqual((await store.loadAllPresets()).map(p => p.id), [valid.id]);
+  });
+});
+
+test("legacy optional metadata gets Swift-compatible defaults", async () => {
+  await withTempEnv(async (store, { presets }) => {
+    await fs.writeFile(path.join(presets, "legacy.json"), JSON.stringify({ id: "legacy", name: "Legacy", bands: [] }));
+    const loaded = await store.getPreset("legacy");
+    assert.equal(loaded.preampDb, 0);
+    assert.equal(loaded.bands.length, 20);
+    assert.equal(loaded.version, 1);
+    assert.deepEqual(loaded.tags, []);
+    assert.deepEqual(loaded.safety, { autoGainEnabled: false, clippingRisk: "low" });
+  });
+});
+
+test("getPreset rejects a valid file whose embedded id does not match the requested id", async () => {
+  await withTempEnv(async (store, { presets }) => {
+    await fs.writeFile(path.join(presets, "requested.json"), JSON.stringify(samplePreset(store, { id: "different" })));
+    assert.equal(await store.getPreset("requested"), null);
+  });
+});
+
+test("replacing a malformed working preset preserves its original bytes", async () => {
+  await withTempEnv(async (store, { tmp, presets }) => {
+    const preset = samplePreset(store);
+    const damaged = JSON.stringify({ ...preset, correction: { measuredCorrection: {} } });
+    await fs.writeFile(path.join(presets, `${preset.id}.json`), damaged);
+    await store.savePreset(preset);
+    const revisions = path.join(tmp, "revisions", preset.id);
+    const files = await fs.readdir(revisions);
+    assert.equal(files.length, 1);
+    assert.match(files[0], /^\.corrupt-/);
+    assert.equal(await fs.readFile(path.join(revisions, files[0]), "utf8"), damaged);
+    assert.equal((await store.getPreset(preset.id)).name, preset.name);
+  });
+});
+
+test("stored measured curves retain invalid hashes, point order, and future schema versions", async () => {
+  await withTempEnv(async (store, { presets }) => {
+    const { measuredPayloadFIREligibility } = await import(path.join(dist, "validate.js"));
+    for (const schemaVersion of [1, 2]) {
+      const payload = {
+        schemaVersion, measurementId: "measurement", sourceFormat: "autoeq_graphic_eq",
+        source: "test", provenanceURL: "https://example.invalid/curve",
+        sourcePreampDb: -6, contentHash: "0".repeat(64), channel: "stereo",
+        phaseData: "magnitude_only", usableLowHz: 40, usableHighHz: 10000,
+        points: [{ frequencyHz: 1000, gainDb: 1 }, { frequencyHz: 20, gainDb: 30 }],
+      };
+      const preset = samplePreset(store, {
+        id: `measured_${schemaVersion}`,
+        correction: {
+          role: "baseline", sourceConfidence: "measured", correctionStrength: 1,
+          targetBlend: 1, preferenceBandIndexes: [], measuredCorrection: payload,
+        },
+      });
+      await fs.writeFile(path.join(presets, `${preset.id}.json`), JSON.stringify(preset));
+      const loaded = await store.getPreset(preset.id);
+      assert.deepEqual(JSON.parse(JSON.stringify(loaded.correction.measuredCorrection)), payload);
+      assert.equal(measuredPayloadFIREligibility(loaded.correction.measuredCorrection).eligible, false);
+    }
+  });
+});
+
 test("AURALINK_LIBRARY_DIR still resolves as the pre-split name", async () => {
   await withTempEnv(async (store, { tmp }) => {
     const legacy = path.join(tmp, "legacy-library");

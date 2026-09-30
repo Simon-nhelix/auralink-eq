@@ -29,6 +29,7 @@ import { execSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { persistedPresetSchema } from "./persisted-preset-schema.js";
 
 import {
   EQPreset,
@@ -455,6 +456,20 @@ function presetFilePath(id: string): string {
 
 // MARK: - Preset CRUD
 
+function decodeStoredPreset(value: unknown): EQPreset | null {
+  const parsed = persistedPresetSchema.safeParse(value);
+  if (!parsed.success || parseRecordId(parsed.data.id) !== parsed.data.id) return null;
+  return normalizePreset(parsed.data);
+}
+
+function decodeStoredPresetText(text: string): EQPreset | null {
+  try {
+    return decodeStoredPreset(JSON.parse(text));
+  } catch {
+    return null;
+  }
+}
+
 /** Every valid preset in one directory, keyed by id. Malformed files are skipped. */
 async function loadPresetsFromDir(dir: string): Promise<Map<string, EQPreset>> {
   const byId = new Map<string, EQPreset>();
@@ -466,9 +481,9 @@ async function loadPresetsFromDir(dir: string): Promise<Map<string, EQPreset>> {
   }
   for (const entry of entries) {
     if (!entry.toLowerCase().endsWith(".json")) continue;
-    const parsed = await readJson<EQPreset>(path.join(dir, entry));
-    if (parsed && typeof parsed.id === "string" && Array.isArray(parsed.bands)) {
-      byId.set(parsed.id, normalizePreset(parsed));
+    const preset = decodeStoredPreset(await readJson<unknown>(path.join(dir, entry)));
+    if (preset) {
+      byId.set(preset.id, preset);
     }
   }
   return byId;
@@ -498,10 +513,11 @@ export async function collectionPresetIds(): Promise<string[]> {
  * collection. Null if neither has it or the file is malformed.
  */
 export async function getPreset(id: string): Promise<EQPreset | null> {
+  const safeID = requireRecordId(id);
   for (const file of [presetFilePath(id), collectionPresetPath(id)]) {
-    const parsed = await readJson<EQPreset>(file);
-    if (parsed && typeof parsed.id === "string" && Array.isArray(parsed.bands)) {
-      return normalizePreset(parsed);
+    const preset = decodeStoredPreset(await readJson<unknown>(file));
+    if (preset?.id === safeID) {
+      return preset;
     }
   }
   return null;
@@ -551,6 +567,7 @@ async function persistPreset(preset: EQPreset): Promise<EQPreset> {
   await ensureDir(presetsDir());
   const now = new Date().toISOString();
   const existing = await getPreset(preset.id);
+  const workingText = await readTextIfExists(presetFilePath(preset.id));
 
   const normalized = normalizePreset(preset);
   const saved: EQPreset = {
@@ -565,6 +582,15 @@ async function persistPreset(preset: EQPreset): Promise<EQPreset> {
     updatedAt: now,
   };
 
+  if (workingText !== null && decodeStoredPresetText(workingText)?.id !== preset.id) {
+    // Match Swift's preservation of corrupt working files before replacement.
+    const revisionDirectory = path.join(revisionsDir(), requireRecordId(saved.id));
+    await ensureDir(revisionDirectory);
+    await atomicWriteFile(
+      path.join(revisionDirectory, `.corrupt-${Date.now()}-${Math.random().toString(36).slice(2)}.json`),
+      workingText
+    );
+  }
   if (existing) {
     // Same layout as Swift PresetStore: rollback reads revisions/<id>/vN.json.
     // Preserve the old state before replacing it; a failed snapshot aborts save.
