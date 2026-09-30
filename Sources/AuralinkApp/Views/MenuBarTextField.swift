@@ -25,7 +25,7 @@ struct MenuBarTextField: NSViewRepresentable {
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = NSFont.systemFont(ofSize: 13, weight: .regular)
-        field.textColor = NSColor(calibratedRed: 0.93, green: 0.95, blue: 0.98, alpha: 1)
+        field.textColor = Theme.AppKitColors.textPrimary
         field.lineBreakMode = .byTruncatingTail
         field.maximumNumberOfLines = 1
         field.cell?.usesSingleLineMode = true
@@ -33,7 +33,7 @@ struct MenuBarTextField: NSViewRepresentable {
         field.placeholderAttributedString = NSAttributedString(
             string: placeholder,
             attributes: [
-                .foregroundColor: NSColor(calibratedRed: 0.55, green: 0.60, blue: 0.68, alpha: 1),
+                .foregroundColor: Theme.AppKitColors.textTertiary,
                 .font: NSFont.systemFont(ofSize: 13, weight: .regular)
             ]
         )

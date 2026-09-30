@@ -31,7 +31,7 @@ struct AIResultView: View {
         AuraCard(padding: Theme.Metrics.pad) {
             VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
                 header(for: result)
-                Divider().overlay(Theme.Palette.line)
+                RailDivider()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
@@ -44,7 +44,7 @@ struct AIResultView: View {
                 }
                 .frame(maxHeight: Theme.Layout.Proposal.contentMaxHeight)
 
-                Divider().overlay(Theme.Palette.line)
+                RailDivider()
                 footerMeta(for: result)
                 actions
             }
@@ -59,18 +59,15 @@ struct AIResultView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.Gradients.aura)
-                    Text(L10n.text("Proposed Tuning"))
-                        .font(Theme.Typo.caption)
-                        .tracking(0.8)
-                        .foregroundStyle(Theme.Palette.textTertiary)
+                        .foregroundStyle(Theme.Palette.accent)
+                    SectionLabel(L10n.text("Proposed Tuning"))
                 }
                 Text(result.preset.name)
-                    .font(Theme.Typo.title)
+                    .font(Theme.Typo.headline)
                     .foregroundStyle(Theme.Palette.textPrimary)
                     .lineLimit(2)
                 if let hp = result.preset.headphone, !hp.isEmpty {
-                    AuraTag(hp, tint: Theme.Palette.auraBlue)
+                    AuraTag(hp, tint: Theme.Palette.info)
                 }
             }
             Spacer(minLength: 0)
@@ -90,8 +87,7 @@ struct AIResultView: View {
             .foregroundStyle(v.ok ? Theme.Palette.success : Theme.Palette.danger)
 
             StatusDot(color: tint,
-                      label: L10n.format("Clipping: %@", L10n.text(v.clippingRisk.displayName)),
-                      glow: v.clippingRisk == .high)
+                      label: L10n.format("Clipping: %@", L10n.text(v.clippingRisk.displayName)))
         }
     }
 

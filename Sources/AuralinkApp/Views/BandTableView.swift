@@ -17,15 +17,15 @@ struct BandTableView: View {
         AuraCard(padding: 0) {
             VStack(spacing: 0) {
                 header
-                Divider().overlay(Theme.Palette.line)
+                Rectangle().fill(Theme.Palette.lineSoft).frame(height: 1)
                 ScrollView(.vertical, showsIndicators: true) {
                     LazyVStack(spacing: 0) {
                         ForEach(model.currentPreset.bands) { band in
-                            BandRow(band: band)
+                            BandRow(band: band, selected: model.selectedBandIndex == band.index)
                                 .background(rowBackground(for: band))
                                 .contentShape(Rectangle())
                                 .onTapGesture { model.selectedBandIndex = band.index }
-                            Divider().overlay(Theme.Palette.lineSoft)
+                            Rectangle().fill(Theme.Palette.lineSoft).frame(height: 1)
                         }
                     }
                 }
@@ -53,27 +53,20 @@ struct BandTableView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.Metrics.pad)
-        .padding(.vertical, 8)
-        .background(Theme.Palette.surface)
+        .frame(height: 32)
     }
 
     private func cell(_ text: String, width: CGFloat, align: Alignment = .leading) -> some View {
         Text(text)
-            .font(Theme.Typo.caption)
-            .tracking(0.6)
+            .font(Theme.Typo.section)
+            .tracking(0.5)
             .foregroundStyle(Theme.Palette.textTertiary)
             .frame(width: width, alignment: align)
     }
 
     private func rowBackground(for band: EQBand) -> some View {
-        let selected = model.selectedBandIndex == band.index
-        return Rectangle()
-            .fill(selected ? Theme.Palette.accent.opacity(0.10) : Color.clear)
-            .overlay(alignment: .leading) {
-                Rectangle()
-                    .fill(selected ? Theme.Palette.accent : Color.clear)
-                    .frame(width: 2)
-            }
+        Rectangle()
+            .fill(model.selectedBandIndex == band.index ? Theme.Palette.accentSoft : Color.clear)
     }
 
     /// Shared column widths so header + rows line up exactly.
@@ -88,6 +81,8 @@ struct BandTableView: View {
 private struct BandRow: View {
     @EnvironmentObject var model: AppModel
     let band: EQBand
+    /// The selected row shows its numeric fields as wells; other rows stay text.
+    let selected: Bool
 
     var body: some View {
         HStack(spacing: 0) {
@@ -107,7 +102,7 @@ private struct BandRow: View {
             // Index.
             Text("\(band.index)")
                 .font(Theme.Typo.mono)
-                .foregroundStyle(Theme.Palette.textSecondary)
+                .foregroundStyle(Theme.Palette.textTertiary)
                 .frame(width: BandTableView.Columns.index, alignment: .center)
 
             Spacer(minLength: 4)
@@ -120,11 +115,11 @@ private struct BandRow: View {
             } label: {
                 HStack(spacing: 3) {
                     Text(L10n.text(band.type.displayName))
-                        .font(Theme.Typo.label)
+                        .font(Theme.Typo.body)
                         .foregroundStyle(textColor)
                         .lineLimit(1)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 7, weight: .bold))
+                        .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
@@ -141,6 +136,7 @@ private struct BandRow: View {
                 step: stepFor(hz: band.frequencyHz),
                 format: { Fmt.hz($0) },
                 width: BandTableView.Columns.freq,
+                emphasized: selected,
                 enabled: band.enabled
             ) { newValue in
                 commit { $0.frequencyHz = newValue }
@@ -155,6 +151,7 @@ private struct BandRow: View {
                 step: 0.5,
                 format: { Fmt.db($0) },
                 width: BandTableView.Columns.gain,
+                emphasized: selected,
                 enabled: band.enabled && band.type.usesGain
             ) { newValue in
                 commit { $0.gainDb = newValue }
@@ -169,6 +166,7 @@ private struct BandRow: View {
                 step: 0.1,
                 format: { shapeFormat($0, for: band.type) },
                 width: BandTableView.Columns.q,
+                emphasized: selected,
                 enabled: band.enabled
             ) { newValue in
                 commit { $0.q = newValue }
@@ -176,30 +174,36 @@ private struct BandRow: View {
 
             Spacer(minLength: 4)
 
-            // Channel menu.
-            Menu {
-                ForEach(BandChannel.allCases, id: \.self) { ch in
-                    Button(L10n.text(ch.displayName)) { commit { $0.channel = ch } }
+            // Channel menu. The dot sits outside the menu: a borderless menu
+            // label renders only one image and one text.
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(tint(for: band.channel))
+                    .frame(width: 7, height: 7)
+                Menu {
+                    ForEach(BandChannel.allCases, id: \.self) { ch in
+                        Button(L10n.text(ch.displayName)) { commit { $0.channel = ch } }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(L10n.text(band.channel.displayName))
+                            .font(Theme.Typo.body)
+                            .foregroundStyle(textColor)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Theme.Palette.textTertiary)
+                    }
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(tint(for: band.channel))
-                        .frame(width: 7, height: 7)
-                    Text(L10n.text(band.channel.displayName))
-                        .font(Theme.Typo.label)
-                        .foregroundStyle(textColor)
-                        .lineLimit(1)
-                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
             .frame(width: BandTableView.Columns.channel, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.Metrics.pad)
-        .padding(.vertical, 5)
-        .opacity(band.enabled ? 1.0 : 0.55)
+        .frame(height: 34)
+        .opacity(band.enabled ? 1.0 : 0.5)
     }
 
     private var textColor: Color {
@@ -231,9 +235,9 @@ private struct BandRow: View {
 
     private func tint(for channel: BandChannel) -> Color {
         switch channel {
-        case .stereo: return Theme.Palette.nodeStereo
-        case .left:   return Theme.Palette.nodeLeft
-        case .right:  return Theme.Palette.nodeRight
+        case .stereo: return Theme.Palette.channelStereo
+        case .left:   return Theme.Palette.channelLeft
+        case .right:  return Theme.Palette.channelRight
         }
     }
 }

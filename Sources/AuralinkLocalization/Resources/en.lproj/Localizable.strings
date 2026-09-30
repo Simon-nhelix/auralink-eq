@@ -375,3 +375,11 @@
 "Downloading update…" = "Downloading update…";
 "Installing and restarting…" = "Installing and restarting…";
 "Update available: %@" = "Update available: %@";
+
+/* Appearance and redesigned editor chrome */
+"Appearance" = "Appearance";
+"System" = "System";
+"Light" = "Light";
+"Dark" = "Dark";
+"Output device" = "Output device";
+"Band %@ · %@ · %@ · %@ %@" = "Band %@ · %@ · %@ · %@ %@";

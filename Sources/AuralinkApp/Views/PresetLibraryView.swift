@@ -20,69 +20,25 @@ struct PresetLibraryView: View {
     @FocusState private var renameFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Metrics.gap) {
+        VStack(alignment: .leading, spacing: 12) {
             header
             searchField
-            toolbar
             list
         }
-        .padding(Theme.Metrics.pad)
-        .background(Theme.Palette.bg)
+        .padding(.horizontal, Theme.Metrics.padLg)
+        .padding(.top, 2)
     }
 
-    // MARK: Header
+    // MARK: Header (title + tools)
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "square.stack.3d.up")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.Gradients.aura)
-            Text(L10n.text("Presets"))
-                .font(Theme.Typo.title)
-                .foregroundStyle(Theme.Palette.textPrimary)
-            Spacer()
+        HStack(spacing: 2) {
+            RailPanelTitle(L10n.text("Presets"))
             Text("\(model.presets.count)")
-                .font(Theme.Typo.mono)
+                .font(Theme.Typo.mono.weight(.regular))
                 .foregroundStyle(Theme.Palette.textTertiary)
-        }
-    }
-
-    // MARK: Search
-
-    private var searchField: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.Palette.textTertiary)
-            TextField(L10n.text("Search presets"), text: $search)
-                .textFieldStyle(.plain)
-                .font(Theme.Typo.body)
-                .foregroundStyle(Theme.Palette.textPrimary)
-            if !search.isEmpty {
-                Button {
-                    search = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                .fill(Theme.Palette.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                        .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                )
-        )
-    }
-
-    // MARK: Toolbar
-
-    private var toolbar: some View {
-        HStack(spacing: 6) {
+                .padding(.leading, 6)
+            Spacer(minLength: 8)
             toolButton(L10n.text("New"), systemImage: "plus") {
                 model.newPreset()
             }
@@ -95,7 +51,10 @@ struct PresetLibraryView: View {
             toolButton(L10n.text("Delete"), systemImage: "trash", destructive: true) {
                 model.delete(model.currentPreset)
             }
-            Spacer(minLength: 0)
+            Rectangle()
+                .fill(Theme.Palette.line)
+                .frame(width: 1, height: 14)
+                .padding(.horizontal, 4)
             toolButton(L10n.text("Import"), systemImage: "square.and.arrow.down") {
                 importTapped()
             }
@@ -112,42 +71,65 @@ struct PresetLibraryView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(destructive ? Theme.Palette.danger : Theme.Palette.textSecondary)
-                .frame(width: 26, height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                        .fill(Theme.Palette.surfaceHi)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                                .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                        )
-                )
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(label)
+        .accessibilityLabel(label)
+    }
+
+    // MARK: Search
+
+    private var searchField: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.Palette.textTertiary)
+            TextField(L10n.text("Search presets"), text: $search)
+                .textFieldStyle(.plain)
+                .font(Theme.Typo.body)
+                .foregroundStyle(Theme.Palette.textPrimary)
+            if !search.isEmpty {
+                Button {
+                    search = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Theme.Palette.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .background(RailFieldBackground())
     }
 
     // MARK: List (grouped by headphone)
 
     private var list: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: Theme.Metrics.pad, pinnedViews: [.sectionHeaders]) {
+            LazyVStack(alignment: .leading, spacing: 10, pinnedViews: [.sectionHeaders]) {
                 ForEach(groups, id: \.key) { group in
                     Section {
-                        VStack(spacing: 6) {
+                        VStack(spacing: 2) {
                             ForEach(group.presets) { preset in
                                 row(preset)
                             }
                         }
                     } header: {
-                        HStack {
+                        HStack(spacing: 6) {
                             SectionLabel(group.key)
-                            Spacer()
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                             Text("\(group.presets.count)")
                                 .font(Theme.Typo.caption)
                                 .foregroundStyle(Theme.Palette.textTertiary)
+                            Spacer(minLength: 0)
                         }
-                        .padding(.vertical, 4)
-                        .background(Theme.Palette.bg)
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 6)
+                        .background(Theme.Palette.surface)
                     }
                 }
                 if groups.isEmpty {
@@ -158,6 +140,7 @@ struct PresetLibraryView: View {
                         .padding(.top, 24)
                 }
             }
+            .padding(.bottom, Theme.Metrics.padLg)
         }
     }
 
@@ -165,34 +148,27 @@ struct PresetLibraryView: View {
         let isCurrent = preset.id == model.currentPreset.id
         let isRenaming = renamingId == preset.id
         let inCollection = model.collectionPresetIDs.contains(preset.id)
-        return AuraCard(padding: 10) {
+        return PresetRowContainer(selected: isCurrent) {
             HStack(alignment: .center, spacing: Theme.Metrics.gap) {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 3) {
                     if isRenaming {
                         TextField(L10n.text("Name"), text: $renameText)
                             .textFieldStyle(.plain)
-                            .font(Theme.Typo.headline)
+                            .font(Theme.Typo.body.weight(.medium))
                             .foregroundStyle(Theme.Palette.textPrimary)
                             .focused($renameFocused)
                             .onSubmit { commitRename(preset) }
                     } else {
                         Text(preset.name)
-                            .font(Theme.Typo.headline)
+                            .font(Theme.Typo.body.weight(.medium))
                             .foregroundStyle(isCurrent ? Theme.Palette.accent : Theme.Palette.textPrimary)
                             .lineLimit(1)
+                            .truncationMode(.middle)
                     }
-                    HStack(spacing: 6) {
-                        if let hp = preset.headphone, !hp.isEmpty {
-                            AuraTag(hp, tint: Theme.Palette.auraBlue)
-                        }
-                        Text("v\(preset.version)")
-                            .font(Theme.Typo.caption)
-                            .foregroundStyle(Theme.Palette.textTertiary)
-                        createdByBadge(preset.createdBy)
-                        if inCollection {
-                            AuraTag(L10n.text("Collection"), tint: Theme.Palette.success)
-                        }
-                    }
+                    Text(metaLine(preset, inCollection: inCollection))
+                        .font(Theme.Typo.caption)
+                        .foregroundStyle(Theme.Palette.textTertiary)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 if isRenaming {
@@ -204,15 +180,10 @@ struct PresetLibraryView: View {
                     }
                     .buttonStyle(.plain)
                 } else if isCurrent {
-                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"), glow: true)
+                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"))
                 }
             }
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Metrics.radius, style: .continuous)
-                .strokeBorder(isCurrent ? Theme.Palette.accent.opacity(0.5) : Color.clear, lineWidth: 1)
-        )
-        .contentShape(Rectangle())
         .onTapGesture {
             guard !isRenaming else { return }
             model.load(preset: preset)
@@ -233,12 +204,17 @@ struct PresetLibraryView: View {
         }
     }
 
-    private func createdByBadge(_ by: CreatedBy) -> some View {
+    /// "v3 · AI · Collection" — version, author, and collection membership.
+    private func metaLine(_ preset: EQPreset, inCollection: Bool) -> String {
+        var parts = ["v\(preset.version)", createdByLabel(preset.createdBy)]
+        if inCollection { parts.append(L10n.text("Collection")) }
+        return parts.joined(separator: " · ")
+    }
+
+    private func createdByLabel(_ by: CreatedBy) -> String {
         switch by {
-        case .ai:
-            return AuraTag(L10n.text("AI"), tint: Theme.Palette.auraViolet)
-        case .user:
-            return AuraTag(L10n.text("User"), tint: Theme.Palette.textSecondary)
+        case .ai: return L10n.text("AI")
+        case .user: return L10n.text("User")
         }
     }
 
@@ -300,5 +276,26 @@ struct PresetLibraryView: View {
         if let url = PresetFileIO.exportPanel(suggestedName: preset.name) {
             model.exportPreset(preset, to: url)
         }
+    }
+}
+
+/// Flat preset row: accent-tinted when loaded, a faint highlight on hover.
+/// Not a Button, so the inline rename field inside it stays editable.
+private struct PresetRowContainer<Content: View>: View {
+    let selected: Bool
+    @ViewBuilder var content: Content
+    @State private var hovering = false
+
+    var body: some View {
+        content
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                    .fill(selected ? Theme.Palette.accentSoft : (hovering ? Theme.Palette.lineSoft : Color.clear))
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
     }
 }

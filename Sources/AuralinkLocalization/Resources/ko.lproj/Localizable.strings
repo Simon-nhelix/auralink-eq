@@ -375,3 +375,11 @@
 "Downloading update…" = "업데이트 다운로드 중…";
 "Installing and restarting…" = "설치 후 재시작 중…";
 "Update available: %@" = "업데이트 가능: %@";
+
+/* Appearance and redesigned editor chrome */
+"Appearance" = "화면 모드";
+"System" = "시스템 설정";
+"Light" = "라이트";
+"Dark" = "다크";
+"Output device" = "출력 기기";
+"Band %@ · %@ · %@ · %@ %@" = "밴드 %@ · %@ · %@ · %@ %@";

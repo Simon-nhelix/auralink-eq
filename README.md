@@ -306,27 +306,34 @@ the MCP section of **[docs/SETUP.md](docs/SETUP.md)**.
 
 ## Preparing UI design changes
 
-The current UI has one fixed dark theme. Its design entry points are
-[`Theme.swift`](Sources/AuralinkApp/Views/DesignSystem/Theme.swift) and
-[`Components.swift`](Sources/AuralinkApp/Views/DesignSystem/Components.swift):
+The UI uses a "quiet neutral" design with a Light and a Dark appearance. The
+**View → Appearance** menu (also in the menu bar's **…** menu) chooses System,
+Light, or Dark; System follows macOS. Its design entry points are
+[`Theme.swift`](Sources/AuralinkApp/Views/DesignSystem/Theme.swift),
+[`Components.swift`](Sources/AuralinkApp/Views/DesignSystem/Components.swift), and
+[`Appearance.swift`](Sources/AuralinkApp/Views/DesignSystem/Appearance.swift):
 
-- `Theme.Palette`, `Gradients`, and `Typo` define shared colors and text styles.
+- `Theme.Palette` defines semantic colors. Each one resolves to a light or dark
+  value for the drawing appearance, so views never read the color scheme.
+  `Theme.Typo` defines text styles; readouts use tabular digits.
 - `Theme.Metrics` defines shared spacing, radii, and button padding.
 - `Theme.Layout` defines menu-bar, editor, monitor, proposal, and band-table
   dimensions. Change the shared graph minimum or table columns here so their
   callers stay aligned.
-- `Components.swift` owns cards, action buttons, status dots, labels, tags,
-  and the waveform brand mark shared by the editor and menu bar.
+- `Components.swift` owns cards, action buttons, the segmented control, status
+  dots, labels, tags, the level meter, and the brand mark shared by the editor
+  and menu bar.
+- `Appearance.swift` stores the appearance choice and applies it to every
+  window, the menu bar popover included.
 
-Change screen composition in `EditorWindow`, `MenuBarView`, and `TopBarView`.
-Keep controls bound to the existing `AppModel` intents and output-picker
-snapshot; appearance changes should preserve routing, permission handling,
-and the UI publish gate. DSP ranges and graph coordinate transforms remain
-in their existing logic modules.
+Change screen composition in `EditorWindow`, `EditorChrome` (toolbar items,
+graph control strip, status bar), and `MenuBarView`. Keep controls bound to the
+existing `AppModel` intents and output-picker snapshot; appearance changes
+should preserve routing, permission handling, and the UI publish gate. DSP
+ranges and graph coordinate transforms remain in their existing logic modules.
 
-These entry points preserve the existing visual defaults. Runtime theme
-selection, a light theme, and isolated screen previews are future work. Some
-local control sizes and icon fonts still live in views. UI copy is localized
+Isolated screen previews are future work. Some local control sizes and icon
+fonts still live in views. Check new colors in both appearances. UI copy is localized
 through `AuralinkLocalization`, including enum labels at the presentation layer.
 Verify design changes at the editor minimum size, with long preset/device
 names, and in the menu-bar search and proposal states. Use `swift build` and

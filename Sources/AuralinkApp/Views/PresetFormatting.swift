@@ -48,8 +48,8 @@ enum PresetFormatting {
     static func credibilityTint(_ c: Credibility) -> Color {
         switch c {
         case .measured:     return Theme.Palette.success
-        case .manufacturer: return Theme.Palette.auraBlue
-        case .community:    return Theme.Palette.auraViolet
+        case .manufacturer: return Theme.Palette.info
+        case .community:    return Theme.Palette.ai
         case .estimated:    return Theme.Palette.warning
         }
     }

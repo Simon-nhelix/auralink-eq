@@ -21,7 +21,7 @@ struct MenuBarView: View {
     @State private var contentHeight: CGFloat = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: Theme.Metrics.gap) {
             header
             UpdateAvailableButton()
 
@@ -66,18 +66,18 @@ struct MenuBarView: View {
     private var header: some View {
         HStack(spacing: 10) {
             AuraWaveformMark()
-                .frame(width: 28, height: 20)
+                .frame(width: 18, height: 17)
             Text(L10n.text("Auralink EQ"))
-                .font(Theme.Typo.title)
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Theme.Palette.textPrimary)
             Spacer(minLength: 0)
             StatusDot(
                 color: model.controlServerRunning ? Theme.Palette.success : Theme.Palette.danger,
-                label: apiStatusLabel,
-                glow: model.audioState.mcpConnected
+                label: apiStatusLabel
             )
             overflowMenu
         }
+        .frame(height: 28)
     }
 
     private var apiStatusLabel: String {
@@ -91,6 +91,7 @@ struct MenuBarView: View {
                 openWindow(id: "updates")
                 updates.checkNow()
             }
+            AppearancePicker()
             Divider()
             Button(L10n.text("Refresh audio setup"), systemImage: "arrow.clockwise") {
                 model.refreshAudioSetup()
@@ -114,14 +115,11 @@ struct MenuBarView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.Palette.textSecondary)
                 .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill(Theme.Palette.surfaceHi)
-                        .overlay(Circle().strokeBorder(Theme.Palette.line, lineWidth: 1))
-                )
+                .contentShape(Rectangle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        .fixedSize()
         .help(L10n.text("More Auralink controls"))
     }
 
@@ -154,19 +152,22 @@ struct MenuBarView: View {
     }
 
     private func noticeView(_ notice: MiniNotice) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: notice.isError ? "exclamationmark.octagon.fill" : "info.circle.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(notice.isError ? Theme.Palette.danger : Theme.Palette.warning)
+        let tint = notice.isError ? Theme.Palette.danger : Theme.Palette.warning
+        return HStack(alignment: .top, spacing: 8) {
+            Image(systemName: notice.isError ? "exclamationmark.octagon" : "info.circle")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(tint)
+                .padding(.top, 1)
             Text(notice.text)
-                .font(Theme.Typo.caption)
-                .foregroundStyle(Theme.Palette.textSecondary)
+                .font(Theme.Typo.label.weight(.regular))
+                .foregroundStyle(Theme.Palette.textPrimary)
                 .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             if notice.needsSetup {
                 Button(L10n.text("Set Up")) { model.openSetupGuide() }
                     .buttonStyle(.plain)
-                    .font(Theme.Typo.label)
+                    .font(Theme.Typo.label.weight(.semibold))
                     .foregroundStyle(Theme.Palette.accent)
             } else {
                 Button {
@@ -175,20 +176,18 @@ struct MenuBarView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Theme.Palette.textTertiary)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                .fill((notice.isError ? Theme.Palette.danger : Theme.Palette.warning).opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                        .strokeBorder((notice.isError ? Theme.Palette.danger : Theme.Palette.warning).opacity(0.25), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(tint.opacity(0.10))
         )
     }
 
@@ -196,15 +195,15 @@ struct MenuBarView: View {
 
     private var routePanel: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Image(systemName: model.systemEQActive ? "waveform" : "speaker.wave.2.fill")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(model.systemEQActive ? Theme.Palette.success : Theme.Palette.textSecondary)
-                    .frame(width: 24)
+            HStack(spacing: 10) {
+                iconPlate(
+                    model.systemEQActive ? "waveform" : "speaker.wave.2",
+                    tint: model.systemEQActive ? Theme.Palette.success : Theme.Palette.textSecondary
+                )
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(model.systemEQActive ? L10n.text("Mac sound processed") : L10n.text("Mac sound direct"))
-                        .font(Theme.Typo.headline)
+                        .font(Theme.Typo.bodyStrong)
                         .foregroundStyle(Theme.Palette.textPrimary)
                     outputMenu
                 }
@@ -216,24 +215,28 @@ struct MenuBarView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: model.systemEQActive ? "stop.fill" : "play.fill")
+                            .font(.system(size: 10))
                         Text(model.systemEQActive ? L10n.text("Stop System EQ") : L10n.text("Start System EQ"))
                             .lineLimit(1)
                             .fixedSize()
                     }
                 }
-                .buttonStyle(AuraButtonStyle(prominent: !model.systemEQActive, role: .route))
+                .buttonStyle(AuraButtonStyle(prominent: !model.systemEQActive))
                 .disabled(model.needsVirtualDevice && !model.systemEQActive)
                 .opacity(model.needsVirtualDevice && !model.systemEQActive ? 0.45 : 1)
             }
             .padding(12)
 
-            Divider().overlay(Theme.Palette.line)
+            Rectangle().fill(Theme.Palette.lineSoft).frame(height: 1)
 
-            HStack(spacing: 9) {
-                miniPeakMeter
-                    .frame(height: 4)
-                Text(peakLabel)
-                    .font(Theme.Typo.mono)
+            HStack(spacing: 12) {
+                PeakMeter(
+                    peakDb: model.audioState.estimatedTruePeakDb,
+                    clipping: model.audioState.clippingDetected
+                )
+                .frame(height: 3)
+                Text(Fmt.dbtp(model.audioState.estimatedTruePeakDb))
+                    .font(Theme.Typo.mono.weight(.regular))
                     .foregroundStyle(model.audioState.clippingDetected ? Theme.Palette.danger : Theme.Palette.textSecondary)
                 StatusDot(
                     color: model.audioState.clippingDetected ? Theme.Palette.danger : Theme.Palette.success,
@@ -241,7 +244,7 @@ struct MenuBarView: View {
                 )
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 9)
+            .padding(.vertical, 10)
         }
         .background(panelBackground)
     }
@@ -261,34 +264,29 @@ struct MenuBarView: View {
         } label: {
             HStack(spacing: 4) {
                 Text(model.outputPickerSnapshot.selectedName)
-                    .font(Theme.Typo.caption)
+                    .font(Theme.Typo.label.weight(.regular))
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(Theme.Palette.textTertiary)
             }
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .frame(maxWidth: 145, alignment: .leading)
+        .frame(maxWidth: 150, alignment: .leading)
     }
 
-    private var miniPeakMeter: some View {
-        GeometryReader { geometry in
-            let level = max(0, min(1, (model.audioState.estimatedTruePeakDb + 60) / 60))
-            ZStack(alignment: .leading) {
-                Capsule().fill(Theme.Palette.line)
-                Capsule()
-                    .fill(model.audioState.clippingDetected ? Theme.Palette.danger : Theme.Palette.accent)
-                    .frame(width: geometry.size.width * CGFloat(level))
-            }
-        }
-    }
-
-    private var peakLabel: String {
-        let value = model.audioState.estimatedTruePeakDb
-        return value <= -120 ? "−∞ dBTP" : String(format: "%.1f dBTP", value)
+    /// 32-pt recessed plate holding a row's leading symbol.
+    private func iconPlate(_ systemName: String, tint: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(tint)
+            .frame(width: 32, height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                    .fill(Theme.Palette.inset)
+            )
     }
 
     // MARK: Current tuning + search
@@ -299,35 +297,30 @@ struct MenuBarView: View {
                 toggleTuningPicker()
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "headphones")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.Palette.textSecondary)
-                        .frame(width: 22)
+                    iconPlate("headphones", tint: Theme.Palette.textSecondary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(currentHeadphoneProfile?.displayName ?? L10n.text("Generic / Flat"))
-                            .font(Theme.Typo.headline)
+                            .font(Theme.Typo.bodyStrong)
                             .foregroundStyle(Theme.Palette.textPrimary)
                             .lineLimit(1)
                         Text(compactPresetDetail(model.currentPreset))
-                            .font(Theme.Typo.body)
+                            .font(Theme.Typo.label.weight(.regular))
                             .foregroundStyle(Theme.Palette.textSecondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
                     Spacer(minLength: 0)
                     Image(systemName: tuningPickerExpanded ? "chevron.up" : "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Theme.Palette.textTertiary)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            .padding(12)
 
             if tuningPickerExpanded {
-                Divider().overlay(Theme.Palette.line)
+                Rectangle().fill(Theme.Palette.lineSoft).frame(height: 1)
                 tuningPicker
                     .transition(.opacity.combined(with: .move(edge: .top)))
             } else {
@@ -336,28 +329,33 @@ struct MenuBarView: View {
                 } label: {
                     MiniResponseGraphView(
                         curve: model.responseCurve,
-                        bands: model.currentPreset.bands
+                        bands: model.currentPreset.bands,
+                        preampDb: model.currentPreset.preampDb
                     )
-                    .frame(height: Theme.Layout.MenuBar.responseHeight)
+                    .frame(height: Theme.Layout.MenuBar.responseHeight + 16)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.horizontal, 12)
                 .help(L10n.text("Open the full response graph"))
-
-                Divider().overlay(Theme.Palette.line)
 
                 HStack {
                     StatusDot(
-                        color: model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.success,
+                        color: model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent,
                         label: L10n.format("%lld bands", model.currentPreset.activeBands.count)
                     )
                     Spacer()
-                    Text(Fmt.db(model.currentPreset.preampDb))
-                        .font(Theme.Typo.mono)
-                        .foregroundStyle(Theme.Palette.textSecondary)
+                    HStack(spacing: 4) {
+                        Text(L10n.text("Preamp"))
+                            .foregroundStyle(Theme.Palette.textSecondary)
+                        Text(Fmt.db(model.currentPreset.preampDb))
+                            .foregroundStyle(Theme.Palette.textPrimary)
+                    }
+                    .font(Theme.Typo.mono.weight(.regular))
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 9)
+                .padding(.top, 6)
+                .padding(.bottom, 11)
             }
         }
         .background(panelBackground)
@@ -430,31 +428,29 @@ struct MenuBarView: View {
                 isOn: Binding(
                     get: { model.audioState.eqEnabled },
                     set: { model.setEQEnabled($0) }
-                ),
-                tint: Theme.Palette.accent
+                )
             )
-            Divider().overlay(Theme.Palette.line).padding(.vertical, 8)
+            cellDivider
             compactToggle(
                 L10n.text("Safe"),
                 isOn: Binding(
                     get: { model.audioState.safeMode },
                     set: { model.setSafeMode($0) }
-                ),
-                tint: Theme.Palette.success
+                )
             )
-            Divider().overlay(Theme.Palette.line).padding(.vertical, 8)
+            .help(model.safeModeStatusText)
+            cellDivider
             compactToggle(
                 L10n.text("FIR"),
                 isOn: Binding(
                     get: { model.measuredFIRRequested },
                     set: { model.setHQCorrectionMode($0) }
-                ),
-                tint: Theme.Palette.auraViolet
+                )
             )
             .disabled(!model.measuredFIRRequestAllowed)
             .opacity(model.measuredFIRRequestAllowed ? 1 : 0.45)
             .help(model.measuredFIRHelpText)
-            Divider().overlay(Theme.Palette.line).padding(.vertical, 8)
+            cellDivider
             Button {
                 model.toggleAB()
             } label: {
@@ -465,21 +461,25 @@ struct MenuBarView: View {
                 }
                 .font(Theme.Typo.label)
                 .foregroundStyle(model.comparingBefore ? Theme.Palette.accent : Theme.Palette.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(model.beforeSnapshot == nil)
             .opacity(model.beforeSnapshot == nil ? 0.45 : 1)
         }
+        .frame(height: 40)
         .background(panelBackground)
     }
 
-    private func compactToggle(
-        _ title: String,
-        isOn: Binding<Bool>,
-        tint: Color
-    ) -> some View {
+    private var cellDivider: some View {
+        Rectangle()
+            .fill(Theme.Palette.lineSoft)
+            .frame(width: 1)
+            .padding(.vertical, 10)
+    }
+
+    private func compactToggle(_ title: String, isOn: Binding<Bool>) -> some View {
         Toggle(isOn: isOn) {
             Text(title)
                 .font(Theme.Typo.label)
@@ -487,9 +487,9 @@ struct MenuBarView: View {
         }
         .toggleStyle(.switch)
         .controlSize(.mini)
-        .tint(tint)
+        .tint(Theme.Palette.accent)
+        .fixedSize()
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
     }
 
     // MARK: Quick tune
@@ -498,11 +498,10 @@ struct MenuBarView: View {
         let canSubmit = !tuneCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 0) {
+            HStack(spacing: 10) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.Gradients.aura)
-                    .frame(width: 34)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.Palette.accent)
                 MenuBarTextField(
                     text: $tuneCommand,
                     placeholder: L10n.text("Describe a sound change…"),
@@ -510,52 +509,28 @@ struct MenuBarView: View {
                 )
                 .frame(height: 20)
                 .layoutPriority(1)
-                Button {
-                    submitQuickTune()
-                } label: {
-                    Text(L10n.text("Tune"))
-                        .font(Theme.Typo.label)
-                        .foregroundStyle(canSubmit ? Theme.Palette.textPrimary : Theme.Palette.textTertiary)
-                        .padding(.horizontal, 11)
-                        .frame(height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(Theme.Palette.surface)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .strokeBorder(
-                                            canSubmit
-                                                ? Theme.Palette.auraViolet.opacity(0.38)
-                                                : Theme.Palette.line,
-                                            lineWidth: 1
-                                        )
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSubmit)
-                .help(L10n.text("Apply quick tuning"))
+                Button(L10n.text("Tune")) { submitQuickTune() }
+                    .buttonStyle(FieldActionButtonStyle(enabled: canSubmit))
+                    // The AppKit field claims all spare width; keep the label whole.
+                    .fixedSize()
+                    .disabled(!canSubmit)
+                    .help(L10n.text("Apply quick tuning"))
             }
-            .padding(4)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                    .fill(Theme.Palette.surfaceHi)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                            .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                    )
-            )
+            .padding(.leading, 12)
+            .padding(.trailing, 5)
+            .frame(height: 38)
+            .background(PromptFieldBackground())
 
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Button(L10n.text("Warmer")) { model.makeWarmer() }
-                Text("•").foregroundStyle(Theme.Palette.textTertiary)
                 Button(L10n.text("Reduce harshness")) { model.reduceHarshness() }
             }
             .buttonStyle(.plain)
             .font(Theme.Typo.label)
-            .foregroundStyle(Theme.Palette.auraViolet)
-            .padding(.horizontal, 8)
+            .foregroundStyle(Theme.Palette.accent)
+            .padding(.horizontal, 4)
             .disabled(model.isTuning)
+            .opacity(model.isTuning ? 0.5 : 1)
         }
     }
 
@@ -572,33 +547,24 @@ struct MenuBarView: View {
     private var recentPresetsSection: some View {
         let presets = recentPresets
         if !presets.isEmpty {
-            VStack(spacing: 0) {
-                HStack {
-                    Text(L10n.text("Recent"))
-                        .font(Theme.Typo.body)
-                        .foregroundStyle(Theme.Palette.textSecondary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                }
-                .padding(.horizontal, 11)
-                .padding(.vertical, 8)
+            VStack(alignment: .leading, spacing: 2) {
+                SectionLabel(L10n.text("Recent"))
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 4)
 
                 ForEach(Array(presets.prefix(2).enumerated()), id: \.element.id) { index, preset in
                     let parts = compactPresetParts(preset)
-                    Divider().overlay(Theme.Palette.line)
                     Button {
                         model.load(preset: preset)
                     } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             Image(systemName: "waveform")
-                                .font(.system(size: 11))
+                                .font(.system(size: 12))
                                 .foregroundStyle(Theme.Palette.textTertiary)
-                                .frame(width: 18)
+                                .frame(width: 16)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(parts.title)
-                                    .font(Theme.Typo.label)
+                                    .font(Theme.Typo.body.weight(.medium))
                                     .foregroundStyle(Theme.Palette.textPrimary)
                                     .lineLimit(1)
                                 if let detail = parts.detail {
@@ -610,18 +576,17 @@ struct MenuBarView: View {
                             }
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(Theme.Palette.textTertiary)
                         }
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 8)
+                        .frame(minHeight: 40)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RecentRowButtonStyle())
                     .accessibilityLabel(L10n.format("Load recent preset %@: %@", String(index + 1), String(preset.name)))
                 }
             }
-            .background(panelBackground)
         }
     }
 
@@ -657,7 +622,7 @@ struct MenuBarView: View {
             .fill(Theme.Palette.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Metrics.radius, style: .continuous)
-                    .strokeBorder(Theme.Palette.line, lineWidth: 1)
+                    .strokeBorder(Theme.Palette.lineSoft, lineWidth: 1)
             )
     }
 
@@ -785,5 +750,26 @@ private struct MenuBarWindowAnchor: NSViewRepresentable {
         let pinnedY = visible.maxY - frame.height - 2
         frame.origin = NSPoint(x: originX, y: max(visible.minY + 2, pinnedY))
         window.setFrame(frame, display: true)
+    }
+}
+
+/// Plain list row that highlights while hovered or pressed.
+private struct RecentRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        RecentRow(configuration: configuration)
+    }
+
+    private struct RecentRow: View {
+        let configuration: ButtonStyleConfiguration
+        @State private var hovering = false
+
+        var body: some View {
+            configuration.label
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                        .fill(hovering || configuration.isPressed ? Theme.Palette.lineSoft : Color.clear)
+                )
+                .onHover { hovering = $0 }
+        }
     }
 }

@@ -34,7 +34,11 @@ struct AuralinkApp: App {
                        minHeight: Theme.Layout.Editor.minHeight)
         }
         .windowResizability(.contentMinSize)
-        .commands { UpdateCommands(updates: delegate.updates) }
+        .windowToolbarStyle(.unified(showsTitle: false))
+        .commands {
+            UpdateCommands(updates: delegate.updates)
+            AppearanceCommands()
+        }
 
         Window(L10n.text("Auralink updates"), id: "updates") {
             UpdateView().environmentObject(delegate.updates)
@@ -78,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
             NSApp.setActivationPolicy(.regular)
+            AppearancePreference.stored.apply()
 
             // Stand up the loopback HTTP API the MCP server talks to.
             let server = ControlServer(model: model)

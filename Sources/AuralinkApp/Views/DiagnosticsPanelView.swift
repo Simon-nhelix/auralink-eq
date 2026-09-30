@@ -54,9 +54,12 @@ struct DiagnosticsPanelView: View {
                 statsRow
 
                 SectionLabel(L10n.text("Incidents"))
+                    .padding(.top, 6)
                 incidentList
             }
-            .padding(Theme.Metrics.pad)
+            .padding(.horizontal, Theme.Metrics.padLg)
+            .padding(.top, 2)
+            .padding(.bottom, Theme.Metrics.padLg)
         }
     }
 
@@ -66,7 +69,7 @@ struct DiagnosticsPanelView: View {
         HStack(spacing: 10) {
             legendDot(L10n.text("underrun / clip"), Theme.Palette.danger)
             legendDot(L10n.text("resync / gap"), Theme.Palette.warning)
-            legendDot(L10n.text("recovery"), Theme.Palette.auraBlue)
+            legendDot(L10n.text("recovery"), Theme.Palette.info)
             Spacer()
             Text(L10n.format("last %@ s", String(Int(Self.windowSeconds))))
                 .font(Theme.Typo.caption)
@@ -104,17 +107,19 @@ struct DiagnosticsPanelView: View {
     private func statCell(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label.uppercased())
-                .font(Theme.Typo.caption)
+                .font(Theme.Typo.micro.weight(.semibold))
+                .tracking(0.5)
                 .foregroundStyle(Theme.Palette.textTertiary)
+                .lineLimit(1)
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(Theme.Typo.monoLg)
                 .foregroundStyle(Theme.Palette.textPrimary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Metrics.padSm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm)
-                .fill(Theme.Palette.surfaceHi)
+                .fill(Theme.Palette.raised)
         )
     }
 
@@ -130,7 +135,7 @@ struct DiagnosticsPanelView: View {
                     .padding(Theme.Metrics.padSm)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm)
-                            .fill(Theme.Palette.surfaceHi)
+                            .fill(Theme.Palette.raised)
                     )
             } else {
                 VStack(spacing: 6) {
@@ -166,7 +171,7 @@ struct DiagnosticsPanelView: View {
                 .foregroundStyle(Theme.Palette.accent)
             }
             Text(incident.report)
-                .font(.system(size: 10))
+                .font(Theme.Typo.micro)
                 .foregroundStyle(Theme.Palette.textSecondary)
                 .lineLimit(8)
                 .textSelection(.enabled)
@@ -174,7 +179,7 @@ struct DiagnosticsPanelView: View {
         .padding(Theme.Metrics.padSm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm)
-                .fill(Theme.Palette.surfaceHi)
+                .fill(Theme.Palette.raised)
         )
     }
 }
