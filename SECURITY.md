@@ -67,3 +67,13 @@ GitHub account and release notes are not themselves authenticated by that key.
 Ad-hoc macOS signing is the current release workflow. Update authenticity does
 not imply Apple notarization. Key rotation is not supported automatically; a lost
 key requires recovery or a documented manual migration to a newly signed release.
+
+### MCP tuning persistence
+
+A request to register a device or tune its EQ includes saving the resulting
+baseline or preference preset. MCP tuning tools write both the working preset
+library and the configured user collection; they do not commit or publish it.
+The existing app permission mode still governs these writes. A separate user
+request to hear a result is required for live application. `delete_preset`
+removes working and collection copies plus revision history; it does not cascade
+to other presets. Explicitly unsaved listening trials remain available.

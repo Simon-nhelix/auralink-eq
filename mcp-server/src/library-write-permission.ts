@@ -4,7 +4,7 @@ import { getState, type ControlResult } from "./control.js";
 import type { AudioState, PermissionMode } from "./types.js";
 
 export const libraryWriteConfirmationSchema = z.boolean().default(false).describe(
-  "Set true only when the user explicitly requested this file change. " +
+  "Set true when the user requested registration, tuning (including automatic saving), or deletion. No separate save request is needed. " +
   "Read Only always forbids writes; Ask Before Write requires confirmation."
 );
 

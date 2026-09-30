@@ -1,3 +1,4 @@
+import { isPureBaseline } from "./preference-tuning.js";
 import {
   loadHeadphoneProfiles,
   loadAgentEQGuide,
@@ -207,7 +208,7 @@ export async function tuningGuidePayload(options: {
       source: agentGuide.source,
       path: agentGuide.path ?? null,
       summary:
-        "Use the agent guide for the product workflow: adding a model saves a Harman baseline; preference tuning auditions first and saves only when the user likes it.",
+        "Use the agent guide for the product workflow: adding a model saves a Harman baseline; preference tuning automatically saves a separate variation and can be deleted through MCP.",
     },
     roleSplit: {
       aiClient:
@@ -265,17 +266,17 @@ export async function tuningGuidePayload(options: {
     },
     workflow: [
       "Call get_agent_eq_guide and get_current_audio_state. If needsVirtualDevice is true, do not route or promise audible changes.",
-      "Resolve the headphone with list_headphone_profiles/get_headphone_profile, or add it with upsert_headphone_profile when the user provides enough model data.",
+      "Resolve the headphone with list_headphone_profiles/get_headphone_profile, or register it with register_headphone_baseline when the user provides enough model data.",
       "MEASURED FIRST: call get_autoeq_correction with the model name. A hit returns AutoEq's measured PEQ fallback and, when published, a dense measuredCorrection payload. Use the exact bands/preamp as the baseline and copy measuredCorrection unchanged into Auralink software presets so Measured FIR can reproduce the dense curve. Record the source/rig in the preset goal or tags.",
       "Only when no measurement exists: read eq://target-curves and eq://safety-rules and design a conservative baseline from the profile's correction notes.",
-      "For a newly added model, save the baseline with create_eq_preset (tags: baseline + the evidence source, e.g. autoeq-oratory1990).",
-      "For preference changes, preserve measuredCorrection, mark only the new subjective slots in preferenceBandIndexes, and audition with audition_eq_preset instead of saving every experiment. Measured FIR then renders the dense baseline plus those preference bands, without applying baseline PEQ twice.",
+      "For a newly added model, use register_headphone_baseline to save a separate pure baseline automatically.",
+      "For preference changes, call create_preference_tuning with the baseline id and only subjective bands. It preserves measuredCorrection and automatically saves a separate combined preset in the library and collection. No separate save request is needed.",
       "After designing or editing bands, call get_response_curve and check the curve does what the user asked (e.g. '+3 dB shelf below 100 Hz, mids flat, 7 kHz dip') before auditioning.",
       "Prefer 3-8 meaningful bands for preference moves; measured baselines may legitimately use 10.",
       "Favor cuts for harsh/problem regions. If the user says a change is too subtle, scale the relevant moves up (±3-4 dB) rather than adding more tiny bands.",
       "Audition level: keep AutoEq's preamp for measured baselines. For small tweaks preampDb:0/autoGain:false preserves level; for bigger boost stacks enable autoGain.",
       "Call validate_eq_preset for a dry run when uncertain. The write/audition paths validate again.",
-      "If the user says they like the current audition or asks to save it, call save_current_preset.",
+      "Requested tunings are saved automatically. Use delete_preset when the user wants to remove one. Reserve audition_eq_preset for explicitly unsaved trials.",
       "If the user only asked to add/save a profile or baseline preset, do not apply it unless they also asked to hear it.",
       "Call apply_eq_preset separately only when applying an already-saved preset. Pass confirmed:true only for explicit user requests.",
       "Call route_system_audio only when the user asked for live system sound routing and state shows a loopback device is available.",
@@ -401,16 +402,9 @@ export function headphoneMatchesPreset(preset: EQPreset, needle: string): boolea
   return haystack.includes(n);
 }
 
-/** True when a preset is a measured/Harman baseline (not a preference variation).
- *  Per the agent guide, baselines are saved with the `harman-neutral` tag and/or a
- *  measured source (autoeq/crinacle/oratory); preference variations carry other tags. */
+/** Resolve only pure baselines; inherited source/target tags do not identify one. */
 export function presetIsBaseline(preset: EQPreset): boolean {
-  if (preset.correction?.role === "baseline") return true;
-  const tags = preset.tags.map((t) => t.toLowerCase());
-  if (tags.includes("baseline")) return true;
-  if (tags.includes("harman-neutral")) return true;
-  const blob = `${preset.name} ${preset.correction?.source ?? ""} ${preset.goal ?? ""} ${tags.join(" ")}`.toLowerCase();
-  return /autoeq|crinacle|oratory|\bmeasured\b|harman.?baseline/.test(blob);
+  return isPureBaseline(preset);
 }
 
 /** Resolve the best baseline preset for a headphone + list the alternates.

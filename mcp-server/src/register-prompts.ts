@@ -36,10 +36,10 @@ export function registerPrompts(server: McpServer): void {
               (preference ? ` Additional preference: "${preference}".` : "") +
               `\n\nSteps:\n` +
               `1. Call get_tuning_guidance with headphone="${headphone}" and goal="${goal}". Treat Auralink as an audio engine, not an AI model.\n` +
-              `2. Call get_headphone_profile to read the ${headphone}'s signature, correction notes, and harsh regions.\n` +
+              `2. Call get_tuning_brief for ${headphone}. If no pure baseline exists, call register_headphone_baseline first (AutoEq or explicit sourced correction).\n` +
               `3. Read eq://target-curves and eq://safety-rules to choose a sensible starting direction and stay within limits.\n` +
               `4. Design a small set of explicit parametric bands yourself (favor gentle cuts of harsh regions over large boosts).\n` +
-              `5. Call create_eq_preset with those bands (it validates before writing). If validation fails, revise and retry.\n` +
+              `5. Call create_preference_tuning with the baseline id and only the subjective bands; it validates and automatically saves the tuning. If validation fails, revise and retry.\n` +
               `6. Summarize the changes and their rationale, report the clipping risk, and ask whether to apply_eq_preset.`,
           },
         },
@@ -78,7 +78,7 @@ export function registerPrompts(server: McpServer): void {
               `1. Load the starting preset with get_preset.\n` +
               `2. If a headphone is set, read its harsh regions via get_headphone_profile; otherwise target the common 5–9 kHz range.\n` +
               `3. Add gentle bell cuts (around ${amount_db ?? "2–3"} dB, moderate Q) in the harsh regions; do not add boosts.\n` +
-              `4. Call validate_eq_preset to confirm it's safe, then create_eq_preset to save a new version.\n` +
+              `4. For a device preset, resolve its baseline with get_tuning_brief and use create_preference_tuning with the complete desired preference layer. Preserve existing preference moves unless asked to remove them. For generic presets use create_eq_preset with a new id. Saving is automatic.\n` +
               `5. Report the cuts you made and ask whether to apply_eq_preset.`,
           },
         },
@@ -119,7 +119,7 @@ export function registerPrompts(server: McpServer): void {
                   `If no profile exists, call get_autoeq_correction and register_headphone_baseline to create a measured baseline first (fresh installs ship no headphone database); if AutoEq has no match either, keep the tuning generic and say so.\n`
                 : `2. (No headphone given — keep the tuning generic but conservative.)\n`) +
               `3. Read eq://safety-rules and keep every move within the limits.\n` +
-              `4. Call create_eq_preset (it validates before writing). Name it clearly, e.g. "${headphone ? headphone + " – " : ""}${genre}".\n` +
+              `4. For a device with a baseline, call create_preference_tuning with the baseline id and subjective bands only; for a generic tuning use create_eq_preset. Both automatically save. Name it clearly, e.g. "${headphone ? headphone + " – " : ""}${genre}".\n` +
               `5. Summarize the tuning and clipping risk, then ask whether to apply_eq_preset.`,
           },
         },

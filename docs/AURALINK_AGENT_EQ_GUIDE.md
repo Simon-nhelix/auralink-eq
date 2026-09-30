@@ -4,9 +4,9 @@ This is the operational guide an AI agent should read before controlling Auralin
 
 - Auralink is not the AI. Auralink is the local audio engine, validator, preset library, headphone knowledge layer, and live audition/apply endpoint.
 - The AI agent reads links, measurements, reviews, user notes, and current app state, then emits explicit parametric EQ bands. When AutoEq supplies dense `GraphicEQ` data, the agent also forwards the returned `measuredCorrection` payload unchanged.
-- The app validates and plays the result. The user decides what deserves to be saved.
+- The app validates the result. Requested tunings are saved automatically; the user can delete unwanted ones through MCP.
 - **Auralink ships no headphone database.** Every profile and curated preset lives in the user's own collection directory (`~/auralink-collection` by default; see `docs/DATA_COLLECTION.md`). An empty headphone list is the expected state on a fresh install, not a defect — look models up with `get_autoeq_correction` instead of assuming data should already be there.
-- Nothing enters that collection on its own. `register_headphone_baseline` puts a headphone and its baseline there because the user asked for the headphone; everything else needs an explicit `add_preset_to_collection`.
+- `register_headphone_baseline` saves the device and its pure baseline. Requested preference tunings are also saved to the collection automatically, without a separate keep/save step.
 
 ## Product Workflow
 
@@ -16,9 +16,9 @@ Use this when the user says things like "이 모델 추가해줘", gives a revie
 
 1. **Call `get_autoeq_correction` with the model name first.** A hit returns the measured parametric correction toward Harman and, when published, a validated dense `GraphicEQ` payload (oratory1990/crinacle/… with provenance). Use the exact bands + AutoEq preamp as the Standard IIR baseline. For the Auralink software target, also copy `measuredCorrection` unchanged into the saved/auditioned preset so Measured FIR can reproduce the dense curve.
 2. Read the source and extract brand, model, form factor, tonal signature, correction notes, likely harsh regions, and evidence quality.
-3. Create or update the headphone profile with `upsert_headphone_profile` (mention the AutoEq source in `source` when one was found, credibility `measured`).
+3. Call `register_headphone_baseline` to save the profile and pure baseline together. Omit bands for AutoEq, or supply explicit bands + type + provenance + credibility for another source. `upsert_headphone_profile` is for metadata-only edits.
 4. Set `suggestedTargetCurveId` to `harman-neutral` unless the evidence clearly points elsewhere.
-5. Create a saved model baseline preset with `create_eq_preset`, including the returned `measuredCorrection` for the Auralink software target when available.
+5. Registration preserves `measuredCorrection` when available. Optional `preferenceBands` are saved as a separate tuning that references the baseline; they never become part of the pure baseline.
 6. Name the baseline clearly, for example `Sennheiser HD600 - AutoEq (oratory1990)` or `TimeEar NH60 - Harman Baseline` when no measurement exists.
 7. Use tags: `ai`, `baseline`, profile id, and evidence type such as `autoeq`, `measured`, `community`, or `estimated`.
 8. If the source contains a long subtitle, translation artifact, or alias, keep the visible `brand` and `model` clean. Put aliases and caveats in `source` or notes only.
@@ -33,14 +33,14 @@ Before any sound change, call **`get_tuning_brief`** with the headphone (and the
 
 Use this when the user asks for a sound change after a model/baseline exists: warmer, more exciting, smoother, less sibilant, more vocal, more bass, better rock, and similar.
 
-1. Call `get_tuning_brief` for the headphone. If `recommendation.situation` is `has_baseline`, layer your preference moves on top of `baselinePreset.bands`; if it is `matches_but_no_baseline`, build on `bestAvailablePreset.bands` but recommend creating a measured baseline via `get_autoeq_correction`. Honor `userPreferences.derivedNotes` — avoid the things the user repeatedly dislikes and lean into what they like.
-2. Create a small variation using explicit bands. Preserve the baseline's `measuredCorrection` unchanged and mark only the new subjective slots in `preferenceBandIndexes`; Measured FIR renders the dense baseline and those preference bands, not the baseline PEQ twice.
-3. Audition it live with `audition_eq_preset` when the user asked to hear the change.
-4. Do not save each experiment.
-5. **Record the user's reaction with `record_tuning_feedback`** (sentiment + perceivedIssue + their words + a snapshot of the auditioned bands) for every audition they react to — liked or disliked. This is the taste-memory that makes future tunings converge.
-6. If the user says "좋아", "맘에 들어", "저장해줘", "keep this", or equivalent, call `save_current_preset` with a descriptive name (and record a `liked` feedback entry).
+1. Call `get_tuning_brief` for the headphone. Register a pure baseline with `register_headphone_baseline` if it is missing. Honor the user's recorded likes and dislikes.
+2. Call `create_preference_tuning` with the baseline id and subjective bands only. It preserves the baseline's PEQ and measured FIR payload, allocates free slots, validates and automatically saves to the working library and collection. Do not ask separately whether to save.
+3. Omit `id` for a new variation. Supply a preference tuning id to revise that variation using the complete desired preference layer. Keep unrelated existing preference moves when refining a tuning.
+4. Verify the combined response with `get_response_curve`, then use `apply_eq_preset` when the user requested listening. Only report audible changes after verification.
+5. Record actual user reactions with `record_tuning_feedback`; automatic saving alone is not evidence that the user liked the result.
+6. Delete unwanted variations with `delete_preset`. Only use `audition_eq_preset` when the user explicitly wants an unsaved trial.
 
-Preference presets are audition-first, save-on-like, and every reaction feeds the taste-memory read back by `get_tuning_brief` and `get_user_tuning_preferences`.
+“Flat” here means a device baseline toward the documented measurement target, not zero-gain bypass or guaranteed acoustically flat playback. Keep estimated corrections labeled as estimates. Registration preserves an existing pure baseline; it does not silently retune it.
 
 ### Use The Luxsin X8 Hardware Target
 
@@ -226,7 +226,7 @@ When proposing an EQ, structure your internal result like this before calling to
     }
   ],
   "safetyNotes": ["No automatic attenuation for this audition; monitor clipping."],
-  "savePolicy": "audition_only_until_user_likes_it"
+  "savePolicy": "automatically_save_requested_tunings"
 }
 ```
 
@@ -237,6 +237,6 @@ When proposing an EQ, structure your internal result like this before calling to
 - Do not use large high-Q boosts.
 - Do not apply or audition live without an explicit user request.
 - Do not tell the user sound changed if routing is bypassed for Auralink, or if X8 apply/select did not succeed for `target:"luxsin-x8"`.
-- Do not save preference experiments unless the user likes them or asks to save.
+- Do not overwrite a device baseline with subjective tuning; save a separate preference preset.
 - Do not keep a mistaken translated model suffix in the visible model list after the user calls it out.
 - Do not send direct X8 CGI writes from an agent workflow; use MCP `target:"luxsin-x8"` so discovery, 10-band safety padding, active-entry restoration, and no-device handling are applied.

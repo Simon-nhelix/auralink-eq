@@ -41,12 +41,13 @@ rollback tools require the app.
 | `delete_headphone_profile` | write | Deletes a profile from the collection. |
 | `list_presets` | read | Working library + collection presets, flagged with `inCollection` (offline). |
 | `get_preset` | read | One full preset by id (offline). |
-| `add_preset_to_collection` | write | Copies a preset into the user's collection. Ask first. |
+| `add_preset_to_collection` | write | Copies an existing working preset into the collection; requested tunings are already saved automatically. |
 | `remove_preset_from_collection` | write | Drops a collection entry, keeping the working copy. |
 | `delete_preset` | write | Deletes a local preset and refreshes the app when online. |
-| `create_eq_preset` | write | **Validates before writing**; never touches live audio unless explicitly asked with `applyNow:true` + `confirmed:true`. |
+| `create_preference_tuning` | write | Copies a pure baseline, adds subjective bands, and automatically saves a separate tuning to library + collection. |
+| `create_eq_preset` | write | **Validates before writing**, automatically saves to library + collection; never touches live audio unless explicitly asked with `applyNow:true` + `confirmed:true`. |
 | `audition_eq_preset` | **live** | Applies an unsaved, validated preset temporarily after confirmation. |
-| `register_headphone_baseline` | write | One-shot headphone registration: upserts the profile and saves its measured/explicit baseline into the collection. |
+| `register_headphone_baseline` | write | One-shot headphone registration: upserts the profile and saves its pure measured/explicit baseline into the collection, plus a separate tuning if preference bands are provided. |
 | `get_autoeq_correction` | network read | Fetches/caches measured AutoEq PEQ and GraphicEQ data with provenance. |
 | `get_response_curve` | read | Computes the combined left/right response before auditioning. |
 | `validate_eq_preset` | read | Offline safety + clipping check for an id or inline bands. |

@@ -152,7 +152,7 @@ Two roots, with different owners — see `AuralinkPaths.swift`:
   the control token into an issue or config file.
 - `~/auralink-collection` (override with `AURALINK_COLLECTION_DIR`) is **your**
   headphone profiles and curated presets. Auralink never ships content here and only
-  writes to it when you ask. It is meant to be a git repository you own — see
+  writes requested device baselines and MCP tunings there automatically. It is meant to be a git repository you own — see
   [docs/DATA_COLLECTION.md](docs/DATA_COLLECTION.md).
 
 ---

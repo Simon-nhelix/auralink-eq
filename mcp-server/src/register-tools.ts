@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { buildPreferenceTuning, isPureBaseline } from "./preference-tuning.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -135,7 +137,7 @@ export function registerTools(server: McpServer): void {
       title: "Get agent EQ guide",
       description:
         "Returns the agent-facing EQ tuning guide. Use this before interpreting links, adding headphones, " +
-        "creating Harman baselines, auditioning preference changes, or saving liked variations.",
+        "creating device baselines, automatically saving preference changes, or deleting unwanted tunings.",
       inputSchema: {
         includeLiveState: z
           .boolean()
@@ -151,18 +153,19 @@ export function registerTools(server: McpServer): void {
         guide,
         recommendedToolFlow: {
           addModel: [
-            "upsert_headphone_profile",
-            "create_eq_preset with goal='Harman baseline' and tags including baseline/harman-neutral",
+            "register_headphone_baseline (automatically saves a separate pure device baseline)",
           ],
-          auditionPreference: [
-            "audition_eq_preset with confirmed:true only when the user asked to hear it",
-            "save_current_preset only if the user likes it or asks to save",
+          tunePreference: [
+            "get_tuning_brief to find the device baseline",
+            "create_preference_tuning (automatically saves the preference variation)",
+            "apply_eq_preset with confirmed:true when the user asked to hear it",
           ],
+          removeTuning: ["list_presets", "delete_preset for the user-selected id"],
           savedPresetApply: ["apply_eq_preset for an existing saved preset"],
         },
         defaultPolicy: {
           baselineTarget: "harman-neutral",
-          preferenceSavePolicy: "audition_only_until_user_likes_it",
+          preferenceSavePolicy: "automatically_save_requested_tunings",
           auditionAutoGain: false,
           auditionPreampDb: 0,
         },
@@ -276,15 +279,15 @@ export function registerTools(server: McpServer): void {
           situation: "unknown_headphone",
           action:
             needle && !profile
-              ? `No profile or presets match '${needle}'. If the user is adding a model, gather brand/model/signature and call upsert_headphone_profile; for a known model call get_autoeq_correction first.`
-              : "No headphone was named and none could be inferred from the current preset. Ask which headphone/earphone the user means, or, if they are adding a model, gather brand/model/signature and call upsert_headphone_profile.",
+              ? `No profile or presets match '${needle}'. If the user is adding a model, gather brand/model/signature and call register_headphone_baseline; for a known model call get_autoeq_correction first.`
+              : "No headphone was named and none could be inferred from the current preset. Ask which headphone/earphone the user means, or, if they are adding a model, gather brand/model/signature and call register_headphone_baseline.",
         };
       } else if (recommendedBaseline) {
         recommendation = {
           situation: "has_baseline",
           action:
             `Start preference tuning from baseline '${recommendedBaseline.name}'. Layer small explicit bands ON TOP of its bands (don't rewrite them). ` +
-            `Verify the combined curve with get_response_curve, then audition_eq_preset only when the user asks to hear it.`,
+            `Use create_preference_tuning with this baseline id and only the subjective bands; it saves automatically. Verify with get_response_curve, then apply_eq_preset when the user asks to hear it.`,
           startFromPresetId: recommendedBaseline.id,
         };
       } else if (matchCount === 0) {
@@ -293,7 +296,7 @@ export function registerTools(server: McpServer): void {
           action:
             `No saved presets for '${needle}'` +
             (profile ? " (a profile exists, but no baseline preset)." : ".") +
-            ` Call get_autoeq_correction('${needle}') for the measured correction, then save a baseline with create_eq_preset (tags: baseline, harman-neutral).`,
+            ` Call get_autoeq_correction('${needle}') for the measured correction, then call register_headphone_baseline to save a separate device baseline.`,
         };
       } else {
         recommendation = {
@@ -348,7 +351,7 @@ export function registerTools(server: McpServer): void {
           "Honor userPreferences.derivedNotes: avoid the things they repeatedly dislike and lean into what they like.",
           "If recommendation.situation is 'has_baseline': design 3-8 small preference bands layered on top of baselinePreset.bands.",
           "Verify the combined curve with get_response_curve before auditioning.",
-          "Audition with audition_eq_preset only when the user explicitly asks to hear it; save with save_current_preset only when the user likes it.",
+          "Save preference changes automatically with create_preference_tuning, then apply_eq_preset when listening is requested. Delete unwanted variations with delete_preset.",
           "For descriptor-to-frequency mapping and band-design heuristics, call get_tuning_guidance.",
         ],
       });
@@ -610,7 +613,7 @@ export function registerTools(server: McpServer): void {
       description:
         "Creates or updates a headphone/earphone profile in the user's own collection. Use this after " +
         "the AI client has read a product page, review, measurement graph, or user notes and extracted a " +
-        "tonal signature. This writes one profile file only; it does not create or apply an EQ preset.",
+        "tonal signature. This metadata-only tool writes one profile file. For first registration use register_headphone_baseline, which also saves the device baseline.",
       inputSchema: {
         id: z
           .string()
@@ -818,16 +821,14 @@ export function registerTools(server: McpServer): void {
     }
   );
 
-  // add_preset_to_collection / remove_preset_from_collection — the only way a
-  // preset enters or leaves the user's own (often git-tracked) collection. There is
-  // deliberately no heuristic that promotes presets automatically.
+  // Explicit collection membership tools remain available for existing working presets.
   server.registerTool(
     "add_preset_to_collection",
     {
       title: "Add preset to your collection",
       description:
         "Copies a saved preset into the user's own collection directory so it is kept and shared " +
-        "(typically a git checkout). Ask before doing this: everything else stays machine-local. " +
+        "(typically a git checkout). Requested tunings already enter the collection automatically; use this for other working presets. " +
         "Does not change sound.",
       inputSchema: {
         id: z.string().min(1).describe("Preset id to add. Use list_presets to discover ids."),
@@ -908,7 +909,7 @@ export function registerTools(server: McpServer): void {
       title: "Delete preset",
       description:
         "Deletes a saved preset from the shared library. Use only when the user asks to remove a mistaken or unwanted preset. " +
-        "If the deleted preset is currently loaded, the app is moved back to Flat when reachable.",
+        "Removes both working and collection copies plus revisions. If currently loaded, attempts Flat subject to live-audio permission and reports whether it succeeded.",
       inputSchema: {
         id: z.string().min(1).describe("Preset id to delete."),
         confirmed: libraryWriteConfirmationSchema,
@@ -1011,6 +1012,56 @@ export function registerTools(server: McpServer): void {
     }
   );
 
+  server.registerTool(
+    "create_preference_tuning",
+    {
+      title: "Save preference tuning from a baseline",
+      description:
+        "Creates and automatically saves a device-specific preference tuning to the working library and collection. " +
+        "Pass ONLY subjective bands; the tool copies the saved baseline, preserves its measured FIR data, " +
+        "and allocates unused band slots. The baseline is never overwritten. Register the device with " +
+        "register_headphone_baseline first. Saving is part of a tuning request; no separate keep/save step is needed. " +
+        "Does not change live audio; use apply_eq_preset to hear the saved result. Delete unwanted tunings with delete_preset.",
+      inputSchema: {
+        baselinePresetId: z.string().min(1).describe("Pure baseline id from register_headphone_baseline or get_tuning_brief."),
+        name: z.string().min(1).describe("Tuning name, e.g. HD600 – Warm vocals."),
+        id: z.string().min(1).optional().describe("Omit for a new tuning. Supply an existing preference tuning id to revise it."),
+        goal: z.string().optional(),
+        bands: z.array(bandSpecSchema).min(1).max(20).describe("Subjective bands only; indexes are assigned to unused baseline slots automatically."),
+        preampDb: z.number().min(PREAMP_MIN).max(PREAMP_MAX).optional()
+          .describe("Optional preamp override; by default reserves additional headroom for preference boosts."),
+        confirmed: libraryWriteConfirmationSchema,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+    },
+    async ({ baselinePresetId, name, id, goal, bands, preampDb, confirmed }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ saved: false, ...denied });
+      const baseline = await getPreset(baselinePresetId);
+      if (!baseline) return errorResult("Baseline not found. Call register_headphone_baseline first.");
+      const existing = id ? await getPreset(id) : null;
+      if (existing && (existing.correction?.role !== "combined" || existing.correction.baselinePresetId !== baseline.id)) {
+        return errorResult("That id is not a preference tuning for this baseline. Omit id to create a new tuning.");
+      }
+      try {
+        const draft = buildPreferenceTuning(baseline, {
+          id, name, goal, bands: bands as NonNullable<RegisterHeadphoneBaselineInput["preferenceBands"]>, preampDb,
+        });
+        const validation = validatePreset(draft, await loadSafetyRules(), 48_000, "all");
+        if (!validation.ok) return jsonResult({ saved: false, validation });
+        const saved = await savePreset({ ...draft, safety: { autoGainEnabled: false, clippingRisk: validation.clippingRisk } });
+        const inCollection = (await addPresetToCollection(saved.id)) !== null;
+        const appPresetSync = await reloadPresets();
+        return jsonResult({
+          saved: true, inCollection, preset: saved, baselinePresetId, validation, appPresetSync,
+          note: "Tuning saved automatically. Live audio was not changed. Use apply_eq_preset to listen or delete_preset to remove it.",
+        });
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    }
+  );
+
   // 7. create_eq_preset — synthesize + VALIDATE before writing, optionally audition live.
   server.registerTool(
     "create_eq_preset",
@@ -1020,7 +1071,7 @@ export function registerTools(server: McpServer): void {
         "Creates (or updates, if 'id' matches an existing preset) an EQ preset from a list of band " +
         "specs and saves it to the shared library. The preset is ALWAYS validated against the safety " +
         "rules first; if validation finds an error it is NOT written and the issues are returned. " +
-        "Use this for saved baselines or user-approved presets, not every audition. Auto-preamp is applied only when autoGain is on. By default this only writes a preset file. " +
+        "Requested tunings are automatically saved to the working library and collection. For device preference changes prefer create_preference_tuning. Auto-preamp is applied only when autoGain is on. " +
         "Set applyNow:true with confirmed:true only when the user explicitly asked to hear it now.",
       inputSchema: {
         name: z.string().min(1).describe("Human-readable preset name, e.g. 'HD600 – Warm Rock'."),
@@ -1104,7 +1155,7 @@ export function registerTools(server: McpServer): void {
       const presetId =
         id && id.trim().length > 0
           ? id.trim()
-          : `preset_ai_${Date.now().toString(36)}`;
+          : `preset_ai_${randomUUID()}`;
 
       const draft: EQPreset = normalizePreset({
         id: presetId,
@@ -1155,7 +1206,12 @@ export function registerTools(server: McpServer): void {
         preampDb: autoGain ? validation.suggestedPreampDb : draft.preampDb,
         safety: { autoGainEnabled: autoGain, clippingRisk: validation.clippingRisk },
       };
+      const existing = await getPreset(presetId);
+      if (existing && isPureBaseline(existing) && !isPureBaseline(draft)) {
+        return errorResult("Preference tuning cannot overwrite a baseline. Omit id or use create_preference_tuning.");
+      }
       const saved = await savePreset(finalPreset);
+      const inCollection = (await addPresetToCollection(saved.id)) !== null;
       const appPresetSync = await reloadPresets();
       let liveApply: unknown = { applied: false, skipped: true };
 
@@ -1207,6 +1263,7 @@ export function registerTools(server: McpServer): void {
 
       return jsonResult({
         saved: true,
+        inCollection,
         preset: saved,
         validation,
         appPresetSync: appPresetSync.online
@@ -1236,7 +1293,7 @@ export function registerTools(server: McpServer): void {
     {
       title: "Audition EQ preset without saving",
       description:
-        "Applies an unsaved EQ preset to the running Auralink app for live listening. Use this for preference experiments. " +
+        "Applies an unsaved EQ preset to the running Auralink app for live listening. Use ONLY when the user explicitly requests a temporary unsaved trial; ordinary tuning uses create_preference_tuning then apply_eq_preset. " +
         "It validates before auditioning, does NOT write to the preset library, and requires confirmed:true for live audio changes.",
       inputSchema: {
         name: z.string().min(1).describe("Human-readable audition name, e.g. 'HD600 - Warmer Audition'."),
@@ -1468,7 +1525,7 @@ export function registerTools(server: McpServer): void {
         targetCurveId: z
           .string()
           .default("harman-neutral")
-          .describe("Target curve id stored on the profile/preset. Default harman-neutral."),
+          .describe("Target of the supplied correction. Default harman-neutral; AutoEq results are Harman and must not be relabeled as another target."),
         bands: z
           .array(bandSpecSchema)
           .optional()
@@ -1476,7 +1533,7 @@ export function registerTools(server: McpServer): void {
         preferenceBands: z
           .array(bandSpecSchema)
           .default([])
-          .describe("Optional subjective bands layered after the baseline bands (e.g. sub-bass shelf)."),
+          .describe("Optional subjective bands saved as a SEPARATE preference tuning. The pure baseline is saved first and preserved; indexes are assigned automatically."),
         preferenceLabel: z
           .string()
           .optional()
@@ -1584,7 +1641,7 @@ export function registerTools(server: McpServer): void {
           alternates: lookup.alternates,
           usage:
             "These bands are a measured correction toward the Harman target. Use them as the baseline for " +
-            "create_eq_preset (keep preampDb as given, autoGain:false — AutoEq already computed the headroom). " +
+            "register_headphone_baseline, which saves the device baseline automatically. For subsequent preference changes use create_preference_tuning. " +
             "For Auralink software EQ, copy measuredCorrection exactly so Measured FIR can reproduce the dense curve. " +
             "Keep the parametric bands as the IIR/Luxsin fallback, tag the source (e.g. 'autoeq', '" +
             c.source +

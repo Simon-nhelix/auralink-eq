@@ -9,6 +9,7 @@ import { registerTools } from "../dist/register-tools.js";
 import * as store from "../dist/store.js";
 
 const writes = [
+  ["create_preference_tuning", { baselinePresetId: "baseline_test", name: "Warm", bands: [{ frequencyHz: 80, gainDb: 1 }] }, "saved"],
   ["create_eq_preset", { id: "preset_test", name: "Edited", bands: [{ frequencyHz: 1000, gainDb: -2 }] }, "saved"],
   ["delete_preset", { id: "preset_test" }, "deleted"],
   ["add_preset_to_collection", { id: "preset_test" }, "added"],
@@ -53,7 +54,7 @@ async function withFixture(stateResponse, body) {
   const invoke = async (name, input) => {
     const { config, handler } = tools.get(name);
     const result = await handler(z.object(config.inputSchema).parse(input));
-    return JSON.parse(result.content[0].text);
+    return result.isError ? { isError: true, message: result.content[0].text } : JSON.parse(result.content[0].text);
   };
   try {
     await store.savePreset({
@@ -63,6 +64,13 @@ async function withFixture(stateResponse, body) {
       createdBy: "user", version: 1, tags: [], createdAt: "", updatedAt: "",
     });
     await store.addPresetToCollection("preset_test");
+    await store.savePreset({
+      ...(await store.getPreset("preset_test")), id: "baseline_test", headphone: "Test Can",
+      tags: ["baseline", "harman-neutral"],
+      correction: { role: "baseline", correctionStrength: 1, targetBlend: 1,
+        sourceConfidence: "measured", preferenceBandIndexes: [], targetCurveId: "harman-neutral" },
+    });
+    await store.addPresetToCollection("baseline_test");
     await store.saveHeadphoneProfile({
       id: "test-can", brand: "Test", model: "Can", type: "iem",
       signature: "Original", source: "test", credibility: "estimated",
@@ -142,9 +150,67 @@ test("read-only also blocks create-and-apply before writing or contacting a live
 
 test("offline reads and validation remain available", async () => {
   await withFixture(() => { throw new Error("offline"); }, async ({ invoke, requests }) => {
-    assert.equal((await invoke("list_presets", {})).count, 1);
+    assert.equal((await invoke("list_presets", {})).count, 2);
     const validation = await invoke("validate_eq_preset", { id: "preset_test" });
     assert.equal(validation.validation.ok, true);
     assert.deepEqual(requests, []);
+  });
+});
+
+
+test("preference create, revise and delete preserves baseline and removes every tuning copy", async () => {
+  await withFixture(state("allow_preset_creation"), async ({ invoke }) => {
+    const before = await store.getPreset("baseline_test");
+    const created = await invoke("create_preference_tuning", {
+      baselinePresetId: before.id, name: "Warm", bands: [{ index: 1, frequencyHz: 80, gainDb: 1 }],
+    });
+    assert.equal(created.saved, true);
+    assert.equal(created.inCollection, true);
+    assert.deepEqual(created.preset.bands[0], before.bands[0]);
+    assert.deepEqual(created.preset.correction.preferenceBandIndexes, [2]);
+    assert.equal(created.preset.preampDb, before.preampDb - 1);
+    const brief = await invoke("get_tuning_brief", { headphone: "Test Can" });
+    assert.equal(brief.recommendation.startFromPresetId, before.id);
+    const revised = await invoke("create_preference_tuning", {
+      baselinePresetId: before.id, id: created.preset.id, name: "Warm revised",
+      bands: [{ frequencyHz: 80, gainDb: 2 }],
+    });
+    assert.equal(revised.preset.version, 2);
+    assert.deepEqual(await store.getPreset(before.id), before);
+    assert.equal((await invoke("delete_preset", { id: created.preset.id })).deleted, true);
+    assert.equal(await store.getPreset(created.preset.id), null);
+    assert.equal((await store.collectionPresetIds()).includes(created.preset.id), false);
+    await assert.rejects(fs.access(path.join(store.revisionsDir(), created.preset.id)));
+    assert.deepEqual(await store.getPreset(before.id), before);
+    assert.equal((await invoke("delete_preset", { id: created.preset.id })).deleted, false);
+  });
+});
+
+test("generic MCP creation automatically enters collection without applying live audio", async () => {
+  await withFixture(state("allow_preset_creation"), async ({ invoke, requests }) => {
+    const result = await invoke("create_eq_preset", {
+      name: "Generic", bands: [{ frequencyHz: 800, gainDb: -1 }],
+    });
+    assert.equal(result.saved, true);
+    assert.equal(result.inCollection, true);
+    assert.ok((await store.collectionPresetIds()).includes(result.preset.id));
+    assert.equal(requests.includes("/apply"), false);
+    assert.equal(requests.includes("/audition-preset"), false);
+  });
+});
+
+test("preference writes cannot overwrite a baseline or tune another variation as a baseline", async () => {
+  await withFixture(state("full_control"), async ({ invoke }) => {
+    const before = await store.getPreset("baseline_test");
+    const input = { name: "Bad", bands: [{ frequencyHz: 80, gainDb: 1 }] };
+    for (const [tool, args] of [
+      ["create_preference_tuning", { ...input, baselinePresetId: before.id, id: before.id }],
+      ["create_preference_tuning", { ...input, baselinePresetId: "preset_test" }],
+      ["create_eq_preset", { ...input, id: before.id }],
+    ]) {
+      const result = await invoke(tool, args);
+      assert.notEqual(result.saved, true);
+    }
+    assert.deepEqual(await store.getPreset(before.id), before);
   });
 });
