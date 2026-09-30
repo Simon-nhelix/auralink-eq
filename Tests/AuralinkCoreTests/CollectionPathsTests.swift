@@ -166,6 +166,17 @@ final class CollectionPathsTests: XCTestCase {
         }
     }
 
+    func testMigrationNotNeededForPresetLeftOutOfPopulatedCollection() throws {
+        try withMigrationFixture(
+            legacyHeadphones: ["hd600"],
+            legacyPresets: ["preset_shared", "ai_test-preset"],
+            collectionHeadphones: ["hd600"],
+            collectionPresets: ["preset_shared"]
+        ) { result in
+            XCTAssertFalse(result, "A preset the user kept out of the collection must not re-prompt forever")
+        }
+    }
+
     func testMigrationNotNeededWhenAllIDsAreMigrated() throws {
         let profile = HeadphoneProfile(id: "done", brand: "B", model: "M", type: .iem, signature: "s")
         try withMigrationFixture(
