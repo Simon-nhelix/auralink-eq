@@ -25,6 +25,7 @@ async function withTempEnv(fn) {
   process.env.AURALINK_COLLECTION_DIR = collection;
   process.env.AURALINK_USER_DATA_DIR = userData;
   process.env.AURALINK_PRESETS_DIR = presets;
+  process.env.AURALINK_REVISIONS_DIR = path.join(tmp, "revisions");
   process.env.AURALINK_DATA_DIR = data;
 
   try {

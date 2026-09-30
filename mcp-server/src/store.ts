@@ -529,7 +529,25 @@ export async function removePresetFromCollection(id: string): Promise<boolean> {
  * `updatedAt` (and `createdAt` for brand-new presets). Returns the saved preset.
  * The on-disk shape matches the Swift encoder so the app reads it without fuss.
  */
+const pendingPresetSaves = new Map<string, Promise<EQPreset>>();
+
 export async function savePreset(preset: EQPreset): Promise<EQPreset> {
+  const id = requireRecordId(preset.id);
+  const key = presetFilePath(id);
+  const persist = () => persistPreset({ ...preset, id });
+  // MCP requests can overlap. Keep each read/snapshot/write sequence ordered
+  // so two saves do not reuse the same version and destroy its revision.
+  const previous = pendingPresetSaves.get(key);
+  const pending = previous ? previous.then(persist, persist) : persist();
+  pendingPresetSaves.set(key, pending);
+  try {
+    return await pending;
+  } finally {
+    if (pendingPresetSaves.get(key) === pending) pendingPresetSaves.delete(key);
+  }
+}
+
+async function persistPreset(preset: EQPreset): Promise<EQPreset> {
   await ensureDir(presetsDir());
   const now = new Date().toISOString();
   const existing = await getPreset(preset.id);
@@ -546,6 +564,17 @@ export async function savePreset(preset: EQPreset): Promise<EQPreset> {
           : now,
     updatedAt: now,
   };
+
+  if (existing) {
+    // Same layout as Swift PresetStore: rollback reads revisions/<id>/vN.json.
+    // Preserve the old state before replacing it; a failed snapshot aborts save.
+    const revisionDirectory = path.join(revisionsDir(), requireRecordId(saved.id));
+    await ensureDir(revisionDirectory);
+    await atomicWriteFile(
+      path.join(revisionDirectory, `v${existing.version}.json`),
+      stableStringify(existing)
+    );
+  }
 
   // Working directory only. Getting into the user's collection takes an explicit
   // `addPresetToCollection`.

@@ -32,6 +32,7 @@ async function withTempEnv(fn) {
   process.env.AURALINK_COLLECTION_DIR = collection;
   process.env.AURALINK_USER_DATA_DIR = userData;
   process.env.AURALINK_PRESETS_DIR = presets;
+  process.env.AURALINK_REVISIONS_DIR = path.join(tmp, "revisions");
   process.env.AURALINK_DATA_DIR = data;
 
   try {
@@ -161,6 +162,57 @@ test("savePreset writes only the working copy, never the collection", async () =
       fs.access(path.join(collection, "presets", "ai_test-can-one_harman-neutral.json"))
     );
     assert.deepEqual(await store.collectionPresetIds(), []);
+  });
+});
+
+test("overwriting a preset preserves every previous version for Swift rollback", async () => {
+  await withTempEnv(async (store, { tmp }) => {
+    const first = await store.savePreset(samplePreset(store));
+    const second = await store.savePreset({ ...first, name: "Second", preampDb: -4 });
+    const third = await store.savePreset({ ...second, name: "Third", preampDb: -6 });
+    assert.equal(third.version, 3);
+    assert.equal(third.createdAt, first.createdAt);
+    const revisions = path.join(tmp, "revisions", first.id);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v1.json"), "utf8")), JSON.parse(JSON.stringify(first)));
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v2.json"), "utf8")), JSON.parse(JSON.stringify(second)));
+    assert.deepEqual(await store.getPreset(first.id), third);
+  });
+});
+
+test("editing a collection-only preset snapshots its version without changing the collection", async () => {
+  await withTempEnv(async (store, { tmp, collection }) => {
+    const original = samplePreset(store, { version: 7, createdAt: "2026-01-01T00:00:00Z" });
+    const file = path.join(collection, "presets", `${original.id}.json`);
+    const contents = JSON.stringify(original);
+    await fs.writeFile(file, contents);
+    const saved = await store.savePreset({ ...original, name: "Edited" });
+    assert.equal(saved.version, 8);
+    assert.equal(saved.createdAt, original.createdAt);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(tmp, "revisions", original.id, "v7.json"), "utf8")), JSON.parse(JSON.stringify(original)));
+    assert.equal(await fs.readFile(file, "utf8"), contents);
+  });
+});
+
+test("snapshot failure leaves the working preset unchanged", async () => {
+  await withTempEnv(async (store, { tmp, presets }) => {
+    const first = await store.savePreset(samplePreset(store));
+    const file = path.join(presets, `${first.id}.json`);
+    const contents = await fs.readFile(file, "utf8");
+    await fs.writeFile(path.join(tmp, "revisions"), "blocks the revision directory");
+    await assert.rejects(store.savePreset({ ...first, name: "Must not overwrite" }));
+    assert.equal(await fs.readFile(file, "utf8"), contents);
+  });
+});
+
+test("concurrent MCP saves allocate separate revisions", async () => {
+  await withTempEnv(async (store, { tmp }) => {
+    const original = samplePreset(store);
+    const saved = await Promise.all(["One", "Two", "Three"].map(name => store.savePreset({ ...original, name })));
+    assert.deepEqual(saved.map(p => p.version), [1, 2, 3]);
+    const revisions = path.join(tmp, "revisions", original.id);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v1.json"), "utf8")), JSON.parse(JSON.stringify(saved[0])));
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v2.json"), "utf8")), JSON.parse(JSON.stringify(saved[1])));
+    assert.deepEqual(await store.getPreset(original.id), saved[2]);
   });
 });
 
