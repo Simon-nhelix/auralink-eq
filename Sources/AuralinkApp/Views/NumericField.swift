@@ -12,6 +12,8 @@ struct NumericField: View {
     let step: Double
     let format: (Double) -> String
     let width: CGFloat
+    /// Draws the value in a recessed well (the selected table row).
+    var emphasized = false
     let enabled: Bool
     let onCommit: (Double) -> Void
 
@@ -45,6 +47,13 @@ struct NumericField: View {
                 .disabled(!enabled)
                 .opacity(enabled ? 1 : 0.4)
         }
+        .padding(.leading, 8)
+        .padding(.trailing, 2)
+        .frame(height: 24)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Metrics.radiusXs, style: .continuous)
+                .fill(emphasized || focused ? Theme.Palette.inset : Color.clear)
+        )
         .frame(width: width, alignment: .trailing)
         // Keep the displayed text synced to the model when not actively editing.
         .onChange(of: value) { _, newValue in

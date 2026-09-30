@@ -91,7 +91,7 @@ struct AITuningPanelView: View {
 
             if let curve = selectedCurve {
                 HStack(spacing: 6) {
-                    AuraTag(L10n.text(curve.category.displayName), tint: Theme.Palette.auraViolet)
+                    AuraTag(L10n.text(curve.category.displayName))
                     Spacer(minLength: 0)
                 }
                 Text(curve.description)
@@ -107,8 +107,8 @@ struct AITuningPanelView: View {
     private var strengthSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             inspectorHeading(L10n.text("Strength"), systemImage: "gauge.with.dots.needle.33percent")
-            strengthRow(L10n.text("Correction"), value: $correctionStrength, tint: Theme.Palette.auraBlue)
-            strengthRow(L10n.text("Target blend"), value: $targetBlend, tint: Theme.Palette.auraViolet)
+            strengthRow(L10n.text("Correction"), value: $correctionStrength, tint: Theme.Palette.accent)
+            strengthRow(L10n.text("Target blend"), value: $targetBlend, tint: Theme.Palette.accent)
         }
     }
 
@@ -201,7 +201,7 @@ struct AITuningPanelView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(AuraButtonStyle(prominent: true, role: .ai))
+        .buttonStyle(AuraButtonStyle(prominent: true))
         .disabled(model.isTuning)
     }
 
@@ -212,7 +212,7 @@ struct AITuningPanelView: View {
                     model.makeWarmer()
                 } label: {
                     Text(L10n.text("Warmer"))
-                        .foregroundStyle(Theme.Palette.auraViolet)
+                        .foregroundStyle(Theme.Palette.accent)
                 }
                 .buttonStyle(.plain)
 
@@ -220,7 +220,7 @@ struct AITuningPanelView: View {
                     model.reduceHarshness()
                 } label: {
                     Text(L10n.text("Reduce harshness"))
-                        .foregroundStyle(Theme.Palette.auraViolet)
+                        .foregroundStyle(Theme.Palette.accent)
                 }
                 .buttonStyle(.plain)
                 Spacer(minLength: 0)

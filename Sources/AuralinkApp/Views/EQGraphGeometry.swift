@@ -18,17 +18,22 @@ enum EQGraphGeometry {
     static let minDb: Double = -18
     static let maxDb: Double = 18
 
-    /// Frequency gridlines (decade marks + a few helpers) and which get labels.
+    /// Frequency gridlines (decade marks + a few helpers). Decades draw a
+    /// stronger line; labels sit at their true log positions.
     static let freqGrid: [Double] = [20, 30, 50, 100, 200, 300, 500,
                                     1_000, 2_000, 3_000, 5_000,
                                     10_000, 20_000]
-    static let freqLabels: [Double: String] = [
-        100: "100", 1_000: "1k", 10_000: "10k", 20_000: "20k"
+    static let majorFreqs: Set<Double> = [100, 1_000, 10_000]
+    static let freqLabels: [(hz: Double, text: String)] = [
+        (20, "20"), (50, "50"), (100, "100"), (200, "200"), (500, "500"),
+        (1_000, "1k"), (2_000, "2k"), (5_000, "5k"), (10_000, "10k"), (20_000, "20k")
     ]
     static let dbGrid: [Double] = [-18, -12, -6, 0, 6, 12, 18]
 
     /// Inner plotting inset so axis labels have room and nodes never clip.
-    static let inset = EdgeInsets(top: 42, leading: 34, bottom: 20, trailing: 14)
+    /// The graph header sits above the plot, so the top inset only keeps the
+    /// +18 dB nodes clear of the card edge.
+    static let inset = EdgeInsets(top: 12, leading: 40, bottom: 26, trailing: 16)
 
     // MARK: Plot rect
 

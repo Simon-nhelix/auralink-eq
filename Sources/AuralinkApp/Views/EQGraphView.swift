@@ -3,7 +3,7 @@ import SwiftUI
 import AuralinkCore
 
 /// The centerpiece of the full editor: a live, log-frequency EQ response graph
-/// with 20 draggable band nodes drawn over the filled "aura" response curve.
+/// with 20 draggable band nodes over the response curve.
 ///
 /// Coordinate model
 /// ----------------
@@ -14,6 +14,8 @@ import AuralinkCore
 /// inverses) so the curve, the gridlines, and the nodes stay perfectly aligned.
 /// Editing is committed back through `model.updateBand`, which re-derives
 /// `model.responseCurve`, so the curve always reflects the true DSP magnitude.
+/// That magnitude includes the preamp while the nodes sit at their band gain,
+/// so a dotted preamp line marks the level the curve is offset to.
 struct EQGraphView: View {
 
     @EnvironmentObject var model: AppModel
@@ -25,101 +27,124 @@ struct EQGraphView: View {
 
     var body: some View {
         AuraCard(padding: 0) {
-            GeometryReader { geo in
-                let plot = EQGraphGeometry.plotRect(in: geo.size)
-                ZStack {
-                    // Background plate gradient for depth.
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radius, style: .continuous)
-                        .fill(Theme.Palette.surface)
+            VStack(spacing: 0) {
+                header
 
-                    // The static grid + axis labels.
-                    Canvas { ctx, _ in
-                        drawGrid(ctx, plot: plot)
-                    }
-
-                    // The "before" comparison curve, drawn faintly behind.
-                    if model.comparingBefore, let before = model.beforeSnapshot {
+                GeometryReader { geo in
+                    let plot = EQGraphGeometry.plotRect(in: geo.size)
+                    ZStack {
+                        // The static grid + axis labels.
                         Canvas { ctx, _ in
-                            drawBeforeCurve(ctx, preset: before, plot: plot)
+                            drawGrid(ctx, plot: plot)
                         }
-                    }
 
-                    // Baseline vs preference contribution, when the current preset
-                    // was layered over a known baseline correction.
-                    if let baseline = model.currentBaselinePreset {
+                        // The "before" comparison curve, drawn faintly behind.
+                        if model.comparingBefore, let before = model.beforeSnapshot {
+                            Canvas { ctx, _ in
+                                drawBeforeCurve(ctx, preset: before, plot: plot)
+                            }
+                        }
+
+                        // Baseline vs preference contribution, when the current preset
+                        // was layered over a known baseline correction.
+                        if let baseline = model.currentBaselinePreset {
+                            Canvas { ctx, _ in
+                                drawContributionCurves(ctx, baseline: baseline, plot: plot)
+                            }
+                        }
+
+                        // Preamp level and the live response curve.
                         Canvas { ctx, _ in
-                            drawContributionCurves(ctx, baseline: baseline, plot: plot)
+                            drawPreampLine(ctx, plot: plot)
+                            drawResponseCurve(ctx, plot: plot)
                         }
-                    }
 
-                    // The live aura response curve (fill + glow stroke).
-                    Canvas { ctx, _ in
-                        drawResponseCurve(ctx, plot: plot)
-                    }
+                        // Scroll-wheel catcher: adjusts the selected band's Q/slope.
+                        ScrollQAdjuster { deltaY in
+                            adjustSelectedQ(byScroll: deltaY)
+                        }
+                        .allowsHitTesting(true)
 
-                    // Scroll-wheel catcher: adjusts the selected band's Q/slope.
-                    ScrollQAdjuster { deltaY in
-                        adjustSelectedQ(byScroll: deltaY)
-                    }
-                    .allowsHitTesting(true)
+                        // Interactive node layer (drag / select / Q/slope via modifier-drag).
+                        nodeLayer(plot: plot)
 
-                    // Interactive node layer (drag / select / Q/slope via modifier-drag).
-                    nodeLayer(plot: plot)
+                        selectedBandCallout(plot: plot)
+                    }
+                    .contentShape(Rectangle())
+                    .clipped()
                 }
-                .contentShape(Rectangle())
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.radius, style: .continuous))
             }
         }
-        .overlay(alignment: .topLeading) { headerOverlay }
         .frame(minHeight: Theme.Layout.Editor.graphMinHeight)
     }
 
-    // MARK: - Header chrome
+    // MARK: - Header
 
-    private var headerOverlay: some View {
-        HStack(spacing: 8) {
-            SectionLabel(L10n.text("Frequency Response"))
-            AuraTag(model.currentPreset.name, tint: Theme.Palette.auraBlue)
-            AuraTag(L10n.format("%lld bands", model.currentPreset.activeBands.count), tint: model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent)
-            if let role = model.currentCorrectionRoleText {
-                AuraTag(role, tint: Theme.Palette.auraViolet)
+    /// Title, tags, and the curve controls. Falls back to fewer tags and a
+    /// compact control strip at the editor's minimum width.
+    private var header: some View {
+        ViewThatFits(in: .horizontal) {
+            headerRow(showTags: true, compactControls: false)
+            headerRow(showTags: false, compactControls: false)
+            headerRow(showTags: false, compactControls: true)
+        }
+        .padding(.horizontal, Theme.Metrics.pad)
+        .frame(height: Theme.Layout.Editor.graphHeaderHeight)
+    }
+
+    private func headerRow(showTags: Bool, compactControls: Bool) -> some View {
+        let activeCount = model.currentPreset.activeBands.count
+        return HStack(spacing: 8) {
+            Text(L10n.text("Frequency Response"))
+                .font(Theme.Typo.bodyStrong)
+                .foregroundStyle(Theme.Palette.textPrimary)
+                .fixedSize()
+            if showTags {
+                AuraTag(
+                    L10n.format("%lld bands", activeCount),
+                    tint: activeCount == 0 ? Theme.Palette.textTertiary : Theme.Palette.textSecondary
+                )
+                if let role = model.currentCorrectionRoleText {
+                    AuraTag(role)
+                }
             }
-            Spacer()
             if model.comparingBefore {
                 AuraTag(L10n.text("Comparing: Before"), tint: Theme.Palette.warning)
             }
-            if let i = model.selectedBandIndex,
-               let band = band(at: i) {
-                AuraTag(L10n.format("Band %@ · %@ · %@ %@", String(band.index), String(Fmt.hz(band.frequencyHz)), L10n.text(band.type.qShortName), String(Fmt.q(band.q))),
-                        tint: tint(for: band.channel))
-            }
+            Spacer(minLength: 12)
+            GraphControlStrip(compact: compactControls)
         }
-        .padding(.horizontal, Theme.Metrics.pad)
-        .padding(.top, Theme.Metrics.padSm)
-        .allowsHitTesting(false)
     }
 
     // MARK: - Grid
 
     private func drawGrid(_ ctx: GraphicsContext, plot: CGRect) {
-        // Vertical frequency lines.
+        // Vertical frequency lines: decades stronger than the helpers.
         for hz in EQGraphGeometry.freqGrid {
             let x = EQGraphGeometry.xFor(hz: hz, in: plot)
             var line = Path()
             line.move(to: CGPoint(x: x, y: plot.minY))
             line.addLine(to: CGPoint(x: x, y: plot.maxY))
-            let isLabeled = EQGraphGeometry.freqLabels[hz] != nil
+            let isMajor = EQGraphGeometry.majorFreqs.contains(hz)
             ctx.stroke(
                 line,
-                with: .color(isLabeled ? Theme.Palette.line : Theme.Palette.lineSoft),
+                with: .color(isMajor ? Theme.Palette.line : Theme.Palette.lineSoft),
                 lineWidth: 1
             )
-            if let label = EQGraphGeometry.freqLabels[hz] {
-                let text = Text(label)
-                    .font(Theme.Typo.caption)
-                    .foregroundStyle(Theme.Palette.textTertiary)
-                ctx.draw(text, at: CGPoint(x: x, y: plot.maxY + 9), anchor: .center)
-            }
+        }
+
+        // Frequency labels at their true log positions; the end labels align
+        // inward so they stay inside the plot.
+        let labels = EQGraphGeometry.freqLabels
+        for (offset, label) in labels.enumerated() {
+            let x = EQGraphGeometry.xFor(hz: label.hz, in: plot)
+            let anchor: UnitPoint = offset == 0 ? .topLeading
+                : offset == labels.count - 1 ? .topTrailing
+                : .top
+            let text = Text(label.text)
+                .font(Theme.Typo.micro)
+                .foregroundStyle(Theme.Palette.textTertiary)
+            ctx.draw(text, at: CGPoint(x: x, y: plot.maxY + 7), anchor: anchor)
         }
 
         // Horizontal dB lines.
@@ -134,19 +159,29 @@ struct EQGraphView: View {
                 with: .color(isZero ? Theme.Palette.line : Theme.Palette.lineSoft),
                 lineWidth: isZero ? 1.4 : 1
             )
-            let text = Text(db == 0 ? "0" : String(format: "%+d", Int(db)))
-                .font(Theme.Typo.caption)
+            let text = Text(dbLabel(db))
+                .font(Theme.Typo.micro)
                 .foregroundStyle(Theme.Palette.textTertiary)
-            ctx.draw(text, at: CGPoint(x: plot.minX - 6, y: y), anchor: .trailing)
+            ctx.draw(text, at: CGPoint(x: plot.minX - 8, y: y), anchor: .trailing)
         }
+    }
+
+    /// "+6", "0", "−6" with a typographic minus.
+    private func dbLabel(_ db: Double) -> String {
+        if db == 0 { return "0" }
+        return db > 0 ? "+\(Int(db))" : "\u{2212}\(Int(-db))"
     }
 
     // MARK: - Curves
 
     /// Builds a smooth path through the response points (using the supplied
     /// curve), returning both the open stroke path and a closed fill path down
-    /// to the 0 dB baseline.
-    private func curvePaths(from points: [ResponsePoint], plot: CGRect) -> (stroke: Path, fill: Path) {
+    /// to `baseDb`.
+    private func curvePaths(
+        from points: [ResponsePoint],
+        plot: CGRect,
+        baseDb: Double = 0
+    ) -> (stroke: Path, fill: Path) {
         var stroke = Path()
         guard !points.isEmpty else { return (stroke, Path()) }
 
@@ -174,7 +209,7 @@ struct EQGraphView: View {
         }
 
         var fill = stroke
-        let baseY = EQGraphGeometry.yFor(db: 0, in: plot)
+        let baseY = EQGraphGeometry.yFor(db: baseDb, in: plot)
         if let last = pts.last, let first = pts.first {
             fill.addLine(to: CGPoint(x: last.x, y: baseY))
             fill.addLine(to: CGPoint(x: first.x, y: baseY))
@@ -183,34 +218,37 @@ struct EQGraphView: View {
         return (stroke, fill)
     }
 
+    /// Dotted line at the preamp level, which the response curve includes.
+    private func drawPreampLine(_ ctx: GraphicsContext, plot: CGRect) {
+        let preamp = model.currentPreset.preampDb
+        guard abs(preamp) >= 0.05 else { return }
+        let y = EQGraphGeometry.yFor(db: preamp, in: plot)
+        var line = Path()
+        line.move(to: CGPoint(x: plot.minX, y: y))
+        line.addLine(to: CGPoint(x: plot.maxX, y: y))
+        ctx.stroke(
+            line,
+            with: .color(Theme.Palette.textTertiary.opacity(0.8)),
+            style: StrokeStyle(lineWidth: 1, dash: [2, 4])
+        )
+        let label = Text("\(L10n.text("Preamp")) \(Fmt.db(preamp))")
+            .font(Theme.Typo.micro)
+            .foregroundStyle(Theme.Palette.textTertiary)
+        ctx.draw(label, at: CGPoint(x: plot.maxX - 4, y: y - 3), anchor: .bottomTrailing)
+    }
+
     private func drawResponseCurve(_ ctx: GraphicsContext, plot: CGRect) {
-        let (stroke, fill) = curvePaths(from: model.responseCurve, plot: plot)
-
-        // Filled area under the curve.
-        ctx.fill(fill, with: .linearGradient(
-            Gradient(colors: [
-                Theme.Palette.auraCyan.opacity(0.28),
-                Theme.Palette.auraViolet.opacity(0.02)
-            ]),
-            startPoint: CGPoint(x: plot.midX, y: plot.minY),
-            endPoint: CGPoint(x: plot.midX, y: plot.maxY)
-        ))
-
-        // Glow pass: a wide, soft, low-opacity stroke behind the crisp line.
-        var glow = ctx
-        glow.addFilter(.blur(radius: 6))
-        glow.stroke(stroke, with: .linearGradient(
-            Gradient(colors: [Theme.Palette.auraCyan, Theme.Palette.auraBlue, Theme.Palette.auraViolet]),
-            startPoint: CGPoint(x: plot.minX, y: plot.midY),
-            endPoint: CGPoint(x: plot.maxX, y: plot.midY)
-        ), lineWidth: 6)
-
-        // Crisp aura stroke.
-        ctx.stroke(stroke, with: .linearGradient(
-            Gradient(colors: [Theme.Palette.auraCyan, Theme.Palette.auraBlue, Theme.Palette.auraViolet]),
-            startPoint: CGPoint(x: plot.minX, y: plot.midY),
-            endPoint: CGPoint(x: plot.maxX, y: plot.midY)
-        ), lineWidth: 2.2)
+        let (stroke, fill) = curvePaths(
+            from: model.responseCurve,
+            plot: plot,
+            baseDb: model.currentPreset.preampDb
+        )
+        ctx.fill(fill, with: .color(Theme.Palette.accent.opacity(0.08)))
+        ctx.stroke(
+            stroke,
+            with: .color(Theme.Palette.accent),
+            style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+        )
     }
 
     private func drawBeforeCurve(_ ctx: GraphicsContext, preset: EQPreset, plot: CGRect) {
@@ -225,7 +263,7 @@ struct EQGraphView: View {
         let (stroke, _) = curvePaths(from: pts, plot: plot)
         ctx.stroke(
             stroke,
-            with: .color(Theme.Palette.textSecondary.opacity(0.35)),
+            with: .color(Theme.Palette.textSecondary.opacity(0.55)),
             style: StrokeStyle(lineWidth: 1.4, dash: [4, 4])
         )
     }
@@ -252,8 +290,8 @@ struct EQGraphView: View {
         let (baselineStroke, _) = curvePaths(from: baselineCurve, plot: plot)
         ctx.stroke(
             baselineStroke,
-            with: .color(Theme.Palette.textSecondary.opacity(0.32)),
-            style: StrokeStyle(lineWidth: 1.2, dash: [3, 5])
+            with: .color(Theme.Palette.textTertiary),
+            style: StrokeStyle(lineWidth: 1.25, dash: [5, 5])
         )
 
         let count = min(axis.count, currentCurve.count, baselineCurve.count)
@@ -267,7 +305,7 @@ struct EQGraphView: View {
         let (deltaStroke, _) = curvePaths(from: deltaCurve, plot: plot)
         ctx.stroke(
             deltaStroke,
-            with: .color(Theme.Palette.warning.opacity(0.72)),
+            with: .color(Theme.Palette.warning.opacity(0.7)),
             style: StrokeStyle(lineWidth: 1.1, dash: [8, 4])
         )
     }
@@ -289,32 +327,33 @@ struct EQGraphView: View {
                           y: EQGraphGeometry.yFor(db: gainForY, in: plot))
         let isSelected = model.selectedBandIndex == band.index
         let isHover = hoverBandIndex == band.index
-        let baseTint = tint(for: band.channel)
-        let tintColor = band.enabled ? baseTint : Theme.Palette.textTertiary
+        let tintColor = tint(for: band.channel)
 
         ZStack {
-            // Outer selection / hover ring.
+            // Selection / hover halo.
             Circle()
-                .stroke(tintColor.opacity(isSelected ? 0.9 : (isHover ? 0.5 : 0.0)),
-                        lineWidth: 2)
-                .frame(width: 24, height: 24)
+                .fill(Theme.Palette.accentSoft)
+                .frame(width: isSelected ? 30 : 24, height: isSelected ? 30 : 24)
+                .opacity(isSelected || isHover ? 1 : 0)
 
-            // The node disc.
-            Circle()
-                .fill(tintColor.opacity(band.enabled ? 0.9 : 0.4))
-                .frame(width: isSelected ? 15 : 12, height: isSelected ? 15 : 12)
-                .overlay(
-                    Circle().stroke(Theme.Palette.nodeOutline, lineWidth: 1)
-                )
-                .shadow(color: band.enabled ? tintColor.opacity(0.7) : .clear,
-                        radius: isSelected ? 7 : 4)
-
-            // Index label inside the node.
-            Text("\(band.index)")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(Theme.Palette.nodeLabel)
+            if band.enabled {
+                // Numbered disc: outlined at rest, filled when selected.
+                Circle()
+                    .fill(isSelected ? tintColor : Theme.Palette.surface)
+                    .overlay(Circle().strokeBorder(tintColor, lineWidth: 1.5))
+                    .frame(width: 18, height: 18)
+                Text("\(band.index)")
+                    .font(.system(size: 10, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(isSelected ? Theme.Palette.textOnAccent : tintColor)
+            } else {
+                // Disabled bands stay grabbable but recede to a small ring.
+                Circle()
+                    .strokeBorder(Theme.Palette.textTertiary, lineWidth: 1.25)
+                    .frame(width: 8, height: 8)
+                    .opacity(isSelected || isHover ? 0.9 : 0.55)
+            }
         }
-        .opacity(band.enabled ? 1.0 : 0.5)
         .position(pos)
         .contentShape(Circle().size(width: 28, height: 28).offset(x: pos.x - 14, y: pos.y - 14))
         .onHover { inside in
@@ -322,6 +361,50 @@ struct EQGraphView: View {
         }
         .gesture(dragGesture(for: band, plot: plot))
         .onTapGesture { model.selectedBandIndex = band.index }
+    }
+
+    /// Small readout pinned above (or below, near the top edge) the selected node.
+    @ViewBuilder
+    private func selectedBandCallout(plot: CGRect) -> some View {
+        if let index = model.selectedBandIndex, let band = band(at: index) {
+            let gainForY = band.type.usesGain ? band.gainDb : 0
+            let x = EQGraphGeometry.xFor(hz: band.frequencyHz, in: plot)
+            let y = EQGraphGeometry.yFor(db: gainForY, in: plot)
+            let above = y - 40 >= plot.minY
+            Text(calloutText(for: band))
+                .font(Theme.Typo.caption.weight(.medium))
+                .monospacedDigit()
+                .foregroundStyle(Theme.Palette.textPrimary)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 9)
+                .frame(height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Theme.Palette.raised)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .strokeBorder(Theme.Palette.line, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.10), radius: 6, y: 2)
+                )
+                .position(
+                    x: min(max(x, plot.minX + 120), plot.maxX - 120),
+                    y: above ? y - 28 : y + 28
+                )
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func calloutText(for band: EQBand) -> String {
+        let index = String(band.index)
+        let frequency = Fmt.hz(band.frequencyHz)
+        let shape = L10n.text(band.type.qShortName)
+        let q = Fmt.q(band.q)
+        if band.type.usesGain {
+            return L10n.format("Band %@ · %@ · %@ · %@ %@", index, frequency, Fmt.db(band.gainDb), shape, q)
+        }
+        return L10n.format("Band %@ · %@ · %@ %@", index, frequency, shape, q)
     }
 
     /// Dragging a node: plain drag maps X→frequency and Y→gain. Holding Option
@@ -370,9 +453,9 @@ struct EQGraphView: View {
 
     private func tint(for channel: BandChannel) -> Color {
         switch channel {
-        case .stereo: return Theme.Palette.nodeStereo
-        case .left:   return Theme.Palette.nodeLeft
-        case .right:  return Theme.Palette.nodeRight
+        case .stereo: return Theme.Palette.channelStereo
+        case .left:   return Theme.Palette.channelLeft
+        case .right:  return Theme.Palette.channelRight
         }
     }
 

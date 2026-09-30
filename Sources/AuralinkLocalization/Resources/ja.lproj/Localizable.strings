@@ -375,3 +375,11 @@
 "Downloading update…" = "アップデートをダウンロード中…";
 "Installing and restarting…" = "インストールして再起動中…";
 "Update available: %@" = "アップデート可能：%@";
+
+/* Appearance and redesigned editor chrome */
+"Appearance" = "外観";
+"System" = "システム設定";
+"Light" = "ライト";
+"Dark" = "ダーク";
+"Output device" = "出力デバイス";
+"Band %@ · %@ · %@ · %@ %@" = "バンド%@ · %@ · %@ · %@ %@";

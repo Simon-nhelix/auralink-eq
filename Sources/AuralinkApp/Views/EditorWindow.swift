@@ -4,10 +4,12 @@ import AuralinkCore
 
 /// The full parametric editor shell.
 ///
-/// Layout (per spec): a left/center column holding the top bar, the big EQ
-/// response graph, and the 20-band parameter table; and a fixed-width right
-/// rail that swaps between the Preset Library, the Headphone panel, and the AI
-/// Tuning panel via a segmented control bound to `model.rightPanel`.
+/// Layout: a unified toolbar holding identity (brand, preset) and routing
+/// (output, Start System EQ); a main column with the tune prompt, the EQ
+/// response graph (whose header carries the controls that change the curve),
+/// and the 20-band table; a fixed-width right rail that swaps between the
+/// Preset Library, the Headphone panel, AI Tuning, and the Monitor; and a
+/// quiet status bar with the audio-path readouts.
 ///
 /// When the AI proposes a tuning (`model.pendingProposal != nil`) the whole
 /// window is dimmed and the proposal review (`AIResultView`) floats on top, so
@@ -20,15 +22,12 @@ struct EditorWindow: View {
             Theme.Palette.bg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                TopBarView()
-                UpdateAvailableButton().padding(.horizontal, Theme.Metrics.pad)
-
                 HStack(spacing: 0) {
                     mainColumn
-                    Divider().overlay(Theme.Palette.line)
                     rightRail
                         .frame(width: Theme.Layout.Editor.rightRailWidth)
                 }
+                EditorStatusBar()
             }
 
             if model.pendingProposal != nil {
@@ -40,26 +39,39 @@ struct EditorWindow: View {
             minHeight: Theme.Layout.Editor.minHeight
         )
         .background(Theme.Palette.bg)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                EditorBrandAndPreset()
+            }
+            // With the window title hidden nothing separates the groups, so a
+            // spacer item (a flexible space in a macOS toolbar) pushes routing
+            // to the trailing edge.
+            ToolbarItem(placement: .automatic) {
+                Spacer()
+            }
+            ToolbarItem(placement: .automatic) {
+                EditorRouteControls()
+            }
+        }
+        .toolbarBackground(Theme.Palette.surface, for: .windowToolbar)
+        .toolbarBackground(.visible, for: .windowToolbar)
     }
 
     // MARK: Left / center column
 
     private var mainColumn: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: Theme.Metrics.pad) {
+            UpdateAvailableButton()
             TuneCommandBarView()
 
-            Divider().overlay(Theme.Palette.line)
+            EQGraphView()
+                .frame(minHeight: Theme.Layout.Editor.graphMinHeight, maxHeight: .infinity)
 
-            VStack(spacing: Theme.Metrics.gap) {
-                EQGraphView()
-                    .frame(minHeight: Theme.Layout.Editor.graphMinHeight, maxHeight: .infinity)
-
-                BandTableView()
-                    .frame(minHeight: Theme.Layout.Editor.bandTableMinHeight,
-                           maxHeight: Theme.Layout.Editor.bandTableMaxHeight)
-            }
-            .padding(Theme.Metrics.pad)
+            BandTableView()
+                .frame(minHeight: Theme.Layout.Editor.bandTableMinHeight,
+                       maxHeight: Theme.Layout.Editor.bandTableMaxHeight)
         }
+        .padding(Theme.Metrics.padLg)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -67,11 +79,13 @@ struct EditorWindow: View {
 
     private var rightRail: some View {
         VStack(spacing: 0) {
-            panelPicker
-                .padding(.horizontal, Theme.Metrics.padSm)
-                .padding(.vertical, 10)
-
-            Divider().overlay(Theme.Palette.line)
+            QuietSegmentedControl(
+                options: RightPanel.allCases,
+                selection: $model.rightPanel,
+                title: { $0.title }
+            )
+            .padding(.horizontal, Theme.Metrics.padLg)
+            .padding(.vertical, Theme.Metrics.pad)
 
             // The selected panel fills the remaining height.
             Group {
@@ -84,42 +98,12 @@ struct EditorWindow: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .background(Theme.Palette.surface)
-    }
-
-    private var panelPicker: some View {
-        HStack(spacing: 2) {
-            ForEach(RightPanel.allCases) { panel in
-                Button {
-                    model.rightPanel = panel
-                } label: {
-                    VStack(spacing: 5) {
-                        Image(systemName: icon(for: panel))
-                            .font(.system(size: 13, weight: .medium))
-                        Text(panel.title)
-                            .font(Theme.Typo.caption)
-                    }
-                    .foregroundStyle(model.rightPanel == panel ? Theme.Palette.accent : Theme.Palette.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .overlay(alignment: .bottom) {
-                        Rectangle()
-                            .fill(model.rightPanel == panel ? Theme.Palette.accent : Color.clear)
-                            .frame(height: 2)
-                    }
+        .background(
+            Theme.Palette.surface
+                .overlay(alignment: .leading) {
+                    Rectangle().fill(Theme.Palette.lineSoft).frame(width: 1)
                 }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func icon(for panel: RightPanel) -> String {
-        switch panel {
-        case .presets: return "folder"
-        case .headphone: return "headphones"
-        case .aiTuning: return "sparkles"
-        case .diagnostics: return "waveform.path.ecg"
-        }
+        )
     }
 
     // MARK: AI proposal overlay
@@ -147,62 +131,34 @@ struct EditorWindow: View {
     }
 }
 
+/// One-line natural-language tuning prompt above the graph.
 private struct TuneCommandBarView: View {
     @EnvironmentObject var model: AppModel
     @State private var command: String = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 0) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Theme.Gradients.aura)
-                    .frame(width: 38)
+        let canSubmit = !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-                TextField(L10n.text("Make vocals clearer with a little more kick"), text: $command)
-                    .textFieldStyle(.plain)
-                    .font(Theme.Typo.body)
-                    .foregroundStyle(Theme.Palette.textPrimary)
-                    .onSubmit { tune() }
-                    .padding(.vertical, 9)
+        HStack(spacing: 10) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.Palette.accent)
 
-                Button {
-                    tune()
-                } label: {
-                    Label(L10n.text("Tune"), systemImage: "sparkles")
-                }
-                .buttonStyle(AuraButtonStyle(role: .ai))
-                .disabled(command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .padding(5)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                    .fill(Theme.Palette.surfaceHi)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                            .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                    )
-            )
+            TextField(L10n.text("Make vocals clearer with a little more kick"), text: $command)
+                .textFieldStyle(.plain)
+                .font(Theme.Typo.body)
+                .foregroundStyle(Theme.Palette.textPrimary)
+                .onSubmit { tune() }
 
-            HStack(spacing: 8) {
-                Image(systemName: "point.3.connected.trianglepath.dotted")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Theme.Palette.textTertiary)
-                StatusDot(
-                    color: model.systemOutputRoutedToAuralink ? Theme.Palette.success : Theme.Palette.warning,
-                    label: model.systemOutputRoutedToAuralink
-                        ? L10n.text("Mac sound is going through Auralink")
-                        : L10n.text("Mac sound is direct")
-                )
-                Spacer(minLength: 0)
-                Text(L10n.format("%lld active bands", model.currentPreset.activeBands.count))
-                    .font(Theme.Typo.caption)
-                    .foregroundStyle(model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent)
-            }
+            Button(L10n.text("Tune")) { tune() }
+                .buttonStyle(FieldActionButtonStyle(enabled: canSubmit))
+                .fixedSize()
+                .disabled(!canSubmit)
         }
-        .padding(.horizontal, Theme.Metrics.pad)
-        .padding(.vertical, 10)
-        .background(Theme.Palette.bg)
+        .padding(.leading, 13)
+        .padding(.trailing, 5)
+        .frame(height: 40)
+        .background(PromptFieldBackground())
     }
 
     private func tune() {

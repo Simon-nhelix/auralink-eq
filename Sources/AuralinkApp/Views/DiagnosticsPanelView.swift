@@ -66,7 +66,7 @@ struct DiagnosticsPanelView: View {
         HStack(spacing: 10) {
             legendDot(L10n.text("underrun / clip"), Theme.Palette.danger)
             legendDot(L10n.text("resync / gap"), Theme.Palette.warning)
-            legendDot(L10n.text("recovery"), Theme.Palette.auraBlue)
+            legendDot(L10n.text("recovery"), Theme.Palette.info)
             Spacer()
             Text(L10n.format("last %@ s", String(Int(Self.windowSeconds))))
                 .font(Theme.Typo.caption)
@@ -114,7 +114,7 @@ struct DiagnosticsPanelView: View {
         .padding(Theme.Metrics.padSm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm)
-                .fill(Theme.Palette.surfaceHi)
+                .fill(Theme.Palette.raised)
         )
     }
 
@@ -130,7 +130,7 @@ struct DiagnosticsPanelView: View {
                     .padding(Theme.Metrics.padSm)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm)
-                            .fill(Theme.Palette.surfaceHi)
+                            .fill(Theme.Palette.raised)
                     )
             } else {
                 VStack(spacing: 6) {
@@ -174,7 +174,7 @@ struct DiagnosticsPanelView: View {
         .padding(Theme.Metrics.padSm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm)
-                .fill(Theme.Palette.surfaceHi)
+                .fill(Theme.Palette.raised)
         )
     }
 }

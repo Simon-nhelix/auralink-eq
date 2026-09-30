@@ -27,7 +27,7 @@ struct UpdateView: View {
                         .padding(12)
                 }
                 .frame(height: 160)
-                .background(Theme.Palette.surfaceHi, in: RoundedRectangle(cornerRadius: 8))
+                .background(Theme.Palette.raised, in: RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm))
                 Text(L10n.text("Installing restarts Auralink. Mac sound will be restored to your real output before the restart. Start System EQ again after the update."))
                     .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -56,7 +56,6 @@ struct UpdateView: View {
         .padding(24).frame(width: 540)
         .foregroundStyle(Theme.Palette.textPrimary)
         .background(Theme.Palette.surface)
-        .preferredColorScheme(.dark)
         .onAppear { if updates.state == .idle { updates.checkNow() } }
     }
 

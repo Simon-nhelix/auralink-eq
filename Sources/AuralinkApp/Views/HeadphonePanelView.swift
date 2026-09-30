@@ -36,7 +36,7 @@ struct HeadphonePanelView: View {
         HStack(spacing: 8) {
             Image(systemName: "headphones")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.Gradients.aura)
+                .foregroundStyle(Theme.Palette.accent)
             Text(L10n.text("Headphone"))
                 .font(Theme.Typo.title)
                 .foregroundStyle(Theme.Palette.textPrimary)
@@ -46,7 +46,7 @@ struct HeadphonePanelView: View {
     // MARK: Profile card
 
     private func profileCard(_ profile: HeadphoneProfile) -> some View {
-        AuraCard {
+        AuraCard(fill: Theme.Palette.raised) {
             VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
                 // Title + type + credibility
                 VStack(alignment: .leading, spacing: 6) {
@@ -54,7 +54,7 @@ struct HeadphonePanelView: View {
                         .font(Theme.Typo.title)
                         .foregroundStyle(Theme.Palette.textPrimary)
                     HStack(spacing: 6) {
-                        AuraTag(PresetFormatting.typeLabel(profile.type), tint: Theme.Palette.auraBlue)
+                        AuraTag(PresetFormatting.typeLabel(profile.type), tint: Theme.Palette.info)
                         AuraTag(L10n.text(profile.credibility.displayName), tint: PresetFormatting.credibilityTint(profile.credibility))
                     }
                 }
@@ -101,7 +101,7 @@ struct HeadphonePanelView: View {
                    let curve = model.targetCurves.first(where: { $0.id == curveId }) {
                     VStack(alignment: .leading, spacing: 6) {
                         SectionLabel(L10n.text("Suggested target"))
-                        AuraTag(curve.name, tint: Theme.Palette.auraViolet)
+                        AuraTag(curve.name)
                     }
                 }
 
@@ -124,7 +124,7 @@ struct HeadphonePanelView: View {
         // no headphone data — so say what to do about it instead of pointing at a
         // list that has nothing in it.
         let collectionIsEmpty = model.headphoneProfiles.isEmpty
-        return AuraCard {
+        return AuraCard(fill: Theme.Palette.raised) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(collectionIsEmpty ? L10n.text("Your collection is empty") : L10n.text("No headphone assigned"))
                     .font(Theme.Typo.headline)
@@ -140,7 +140,7 @@ struct HeadphonePanelView: View {
     }
 
     private var activeTuningCard: some View {
-        AuraCard(padding: Theme.Metrics.padSm) {
+        AuraCard(padding: Theme.Metrics.padSm, fill: Theme.Palette.raised) {
             HStack(spacing: Theme.Metrics.gap) {
                 Image(systemName: model.currentPreset.activeBands.isEmpty ? "circle" : "waveform")
                     .font(.system(size: 13, weight: .semibold))
@@ -171,7 +171,7 @@ struct HeadphonePanelView: View {
             }
 
             if presets.isEmpty {
-                AuraCard(padding: Theme.Metrics.padSm) {
+                AuraCard(padding: Theme.Metrics.padSm, fill: Theme.Palette.raised) {
                     HStack(spacing: 8) {
                         Image(systemName: "tray")
                             .foregroundStyle(Theme.Palette.textTertiary)
@@ -207,7 +207,7 @@ struct HeadphonePanelView: View {
                             .foregroundStyle(isCurrent ? Theme.Palette.accent : Theme.Palette.textPrimary)
                             .lineLimit(1)
                         if preset.createdBy == .ai {
-                            AuraTag(L10n.text("AI"), tint: Theme.Palette.auraViolet)
+                            AuraTag(L10n.text("AI"), tint: Theme.Palette.ai)
                         }
                     }
                     HStack(spacing: 8) {
@@ -229,7 +229,7 @@ struct HeadphonePanelView: View {
                 }
                 Spacer(minLength: 0)
                 if isCurrent {
-                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"), glow: true)
+                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"))
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
@@ -240,10 +240,10 @@ struct HeadphonePanelView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                    .fill(isCurrent ? Theme.Palette.surfaceHi : Theme.Palette.surface)
+                    .fill(isCurrent ? Theme.Palette.accentSoft : Theme.Palette.raised)
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                            .strokeBorder(isCurrent ? Theme.Palette.accent.opacity(0.4) : Theme.Palette.line,
+                            .strokeBorder(isCurrent ? Color.clear : Theme.Palette.lineSoft,
                                           lineWidth: 1)
                     )
             )
@@ -299,10 +299,10 @@ struct HeadphonePanelView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                    .fill(isSelected ? Theme.Palette.surfaceHi : Theme.Palette.surface)
+                    .fill(isSelected ? Theme.Palette.accentSoft : Theme.Palette.raised)
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                            .strokeBorder(isSelected ? Theme.Palette.accent.opacity(0.4) : Theme.Palette.line,
+                            .strokeBorder(isSelected ? Color.clear : Theme.Palette.lineSoft,
                                           lineWidth: 1)
                     )
             )

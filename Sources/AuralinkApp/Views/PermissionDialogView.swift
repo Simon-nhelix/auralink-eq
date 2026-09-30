@@ -75,7 +75,7 @@ struct PermissionDialogView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
-                    .foregroundStyle(Theme.Palette.auraViolet)
+                    .foregroundStyle(Theme.Palette.accent)
                 Text(L10n.text("AI Tuning Proposal"))
                     .font(Theme.Typo.caption)
                     .tracking(0.8)
@@ -89,7 +89,7 @@ struct PermissionDialogView: View {
                     .foregroundStyle(Theme.Palette.textPrimary)
                     .lineLimit(2)
                 if let hp = preset.headphone, !hp.isEmpty {
-                    AuraTag(hp, tint: Theme.Palette.auraBlue)
+                    AuraTag(hp, tint: Theme.Palette.info)
                 }
             }
             if let goal = preset.goal, !goal.isEmpty {
@@ -163,7 +163,7 @@ struct PermissionDialogView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(change.summary)
                                 .font(Theme.Typo.mono)
-                                .foregroundStyle(Theme.Palette.auraCyan)
+                                .foregroundStyle(Theme.Palette.accent)
                             if !change.rationale.isEmpty {
                                 Text(change.rationale)
                                     .font(Theme.Typo.caption)
@@ -177,7 +177,7 @@ struct PermissionDialogView: View {
                     .padding(.horizontal, 8)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                            .fill(Theme.Palette.surfaceHi)
+                            .fill(Theme.Palette.raised)
                     )
                 }
             }

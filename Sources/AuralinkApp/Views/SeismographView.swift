@@ -185,8 +185,8 @@ struct SeismographView: View {
         switch kind {
         case "underrun", "clip", "feedback-stop": return Theme.Palette.danger
         case "resync", "capture-gap":     return Theme.Palette.warning
-        case "overload":                  return Theme.Palette.auraViolet
-        case "recovery", "repin":         return Theme.Palette.auraBlue
+        case "overload":                  return Theme.Palette.ai
+        case "recovery", "repin":         return Theme.Palette.info
         default:                          return Theme.Palette.textSecondary
         }
     }

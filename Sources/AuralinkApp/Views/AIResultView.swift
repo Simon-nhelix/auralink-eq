@@ -59,7 +59,7 @@ struct AIResultView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.Gradients.aura)
+                        .foregroundStyle(Theme.Palette.accent)
                     Text(L10n.text("Proposed Tuning"))
                         .font(Theme.Typo.caption)
                         .tracking(0.8)
@@ -70,7 +70,7 @@ struct AIResultView: View {
                     .foregroundStyle(Theme.Palette.textPrimary)
                     .lineLimit(2)
                 if let hp = result.preset.headphone, !hp.isEmpty {
-                    AuraTag(hp, tint: Theme.Palette.auraBlue)
+                    AuraTag(hp, tint: Theme.Palette.info)
                 }
             }
             Spacer(minLength: 0)
@@ -90,8 +90,7 @@ struct AIResultView: View {
             .foregroundStyle(v.ok ? Theme.Palette.success : Theme.Palette.danger)
 
             StatusDot(color: tint,
-                      label: L10n.format("Clipping: %@", L10n.text(v.clippingRisk.displayName)),
-                      glow: v.clippingRisk == .high)
+                      label: L10n.format("Clipping: %@", L10n.text(v.clippingRisk.displayName)))
         }
     }
 

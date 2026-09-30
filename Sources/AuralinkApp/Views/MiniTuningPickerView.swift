@@ -229,7 +229,7 @@ struct MiniTuningPickerView: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Theme.Palette.surfaceHi.opacity(0.55))
+                    .fill(Theme.Palette.raised)
             )
             .contentShape(Rectangle())
         }

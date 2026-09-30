@@ -36,7 +36,7 @@ struct PresetLibraryView: View {
         HStack(spacing: 8) {
             Image(systemName: "square.stack.3d.up")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.Gradients.aura)
+                .foregroundStyle(Theme.Palette.accent)
             Text(L10n.text("Presets"))
                 .font(Theme.Typo.title)
                 .foregroundStyle(Theme.Palette.textPrimary)
@@ -112,15 +112,8 @@ struct PresetLibraryView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(destructive ? Theme.Palette.danger : Theme.Palette.textSecondary)
-                .frame(width: 26, height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                        .fill(Theme.Palette.surfaceHi)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                                .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                        )
-                )
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(label)
@@ -165,7 +158,7 @@ struct PresetLibraryView: View {
         let isCurrent = preset.id == model.currentPreset.id
         let isRenaming = renamingId == preset.id
         let inCollection = model.collectionPresetIDs.contains(preset.id)
-        return AuraCard(padding: 10) {
+        return AuraCard(padding: 10, fill: Theme.Palette.raised) {
             HStack(alignment: .center, spacing: Theme.Metrics.gap) {
                 VStack(alignment: .leading, spacing: 5) {
                     if isRenaming {
@@ -183,7 +176,7 @@ struct PresetLibraryView: View {
                     }
                     HStack(spacing: 6) {
                         if let hp = preset.headphone, !hp.isEmpty {
-                            AuraTag(hp, tint: Theme.Palette.auraBlue)
+                            AuraTag(hp, tint: Theme.Palette.info)
                         }
                         Text("v\(preset.version)")
                             .font(Theme.Typo.caption)
@@ -204,7 +197,7 @@ struct PresetLibraryView: View {
                     }
                     .buttonStyle(.plain)
                 } else if isCurrent {
-                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"), glow: true)
+                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"))
                 }
             }
         }
@@ -236,7 +229,7 @@ struct PresetLibraryView: View {
     private func createdByBadge(_ by: CreatedBy) -> some View {
         switch by {
         case .ai:
-            return AuraTag(L10n.text("AI"), tint: Theme.Palette.auraViolet)
+            return AuraTag(L10n.text("AI"), tint: Theme.Palette.ai)
         case .user:
             return AuraTag(L10n.text("User"), tint: Theme.Palette.textSecondary)
         }
