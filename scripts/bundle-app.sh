@@ -60,8 +60,9 @@ if [[ "${UPDATE_VERSION}" == *-* ]]; then
   fi
 fi
 BUILD_FLAGS=(-c release --product "${EXECUTABLE}" --package-path "${REPO_ROOT}")
+UNIVERSAL_ARCHS=()
 case "${1:-}" in
-  --universal) BUILD_FLAGS+=(--arch arm64 --arch x86_64) ;;
+  --universal) UNIVERSAL_ARCHS=(arm64 x86_64) ;;
   "") ;;
   *) echo "usage: $0 [--universal]" >&2; exit 2 ;;
 esac
@@ -75,13 +76,36 @@ APP_ICON="${REPO_ROOT}/assets/AppIcon/${ICON_FILE}"
 SETUP_GUIDE="${REPO_ROOT}/docs/SETUP.md"
 
 # --- 1. Build --------------------------------------------------------------
-echo "==> Building ${EXECUTABLE} (release)…"
-swift build "${BUILD_FLAGS[@]}"
+if (( ${#UNIVERSAL_ARCHS[@]} > 0 )); then
+    # Build each architecture on its own and join the executables with lipo.
+    # A single `swift build --arch arm64 --arch x86_64` takes SwiftPM's Xcode
+    # build path, which Swift 6.1 (the CI runner) rejects for targets that set
+    # swiftLanguageMode(.v5): "given: [5], supported: []".
+    ARCH_BINARIES=()
+    RELEASE_BIN_DIR=""
+    for arch in "${UNIVERSAL_ARCHS[@]}"; do
+        echo "==> Building ${EXECUTABLE} (release, ${arch})…"
+        swift build "${BUILD_FLAGS[@]}" --arch "${arch}"
+        ARCH_BIN_DIR="$(swift build "${BUILD_FLAGS[@]}" --arch "${arch}" --show-bin-path)"
+        ARCH_BINARIES+=("${ARCH_BIN_DIR}/${EXECUTABLE}")
+        # Resource bundles are architecture-independent; take them from the
+        # first slice's products.
+        [[ -n "${RELEASE_BIN_DIR}" ]] || RELEASE_BIN_DIR="${ARCH_BIN_DIR}"
+    done
+    BUILT_BINARY="${BUILD_DIR}/universal/${EXECUTABLE}"
+    mkdir -p "$(dirname "${BUILT_BINARY}")"
+    lipo -create "${ARCH_BINARIES[@]}" -output "${BUILT_BINARY}"
+    lipo "${BUILT_BINARY}" -verify_arch "${UNIVERSAL_ARCHS[@]}"
+    echo "    universal executable: $(lipo -archs "${BUILT_BINARY}")"
+else
+    echo "==> Building ${EXECUTABLE} (release)…"
+    swift build "${BUILD_FLAGS[@]}"
 
-# Ask SwiftPM where it put the release products rather than guessing the
-# arch-specific path (works on Apple Silicon and Intel alike).
-RELEASE_BIN_DIR="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)"
-BUILT_BINARY="${RELEASE_BIN_DIR}/${EXECUTABLE}"
+    # Ask SwiftPM where it put the release products rather than guessing the
+    # arch-specific path (works on Apple Silicon and Intel alike).
+    RELEASE_BIN_DIR="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)"
+    BUILT_BINARY="${RELEASE_BIN_DIR}/${EXECUTABLE}"
+fi
 
 if [[ ! -x "${BUILT_BINARY}" ]]; then
     echo "error: built binary not found at ${BUILT_BINARY}" >&2
@@ -149,7 +173,8 @@ fi
 cp -R "${LOCALIZATION_BUNDLE}" "${RESOURCES_DIR}/"
 LOCALIZATION_RESOURCES="${LOCALIZATION_BUNDLE}"
 if [[ -d "${LOCALIZATION_BUNDLE}/Contents/Resources" ]]; then
-    # Multi-architecture SwiftPM builds use Xcode's standard bundle layout.
+    # SwiftPM's Xcode build path (multi-arch builds) uses the standard bundle
+    # layout; the native per-architecture builds above use a flat one.
     LOCALIZATION_RESOURCES="${LOCALIZATION_BUNDLE}/Contents/Resources"
 fi
 for language in en ko ja; do
