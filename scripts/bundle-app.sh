@@ -7,8 +7,8 @@
 #   1. `swift build -c release` in the repo root.
 #   2. Create build/Auralink EQ.app/Contents/{MacOS,Resources}.
 #   3. Copy the built `AuralinkApp` binary into Contents/MacOS.
-#   4. Copy the SwiftPM-generated AuralinkCore resource bundle next to it
-#      (the app loads bundled JSON via Bundle.module).
+#   4. Copy the SwiftPM core/localization bundles and localized privacy copy
+#      into Contents/Resources (modules load resources via Bundle.module).
 #   5. Copy the app icon and setup guide into Contents/Resources.
 #   6. Generate Contents/Info.plist (regular app with menubar extra, mic usage,
 #      bundle id, min OS).
@@ -98,6 +98,28 @@ for required in target-curves.json safety-rules.json; do
     fi
 done
 
+# UI translations must ship alongside the executable, not just exist in the
+# checkout. Privacy prompts read InfoPlist.strings from the main app bundle.
+LOCALIZATION_BUNDLE="${RELEASE_BIN_DIR}/Auralink_AuralinkLocalization.bundle"
+if [[ ! -d "${LOCALIZATION_BUNDLE}" ]]; then
+    echo "error: localization resource bundle missing: ${LOCALIZATION_BUNDLE}" >&2
+    exit 1
+fi
+cp -R "${LOCALIZATION_BUNDLE}" "${RESOURCES_DIR}/"
+for language in en ko ja; do
+    LOCALIZED_DIR="${LOCALIZATION_BUNDLE}/${language}.lproj"
+    for required in Localizable.strings Localizable.stringsdict InfoPlist.strings; do
+        if [[ ! -f "${LOCALIZED_DIR}/${required}" ]]; then
+            echo "error: missing ${language} translation resource: ${required}" >&2
+            exit 1
+        fi
+        /usr/bin/plutil -lint "${LOCALIZED_DIR}/${required}" >/dev/null
+    done
+    mkdir -p "${RESOURCES_DIR}/${language}.lproj"
+    cp "${LOCALIZED_DIR}/InfoPlist.strings" "${RESOURCES_DIR}/${language}.lproj/"
+done
+echo "    bundled UI languages: en, ko, ja"
+
 # --- 5. Copy the app icon ---------------------------------------------------
 if [[ -f "${APP_ICON}" ]]; then
     cp "${APP_ICON}" "${RESOURCES_DIR}/${ICON_FILE}"
@@ -140,6 +162,16 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
     <string>${APP_NAME}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>ko</string>
+        <string>ja</string>
+    </array>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleExecutable</key>

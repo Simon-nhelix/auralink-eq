@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -36,19 +37,19 @@ struct BandTableView: View {
 
     private var header: some View {
         HStack(spacing: 0) {
-            cell("ON", width: Columns.enabled)
+            cell(L10n.text("ON"), width: Columns.enabled)
             Spacer(minLength: 4)
             cell("#", width: Columns.index, align: .center)
             Spacer(minLength: 4)
-            cell("TYPE", width: Columns.type)
+            cell(L10n.text("TYPE"), width: Columns.type)
             Spacer(minLength: 4)
-            cell("FREQ", width: Columns.freq, align: .trailing)
+            cell(L10n.text("FREQ"), width: Columns.freq, align: .trailing)
             Spacer(minLength: 4)
-            cell("GAIN", width: Columns.gain, align: .trailing)
+            cell(L10n.text("GAIN"), width: Columns.gain, align: .trailing)
             Spacer(minLength: 4)
-            cell("Q", width: Columns.q, align: .trailing)
+            cell(L10n.text("Q"), width: Columns.q, align: .trailing)
             Spacer(minLength: 4)
-            cell("CH", width: Columns.channel)
+            cell(L10n.text("CH"), width: Columns.channel)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.Metrics.pad)
@@ -76,15 +77,7 @@ struct BandTableView: View {
     }
 
     /// Shared column widths so header + rows line up exactly.
-    enum Columns {
-        static let enabled: CGFloat = 36
-        static let index: CGFloat   = 28
-        static let type: CGFloat    = 100
-        static let freq: CGFloat    = 96
-        static let gain: CGFloat    = 92
-        static let q: CGFloat       = 78
-        static let channel: CGFloat = 84
-    }
+    typealias Columns = Theme.Layout.BandTable
 }
 
 // MARK: - Row
@@ -122,11 +115,11 @@ private struct BandRow: View {
             // Type menu.
             Menu {
                 ForEach(BandType.allCases, id: \.self) { t in
-                    Button(t.displayName) { commit { $0.type = t } }
+                    Button(L10n.text(t.displayName)) { commit { $0.type = t } }
                 }
             } label: {
                 HStack(spacing: 3) {
-                    Text(band.type.displayName)
+                    Text(L10n.text(band.type.displayName))
                         .font(Theme.Typo.label)
                         .foregroundStyle(textColor)
                         .lineLimit(1)
@@ -186,14 +179,14 @@ private struct BandRow: View {
             // Channel menu.
             Menu {
                 ForEach(BandChannel.allCases, id: \.self) { ch in
-                    Button(ch.displayName) { commit { $0.channel = ch } }
+                    Button(L10n.text(ch.displayName)) { commit { $0.channel = ch } }
                 }
             } label: {
                 HStack(spacing: 4) {
                     Circle()
                         .fill(tint(for: band.channel))
                         .frame(width: 7, height: 7)
-                    Text(band.channel.displayName)
+                    Text(L10n.text(band.channel.displayName))
                         .font(Theme.Typo.label)
                         .foregroundStyle(textColor)
                         .lineLimit(1)
@@ -233,7 +226,7 @@ private struct BandRow: View {
     }
 
     private func shapeFormat(_ value: Double, for type: BandType) -> String {
-        "\(type.qShortName) \(Fmt.q(value))"
+        "\(L10n.text(type.qShortName)) \(Fmt.q(value))"
     }
 
     private func tint(for channel: BandChannel) -> Color {

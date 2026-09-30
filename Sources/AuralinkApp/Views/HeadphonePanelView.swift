@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -36,7 +37,7 @@ struct HeadphonePanelView: View {
             Image(systemName: "headphones")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Theme.Gradients.aura)
-            Text("Headphone")
+            Text(L10n.text("Headphone"))
                 .font(Theme.Typo.title)
                 .foregroundStyle(Theme.Palette.textPrimary)
         }
@@ -54,13 +55,13 @@ struct HeadphonePanelView: View {
                         .foregroundStyle(Theme.Palette.textPrimary)
                     HStack(spacing: 6) {
                         AuraTag(PresetFormatting.typeLabel(profile.type), tint: Theme.Palette.auraBlue)
-                        AuraTag(profile.credibility.displayName, tint: PresetFormatting.credibilityTint(profile.credibility))
+                        AuraTag(L10n.text(profile.credibility.displayName), tint: PresetFormatting.credibilityTint(profile.credibility))
                     }
                 }
 
                 // Signature
                 VStack(alignment: .leading, spacing: 4) {
-                    SectionLabel("Signature")
+                    SectionLabel(L10n.text("Signature"))
                     Text(profile.signature)
                         .font(Theme.Typo.body)
                         .foregroundStyle(Theme.Palette.textPrimary)
@@ -70,7 +71,7 @@ struct HeadphonePanelView: View {
                 // Correction notes
                 if !profile.correctionNotes.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        SectionLabel("Correction notes")
+                        SectionLabel(L10n.text("Correction notes"))
                         ForEach(Array(profile.correctionNotes.enumerated()), id: \.offset) { _, note in
                             HStack(alignment: .top, spacing: 8) {
                                 Circle()
@@ -89,7 +90,7 @@ struct HeadphonePanelView: View {
                 // Harsh regions
                 if !profile.harshRegionsHz.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        SectionLabel("Harsh regions")
+                        SectionLabel(L10n.text("Harsh regions"))
                         FlowTags(items: profile.harshRegionsHz.map { PresetFormatting.harshLabel($0) },
                                  tint: Theme.Palette.warning)
                     }
@@ -99,7 +100,7 @@ struct HeadphonePanelView: View {
                 if let curveId = profile.suggestedTargetCurveId,
                    let curve = model.targetCurves.first(where: { $0.id == curveId }) {
                     VStack(alignment: .leading, spacing: 6) {
-                        SectionLabel("Suggested target")
+                        SectionLabel(L10n.text("Suggested target"))
                         AuraTag(curve.name, tint: Theme.Palette.auraViolet)
                     }
                 }
@@ -107,7 +108,7 @@ struct HeadphonePanelView: View {
                 // Source
                 if !profile.source.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        SectionLabel("Source")
+                        SectionLabel(L10n.text("Source"))
                         Text(profile.source)
                             .font(Theme.Typo.caption)
                             .foregroundStyle(Theme.Palette.textTertiary)
@@ -125,12 +126,12 @@ struct HeadphonePanelView: View {
         let collectionIsEmpty = model.headphoneProfiles.isEmpty
         return AuraCard {
             VStack(alignment: .leading, spacing: 6) {
-                Text(collectionIsEmpty ? "Your collection is empty" : "No headphone assigned")
+                Text(collectionIsEmpty ? L10n.text("Your collection is empty") : L10n.text("No headphone assigned"))
                     .font(Theme.Typo.headline)
                     .foregroundStyle(Theme.Palette.textPrimary)
                 Text(collectionIsEmpty
-                     ? "Auralink ships no headphone database — the collection is yours to build. Ask your AI assistant to add a model by name and it will fetch a public AutoEq measurement for it."
-                     : "Pick a headphone below to load a visible baseline correction. The graph and active band table will update immediately.")
+                     ? L10n.text("Auralink ships no headphone database — the collection is yours to build. Ask your AI assistant to add a model by name and it will fetch a public AutoEq measurement for it.")
+                     : L10n.text("Pick a headphone below to load a visible baseline correction. The graph and active band table will update immediately."))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -149,7 +150,7 @@ struct HeadphonePanelView: View {
                         .font(Theme.Typo.label)
                         .foregroundStyle(Theme.Palette.textPrimary)
                         .lineLimit(1)
-                    Text("\(model.currentPreset.activeBands.count) active bands · preamp \(Fmt.db(model.currentPreset.preampDb))")
+                    Text(L10n.format("%lld active bands · preamp %@", model.currentPreset.activeBands.count, String(Fmt.db(model.currentPreset.preampDb))))
                         .font(Theme.Typo.caption)
                         .foregroundStyle(Theme.Palette.textSecondary)
                 }
@@ -162,7 +163,7 @@ struct HeadphonePanelView: View {
         let presets = model.presets(for: currentProfile)
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
-                SectionLabel(currentProfile == nil ? "Generic Presets" : "Presets for this headphone")
+                SectionLabel(currentProfile == nil ? L10n.text("Generic Presets") : L10n.text("Presets for this headphone"))
                 Spacer()
                 Text("\(presets.count)")
                     .font(Theme.Typo.caption)
@@ -174,7 +175,7 @@ struct HeadphonePanelView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "tray")
                             .foregroundStyle(Theme.Palette.textTertiary)
-                        Text("No saved presets for this model yet.")
+                        Text(L10n.text("No saved presets for this model yet."))
                             .font(Theme.Typo.caption)
                             .foregroundStyle(Theme.Palette.textSecondary)
                         Spacer(minLength: 0)
@@ -206,21 +207,21 @@ struct HeadphonePanelView: View {
                             .foregroundStyle(isCurrent ? Theme.Palette.accent : Theme.Palette.textPrimary)
                             .lineLimit(1)
                         if preset.createdBy == .ai {
-                            AuraTag("AI", tint: Theme.Palette.auraViolet)
+                            AuraTag(L10n.text("AI"), tint: Theme.Palette.auraViolet)
                         }
                     }
                     HStack(spacing: 8) {
-                        Text("\(preset.activeBands.count) bands")
-                        Text("preamp \(Fmt.db(preset.preampDb))")
+                        Text(L10n.format("%lld bands", preset.activeBands.count))
+                        Text(L10n.format("preamp %@", String(Fmt.db(preset.preampDb))))
                         if let correction = preset.correction {
                             Text(PresetFormatting.roleTag(correction.role))
                             if correction.sourceConfidence != .unknown {
-                                Text(correction.sourceConfidence.rawValue)
+                                Text(L10n.text(correction.sourceConfidence.rawValue))
                             }
                         } else if preset.tags.contains("baseline") {
-                            Text("baseline")
+                            Text(L10n.text("baseline"))
                         } else if preset.tags.contains("audition") {
-                            Text("audition")
+                            Text(L10n.text("audition"))
                         }
                     }
                     .font(Theme.Typo.caption)
@@ -228,7 +229,7 @@ struct HeadphonePanelView: View {
                 }
                 Spacer(minLength: 0)
                 if isCurrent {
-                    StatusDot(color: Theme.Palette.accent, label: "Loaded", glow: true)
+                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"), glow: true)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
@@ -258,7 +259,7 @@ struct HeadphonePanelView: View {
 
     private var pickList: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Assign headphone")
+            SectionLabel(L10n.text("Assign headphone"))
             VStack(spacing: 6) {
                 pickRow(name: nil, isSelected: assignedId == nil)
                 ForEach(model.headphoneProfiles) { profile in
@@ -268,7 +269,7 @@ struct HeadphonePanelView: View {
                             isSelected: assignedId == profile.id)
                 }
             }
-            Text("Selecting a model applies a saved or newly generated baseline correction, so the response curve changes right away.")
+            Text(L10n.text("Selecting a model applies a saved or newly generated baseline correction, so the response curve changes right away."))
                 .font(Theme.Typo.caption)
                 .foregroundStyle(Theme.Palette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -284,7 +285,7 @@ struct HeadphonePanelView: View {
                 Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
                     .font(.system(size: 13))
                     .foregroundStyle(isSelected ? Theme.Palette.accent : Theme.Palette.textTertiary)
-                Text(name ?? "Generic / none")
+                Text(name ?? L10n.text("Generic / none"))
                     .font(Theme.Typo.body)
                     .foregroundStyle(isSelected ? Theme.Palette.textPrimary : Theme.Palette.textSecondary)
                 Spacer(minLength: 0)

@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -14,8 +15,6 @@ import AuralinkCore
 struct EditorWindow: View {
     @EnvironmentObject var model: AppModel
 
-    private let rightRailWidth: CGFloat = 360
-
     var body: some View {
         ZStack {
             Theme.Palette.bg.ignoresSafeArea()
@@ -27,7 +26,7 @@ struct EditorWindow: View {
                     mainColumn
                     Divider().overlay(Theme.Palette.line)
                     rightRail
-                        .frame(width: rightRailWidth)
+                        .frame(width: Theme.Layout.Editor.rightRailWidth)
                 }
             }
 
@@ -36,8 +35,8 @@ struct EditorWindow: View {
             }
         }
         .frame(
-            minWidth: Theme.Metrics.editorMinWidth,
-            minHeight: Theme.Metrics.editorMinHeight
+            minWidth: Theme.Layout.Editor.minWidth,
+            minHeight: Theme.Layout.Editor.minHeight
         )
         .background(Theme.Palette.bg)
     }
@@ -52,10 +51,11 @@ struct EditorWindow: View {
 
             VStack(spacing: Theme.Metrics.gap) {
                 EQGraphView()
-                    .frame(minHeight: 240, maxHeight: .infinity)
+                    .frame(minHeight: Theme.Layout.Editor.graphMinHeight, maxHeight: .infinity)
 
                 BandTableView()
-                    .frame(minHeight: 180, maxHeight: 320)
+                    .frame(minHeight: Theme.Layout.Editor.bandTableMinHeight,
+                           maxHeight: Theme.Layout.Editor.bandTableMaxHeight)
             }
             .padding(Theme.Metrics.pad)
         }
@@ -126,7 +126,7 @@ struct EditorWindow: View {
     private var proposalOverlay: some View {
         ZStack {
             // Dimmed backdrop that swallows clicks behind the proposal.
-            Color.black.opacity(0.55)
+            Theme.Palette.modalScrim
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture { /* modal: ignore taps outside */ }
@@ -135,12 +135,12 @@ struct EditorWindow: View {
                 guard let proposal = model.pendingProposal else { return }
                 model.auditionTransientPreset(
                     proposal.preset,
-                    message: "Editing \"\(proposal.preset.name)\" in the band table."
+                    message: L10n.format("Editing \"%@\" in the band table.", String(proposal.preset.name))
                 )
                 model.pendingProposal = nil
             })
-                .frame(maxWidth: 460)
-                .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
+                .frame(maxWidth: Theme.Layout.Proposal.editorMaxWidth)
+                .shadow(color: Theme.Palette.modalShadow, radius: 30, y: 12)
         }
         .transition(.opacity)
     }
@@ -158,7 +158,7 @@ private struct TuneCommandBarView: View {
                     .foregroundStyle(Theme.Gradients.aura)
                     .frame(width: 38)
 
-                TextField("Make vocals clearer with a little more kick", text: $command)
+                TextField(L10n.text("Make vocals clearer with a little more kick"), text: $command)
                     .textFieldStyle(.plain)
                     .font(Theme.Typo.body)
                     .foregroundStyle(Theme.Palette.textPrimary)
@@ -168,7 +168,7 @@ private struct TuneCommandBarView: View {
                 Button {
                     tune()
                 } label: {
-                    Label("Tune", systemImage: "sparkles")
+                    Label(L10n.text("Tune"), systemImage: "sparkles")
                 }
                 .buttonStyle(AuraButtonStyle(role: .ai))
                 .disabled(command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -190,11 +190,11 @@ private struct TuneCommandBarView: View {
                 StatusDot(
                     color: model.systemOutputRoutedToAuralink ? Theme.Palette.success : Theme.Palette.warning,
                     label: model.systemOutputRoutedToAuralink
-                        ? "Mac sound is going through Auralink"
-                        : "Mac sound is direct"
+                        ? L10n.text("Mac sound is going through Auralink")
+                        : L10n.text("Mac sound is direct")
                 )
                 Spacer(minLength: 0)
-                Text("\(model.currentPreset.activeBands.count) active bands")
+                Text(L10n.format("%lld active bands", model.currentPreset.activeBands.count))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent)
             }

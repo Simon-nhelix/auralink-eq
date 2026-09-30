@@ -245,6 +245,67 @@ the MCP section of **[docs/SETUP.md](docs/SETUP.md)**.
 
 ---
 
+## Preparing UI design changes
+
+The current UI has one fixed dark theme. Its design entry points are
+[`Theme.swift`](Sources/AuralinkApp/Views/DesignSystem/Theme.swift) and
+[`Components.swift`](Sources/AuralinkApp/Views/DesignSystem/Components.swift):
+
+- `Theme.Palette`, `Gradients`, and `Typo` define shared colors and text styles.
+- `Theme.Metrics` defines shared spacing, radii, and button padding.
+- `Theme.Layout` defines menu-bar, editor, monitor, proposal, and band-table
+  dimensions. Change the shared graph minimum or table columns here so their
+  callers stay aligned.
+- `Components.swift` owns cards, action buttons, status dots, labels, tags,
+  and the waveform brand mark shared by the editor and menu bar.
+
+Change screen composition in `EditorWindow`, `MenuBarView`, and `TopBarView`.
+Keep controls bound to the existing `AppModel` intents and output-picker
+snapshot; appearance changes should preserve routing, permission handling,
+and the UI publish gate. DSP ranges and graph coordinate transforms remain
+in their existing logic modules.
+
+These entry points preserve the existing visual defaults. Runtime theme
+selection, a light theme, and isolated screen previews are future work. Some
+local control sizes and icon fonts still live in views. UI copy is localized
+through `AuralinkLocalization`, including enum labels at the presentation layer.
+Verify design changes at the editor minimum size, with long preset/device
+names, and in the menu-bar search and proposal states. Use `swift build` and
+`swift test` for compilation and logic checks; those checks do not establish
+visual correctness.
+
+## UI languages
+
+English (`en`), Korean (`ko`), and Japanese (`ja`) UI resources live in
+[`Sources/AuralinkLocalization/Resources`](Sources/AuralinkLocalization/Resources).
+The app selects the first supported macOS preferred language when it launches,
+including regional variants such as `ko-KR` and `ja-JP`, and falls back to English.
+Use macOS language settings and restart the app to change its UI language.
+There is no separate in-app language preference yet.
+
+Use `L10n.text("English source phrase")` for fixed app-owned copy and
+`L10n.format("Loaded %@", name)` for complete sentences with arguments. Add the
+same key to all three `Localizable.strings` files. Preserve argument types;
+positional placeholders such as `%2$@` can change word order. Count templates
+use `Localizable.stringsdict` for English singular/plural rules and Korean and
+Japanese count labels. Shared components receive already localized Strings.
+
+Localization changes display text, not stored preset names, headphone/device
+names, tags, enum raw values, API identifiers, or DSP numeric editing. User and
+collection content, generated tuning explanations/validation details, external
+errors, and copied diagnostic reports retain their original text. Localizing
+the UI does not extend the tuning engine's free-text keyword vocabulary.
+
+`scripts/bundle-app.sh` includes the localization bundle, declares the three
+languages in app metadata, and places translated microphone permission copy in
+the main bundle. This follows Apple's
+[Swift package resource localization](https://developer.apple.com/documentation/xcode/localizing-package-resources)
+structure. `swift test` checks language selection, translation-key parity,
+format arguments, plurals, privacy copy, and literal lookup coverage, so these
+checks run in the existing CI workflow. When redesigning screens, also check
+long labels, device/preset names, search results, and proposal actions in each
+language at the minimum editor size and in the menu-bar popover.
+
 ## Status
 
 - **Version — 0.1.0-alpha source preview.** APIs, preset schemas, and the local

@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import AppKit
 
@@ -6,7 +7,7 @@ extension AppModel {
 
     func openSetupGuide() {
         guard let url = setupGuideURL() else {
-            lastError = "The setup guide was not found. Open docs/SETUP.md from the Auralink EQ source repository."
+            lastError = L10n.text("The setup guide was not found. Open docs/SETUP.md from the Auralink EQ source repository.")
             return
         }
         NSWorkspace.shared.open(url)
@@ -23,7 +24,7 @@ extension AppModel {
         if FileManager.default.fileExists(atPath: url.path) {
             NSWorkspace.shared.open(url)
         } else {
-            lastError = "Audio MIDI Setup.app was not found."
+            lastError = L10n.text("Audio MIDI Setup.app was not found.")
         }
     }
 
@@ -71,9 +72,9 @@ extension AppModel {
             try script.write(to: scriptURL, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
             NSWorkspace.shared.open(scriptURL)
-            statusMessage = "Opened BlackHole installer in Terminal."
+            statusMessage = L10n.text("Opened BlackHole installer in Terminal.")
         } catch {
-            lastError = "Couldn't start BlackHole installer: \(error.localizedDescription)"
+            lastError = L10n.format("Couldn't start BlackHole installer: %@", String(error.localizedDescription))
             openBlackHoleDownload()
         }
     }

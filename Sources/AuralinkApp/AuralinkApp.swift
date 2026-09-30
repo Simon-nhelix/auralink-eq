@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AppKit
 import AuralinkCore
@@ -16,29 +17,30 @@ struct AuralinkApp: App {
 
     var body: some Scene {
         // MARK: Menubar surface (the app's "home").
-        MenuBarExtra("Auralink", systemImage: "waveform") {
+        MenuBarExtra(L10n.text("Auralink"), systemImage: "waveform") {
             MenuBarView()
                 .environmentObject(delegate.model)
         }
         .menuBarExtraStyle(.window)
 
         // MARK: Full editor, visible on launch for the testable desktop build.
-        WindowGroup("Auralink EQ", id: "editor") {
+        WindowGroup(L10n.text("Auralink EQ"), id: "editor") {
             EditorWindow()
                 .environmentObject(delegate.model)
-                .frame(minWidth: Theme.Metrics.editorMinWidth,
-                       minHeight: Theme.Metrics.editorMinHeight)
+                .frame(minWidth: Theme.Layout.Editor.minWidth,
+                       minHeight: Theme.Layout.Editor.minHeight)
         }
         .windowResizability(.contentMinSize)
 
         // MARK: Standalone live path monitor — small, floatable, made to sit
         // in a corner during long listening sessions.
-        Window("Auralink Monitor", id: "monitor") {
+        Window(L10n.text("Auralink Monitor"), id: "monitor") {
             MonitorWindowView()
                 .environmentObject(delegate.model)
         }
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 540, height: 460)
+        .defaultSize(width: Theme.Layout.Monitor.defaultWidth,
+                     height: Theme.Layout.Monitor.defaultHeight)
     }
 }
 
@@ -74,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 model.setControlServerRunning(true)
             } else {
                 model.setControlServerRunning(false)
-                model.lastError = "The local control server could not start securely."
+                model.lastError = L10n.text("The local control server could not start securely.")
             }
 
             // Wire up domain + device state. Live audio routing starts only after

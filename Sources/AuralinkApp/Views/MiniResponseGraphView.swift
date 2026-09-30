@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -35,8 +36,8 @@ struct MiniResponseGraphView: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Mini frequency response")
-        .accessibilityValue("\(bands.filter(\.enabled).count) active bands")
+        .accessibilityLabel(L10n.text("Mini frequency response"))
+        .accessibilityValue(L10n.format("%lld active bands", bands.filter(\.enabled).count))
     }
 
     private func drawGrid(_ context: GraphicsContext, plot: CGRect) {

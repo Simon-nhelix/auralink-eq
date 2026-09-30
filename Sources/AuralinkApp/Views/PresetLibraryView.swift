@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 import UniformTypeIdentifiers
@@ -36,7 +37,7 @@ struct PresetLibraryView: View {
             Image(systemName: "square.stack.3d.up")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Theme.Gradients.aura)
-            Text("Presets")
+            Text(L10n.text("Presets"))
                 .font(Theme.Typo.title)
                 .foregroundStyle(Theme.Palette.textPrimary)
             Spacer()
@@ -53,7 +54,7 @@ struct PresetLibraryView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.Palette.textTertiary)
-            TextField("Search presets", text: $search)
+            TextField(L10n.text("Search presets"), text: $search)
                 .textFieldStyle(.plain)
                 .font(Theme.Typo.body)
                 .foregroundStyle(Theme.Palette.textPrimary)
@@ -82,23 +83,23 @@ struct PresetLibraryView: View {
 
     private var toolbar: some View {
         HStack(spacing: 6) {
-            toolButton("New", systemImage: "plus") {
+            toolButton(L10n.text("New"), systemImage: "plus") {
                 model.newPreset()
             }
-            toolButton("Duplicate", systemImage: "plus.square.on.square") {
+            toolButton(L10n.text("Duplicate"), systemImage: "plus.square.on.square") {
                 model.duplicate(model.currentPreset)
             }
-            toolButton("Rename", systemImage: "pencil") {
+            toolButton(L10n.text("Rename"), systemImage: "pencil") {
                 beginRename(model.currentPreset)
             }
-            toolButton("Delete", systemImage: "trash", destructive: true) {
+            toolButton(L10n.text("Delete"), systemImage: "trash", destructive: true) {
                 model.delete(model.currentPreset)
             }
             Spacer(minLength: 0)
-            toolButton("Import", systemImage: "square.and.arrow.down") {
+            toolButton(L10n.text("Import"), systemImage: "square.and.arrow.down") {
                 importTapped()
             }
-            toolButton("Export", systemImage: "square.and.arrow.up") {
+            toolButton(L10n.text("Export"), systemImage: "square.and.arrow.up") {
                 exportTapped()
             }
         }
@@ -150,7 +151,7 @@ struct PresetLibraryView: View {
                     }
                 }
                 if groups.isEmpty {
-                    Text(search.isEmpty ? "No presets yet." : "No presets match “\(search)”.")
+                    Text(search.isEmpty ? L10n.text("No presets yet.") : L10n.format("No presets match “%@”.", String(search)))
                         .font(Theme.Typo.body)
                         .foregroundStyle(Theme.Palette.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -168,7 +169,7 @@ struct PresetLibraryView: View {
             HStack(alignment: .center, spacing: Theme.Metrics.gap) {
                 VStack(alignment: .leading, spacing: 5) {
                     if isRenaming {
-                        TextField("Name", text: $renameText)
+                        TextField(L10n.text("Name"), text: $renameText)
                             .textFieldStyle(.plain)
                             .font(Theme.Typo.headline)
                             .foregroundStyle(Theme.Palette.textPrimary)
@@ -189,7 +190,7 @@ struct PresetLibraryView: View {
                             .foregroundStyle(Theme.Palette.textTertiary)
                         createdByBadge(preset.createdBy)
                         if inCollection {
-                            AuraTag("Collection", tint: Theme.Palette.success)
+                            AuraTag(L10n.text("Collection"), tint: Theme.Palette.success)
                         }
                     }
                 }
@@ -203,7 +204,7 @@ struct PresetLibraryView: View {
                     }
                     .buttonStyle(.plain)
                 } else if isCurrent {
-                    StatusDot(color: Theme.Palette.accent, label: "Loaded", glow: true)
+                    StatusDot(color: Theme.Palette.accent, label: L10n.text("Loaded"), glow: true)
                 }
             }
         }
@@ -217,27 +218,27 @@ struct PresetLibraryView: View {
             model.load(preset: preset)
         }
         .contextMenu {
-            Button("Load") { model.load(preset: preset) }
-            Button("Rename") { beginRename(preset) }
-            Button("Duplicate") { model.duplicate(preset) }
-            Button("Export…") { export(preset) }
+            Button(L10n.text("Load")) { model.load(preset: preset) }
+            Button(L10n.text("Rename")) { beginRename(preset) }
+            Button(L10n.text("Duplicate")) { model.duplicate(preset) }
+            Button(L10n.text("Export…")) { export(preset) }
             Divider()
             if inCollection {
-                Button("Remove from My Collection") { model.removeFromCollection(preset) }
+                Button(L10n.text("Remove from My Collection")) { model.removeFromCollection(preset) }
             } else {
-                Button("Add to My Collection") { model.addToCollection(preset) }
+                Button(L10n.text("Add to My Collection")) { model.addToCollection(preset) }
             }
             Divider()
-            Button("Delete", role: .destructive) { model.delete(preset) }
+            Button(L10n.text("Delete"), role: .destructive) { model.delete(preset) }
         }
     }
 
     private func createdByBadge(_ by: CreatedBy) -> some View {
         switch by {
         case .ai:
-            return AuraTag("AI", tint: Theme.Palette.auraViolet)
+            return AuraTag(L10n.text("AI"), tint: Theme.Palette.auraViolet)
         case .user:
-            return AuraTag("User", tint: Theme.Palette.textSecondary)
+            return AuraTag(L10n.text("User"), tint: Theme.Palette.textSecondary)
         }
     }
 
@@ -259,7 +260,7 @@ struct PresetLibraryView: View {
     private var groups: [PresetGroup] {
         let buckets = Dictionary(grouping: filtered) { p -> String in
             let hp = p.headphone?.trimmingCharacters(in: .whitespaces) ?? ""
-            return hp.isEmpty ? "Generic" : hp
+            return hp.isEmpty ? L10n.text("Generic") : hp
         }
         return buckets
             .map { PresetGroup(key: $0.key, presets: $0.value.sorted { $0.updatedAt > $1.updatedAt }) }

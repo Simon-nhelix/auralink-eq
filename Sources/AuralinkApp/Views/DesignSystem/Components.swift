@@ -37,17 +37,9 @@ public enum AuraButtonRole {
     fileprivate var fill: AnyShapeStyle {
         switch self {
         case .route:
-            return AnyShapeStyle(LinearGradient(
-                colors: [Theme.Palette.auraCyan, Theme.Palette.auraBlue],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ))
+            return AnyShapeStyle(Theme.Gradients.routeButton)
         case .ai:
-            return AnyShapeStyle(LinearGradient(
-                colors: [Theme.Palette.auraViolet, Color(hex: 0x6C3ED7)],
-                startPoint: .leading,
-                endPoint: .trailing
-            ))
+            return AnyShapeStyle(Theme.Gradients.aiButton)
         }
     }
 }
@@ -64,8 +56,9 @@ public struct AuraButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Theme.Typo.label)
-            .foregroundStyle(prominent ? Color.black.opacity(0.9) : Theme.Palette.textPrimary)
-            .padding(.horizontal, 14).padding(.vertical, 7)
+            .foregroundStyle(prominent ? Theme.Palette.textOnAccent : Theme.Palette.textPrimary)
+            .padding(.horizontal, Theme.Metrics.buttonPadHorizontal)
+            .padding(.vertical, Theme.Metrics.buttonPadVertical)
             .background(
                 Group {
                     if prominent {
@@ -82,6 +75,25 @@ public struct AuraButtonStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.75 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// Shared brand mark for the menu bar and full editor.
+struct AuraWaveformMark: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let heights: [CGFloat] = [0.30, 0.62, 0.95, 0.55, 0.80, 0.40]
+            Theme.Gradients.aura
+                .mask(
+                    HStack(alignment: .center, spacing: max(1, geometry.size.width * 0.035)) {
+                        ForEach(heights.indices, id: \.self) { index in
+                            Capsule()
+                                .frame(height: max(2, geometry.size.height * heights[index]))
+                        }
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                )
+        }
     }
 }
 

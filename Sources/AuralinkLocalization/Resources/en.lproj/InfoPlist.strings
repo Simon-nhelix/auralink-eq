@@ -1,0 +1,2 @@
+"CFBundleDisplayName" = "Auralink EQ";
+"NSMicrophoneUsageDescription" = "Auralink EQ captures system audio through a virtual loopback input device (such as BlackHole) so it can apply equalization before sending sound to your headphones. macOS classifies this audio input as microphone access.";

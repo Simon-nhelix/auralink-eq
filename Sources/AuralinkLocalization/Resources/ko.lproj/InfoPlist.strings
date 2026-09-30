@@ -1,0 +1,2 @@
+"CFBundleDisplayName" = "Auralink EQ";
+"NSMicrophoneUsageDescription" = "Auralink EQ는 BlackHole 같은 가상 루프백 입력 기기를 통해 시스템 오디오를 캡처하고, 이퀄라이저를 적용하여 헤드폰으로 출력합니다. macOS는 이 오디오 입력을 마이크 접근으로 분류합니다.";

@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import AuralinkCore
 
@@ -68,26 +69,22 @@ extension AppModel {
         recomputeResponse()
         statusMessage = restoredDanglingOutput
             ?? collectionStatusMessage()
-            ?? "Auralink is ready. Audio routing is stopped until you start it."
+            ?? Self.initialReadyMessage
     }
 
     /// Surfaces the two collection states the user has to act on: profiles left
     /// behind in the pre-split location, and a collection written by a newer build.
     func collectionStatusMessage() -> String? {
         if AuralinkPaths.needsCollectionMigration {
-            return "Your headphone profiles are still in the old location. "
-                + "Run scripts/migrate-collection.mjs to move them into "
-                + AuralinkPaths.collectionDirectory.path
+            return L10n.format("Your headphone profiles are still in the old location. Run scripts/migrate-collection.mjs to move them into %@.", String(AuralinkPaths.collectionDirectory.path))
         }
         switch CollectionManifest.read(from: AuralinkPaths.collectionManifestFile) {
         case .success(let manifest?):
             if manifest.isFromNewerBuild {
-                return "This collection was written by a newer Auralink "
-                    + "(schema \(manifest.schemaVersion)); some entries may not load."
+                return L10n.format("This collection was written by a newer Auralink (schema %@); some entries may not load.", String(manifest.schemaVersion))
             }
         case .failure(let error):
-            return "Collection manifest is corrupt or unreadable. "
-                + error.localizedDescription
+            return L10n.format("Collection manifest is corrupt or unreadable. %@", String(error.localizedDescription))
         case .success(nil):
             break
         }
@@ -124,7 +121,7 @@ extension AppModel {
             await MainActor.run {
                 guard let self else { return }
                 self.loadPresets()
-                self.statusMessage = "Preset library auto-refreshed."
+                self.statusMessage = L10n.text("Preset library auto-refreshed.")
             }
         }
     }
@@ -153,7 +150,7 @@ extension AppModel {
         self.tuner = TuningEngine(knowledge: kb, validator: val)
         self.headphoneProfiles = kb.headphoneProfiles
         self.targetCurves = kb.targetCurves
-        statusMessage = "Knowledge refreshed: \(kb.headphoneProfiles.count) headphones, \(kb.targetCurves.count) targets."
+        statusMessage = L10n.format("Knowledge refreshed: %@ headphones, %@ targets.", String(kb.headphoneProfiles.count), String(kb.targetCurves.count))
         return (kb.headphoneProfiles.count, kb.targetCurves.count)
     }
 
@@ -163,7 +160,7 @@ extension AppModel {
                 .sorted { $0.updatedAt > $1.updatedAt }
             refreshCollectionMembership()
         } catch {
-            lastError = "Couldn't load presets: \(error.localizedDescription)"
+            lastError = L10n.format("Couldn't load presets: %@", String(error.localizedDescription))
         }
     }
 
@@ -195,7 +192,7 @@ extension AppModel {
         let selectedName = audioState.outputDeviceName
             ?? outputs.first(where: { $0.uid == selectedUID })?.name
             ?? outputs.first(where: { $0.isDefault && !$0.isVirtual })?.name
-            ?? "Select device"
+            ?? L10n.text("Select device")
         let options = outputs
             .filter { !$0.isVirtual }
             .map { device in

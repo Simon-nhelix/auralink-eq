@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -12,20 +13,20 @@ enum PresetFormatting {
     /// Display form for tags and meta rows (Title Case).
     static func roleLabel(_ role: CorrectionRole) -> String {
         switch role {
-        case .generic:    return "Generic"
-        case .baseline:   return "Baseline"
-        case .preference: return "Preference"
-        case .combined:   return "Combined"
+        case .generic:    return L10n.text("Generic")
+        case .baseline:   return L10n.text("Baseline")
+        case .preference: return L10n.text("Preference")
+        case .combined:   return L10n.text("Combined")
         }
     }
 
     /// Inline tag-pill form (lowercase) for the HeadphonePanelView preset row.
     static func roleTag(_ role: CorrectionRole) -> String {
         switch role {
-        case .generic:    return "generic"
-        case .baseline:   return "baseline"
-        case .preference: return "preference"
-        case .combined:   return "combined"
+        case .generic:    return L10n.text("generic")
+        case .baseline:   return L10n.text("baseline")
+        case .preference: return L10n.text("preference")
+        case .combined:   return L10n.text("combined")
         }
     }
 
@@ -33,12 +34,12 @@ enum PresetFormatting {
 
     static func typeLabel(_ type: HeadphoneType) -> String {
         switch type {
-        case .openBack:     return "Open-back"
-        case .closedBack:   return "Closed-back"
-        case .iem:          return "IEM"
-        case .earbud:       return "Earbud"
-        case .onEar:        return "On-ear"
-        case .trueWireless: return "True wireless"
+        case .openBack:     return L10n.text("Open-back")
+        case .closedBack:   return L10n.text("Closed-back")
+        case .iem:          return L10n.text("IEM")
+        case .earbud:       return L10n.text("Earbud")
+        case .onEar:        return L10n.text("On-ear")
+        case .trueWireless: return L10n.text("True wireless")
         }
     }
 

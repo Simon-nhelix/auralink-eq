@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -53,13 +54,13 @@ struct PermissionDialogView: View {
                 }
                 .padding(.vertical, 2)
             }
-            .frame(maxHeight: 320)
+            .frame(maxHeight: Theme.Layout.Proposal.contentMaxHeight)
 
             Divider().overlay(Theme.Palette.line)
             actionButtons
         }
         .padding(Theme.Metrics.pad)
-        .frame(width: 420)
+        .frame(width: Theme.Layout.Proposal.permissionWidth)
         .background(Theme.Palette.surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.radiusLg, style: .continuous))
         .overlay(
@@ -75,7 +76,7 @@ struct PermissionDialogView: View {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
                     .foregroundStyle(Theme.Palette.auraViolet)
-                Text("AI Tuning Proposal")
+                Text(L10n.text("AI Tuning Proposal"))
                     .font(Theme.Typo.caption)
                     .tracking(0.8)
                     .foregroundStyle(Theme.Palette.textTertiary)
@@ -103,11 +104,11 @@ struct PermissionDialogView: View {
     /// Green/yellow/red clipping verdict driven by `ClippingRisk`.
     private var clippingBadge: some View {
         let color = clippingColor
-        let label = "\(validation.clippingRisk.displayName) clip risk"
+        let label = L10n.format("%@ clip risk", L10n.text(validation.clippingRisk.displayName))
         return HStack(spacing: 6) {
             Image(systemName: validation.ok ? "checkmark.seal.fill" : "exclamationmark.octagon.fill")
                 .font(.system(size: 11))
-            Text(validation.ok ? label : "Validation failed")
+            Text(validation.ok ? label : L10n.text("Validation failed"))
                 .font(Theme.Typo.caption)
         }
         .foregroundStyle(color)
@@ -131,7 +132,7 @@ struct PermissionDialogView: View {
 
     private var intentSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Intent")
+            SectionLabel(L10n.text("Intent"))
             ForEach(Array(result.intent.enumerated()), id: \.offset) { _, line in
                 HStack(alignment: .top, spacing: 8) {
                     Circle()
@@ -151,7 +152,7 @@ struct PermissionDialogView: View {
 
     private var changesSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Changes")
+            SectionLabel(L10n.text("Changes"))
             VStack(spacing: 6) {
                 ForEach(result.changes) { change in
                     HStack(alignment: .top, spacing: 10) {
@@ -187,7 +188,7 @@ struct PermissionDialogView: View {
 
     private var issuesSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Validation")
+            SectionLabel(L10n.text("Validation"))
             ForEach(Array(validation.issues.enumerated()), id: \.offset) { _, issue in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: ValidationFormatting.issueIcon(issue.severity))
@@ -202,8 +203,8 @@ struct PermissionDialogView: View {
                 }
             }
             HStack(spacing: 14) {
-                Text("Peak \(Fmt.db(validation.estimatedPeakGainDb))")
-                Text("Auto-preamp \(Fmt.db(validation.suggestedPreampDb))")
+                Text(L10n.format("Peak %@", String(Fmt.db(validation.estimatedPeakGainDb))))
+                Text(L10n.format("Auto-preamp %@", String(Fmt.db(validation.suggestedPreampDb))))
             }
             .font(Theme.Typo.caption)
             .foregroundStyle(Theme.Palette.textTertiary)
@@ -223,7 +224,7 @@ struct PermissionDialogView: View {
 
     private var basisSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            SectionLabel("Basis")
+            SectionLabel(L10n.text("Basis"))
             Text(result.basis)
                 .font(Theme.Typo.caption)
                 .foregroundStyle(Theme.Palette.textTertiary)
@@ -239,7 +240,7 @@ struct PermissionDialogView: View {
                 Button(action: onApply) {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark")
-                        Text("Apply")
+                        Text(L10n.text("Apply"))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -247,7 +248,7 @@ struct PermissionDialogView: View {
                 .disabled(!validation.ok)
 
                 Button(action: onSaveDraft) {
-                    Text("Save Draft").frame(maxWidth: .infinity)
+                    Text(L10n.text("Save Draft")).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: false))
             }
@@ -255,7 +256,7 @@ struct PermissionDialogView: View {
                 Button(action: onCompare) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.left.arrow.right")
-                        Text("Compare A/B")
+                        Text(L10n.text("Compare A/B"))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -264,14 +265,14 @@ struct PermissionDialogView: View {
                 Button(action: onEdit) {
                     HStack(spacing: 6) {
                         Image(systemName: "slider.horizontal.3")
-                        Text("Edit")
+                        Text(L10n.text("Edit"))
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: false))
 
                 Button(action: onDiscard) {
-                    Text("Discard").frame(maxWidth: .infinity)
+                    Text(L10n.text("Discard")).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: false))
             }

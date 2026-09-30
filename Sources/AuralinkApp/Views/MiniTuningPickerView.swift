@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -15,7 +16,7 @@ struct MiniTuningPickerView: View {
     /// Fixed ScrollView height. MenuBarExtra collapses unbounded scroll regions;
     /// callers may shrink this when a status notice is also visible so the
     /// popover still fits under the menu bar.
-    var listHeight: CGFloat = 190
+    var listHeight: CGFloat = Theme.Layout.MenuBar.pickerHeight
     let presetsForProfile: (HeadphoneProfile?) -> [EQPreset]
     let onSelectHeadphone: (HeadphoneProfile?) -> Void
     let onSelectPreset: (EQPreset) -> Void
@@ -45,7 +46,7 @@ struct MiniTuningPickerView: View {
             : matchingHeadphones(query: trimmedQuery).count + matchingPresets(query: trimmedQuery).count
 
         return HStack(spacing: 6) {
-            Text(trimmedQuery.isEmpty ? "Available" : "Results")
+            Text(trimmedQuery.isEmpty ? L10n.text("Available") : L10n.text("Results"))
             Spacer(minLength: 0)
             Text("\(count)")
                 .monospacedDigit()
@@ -54,7 +55,7 @@ struct MiniTuningPickerView: View {
         .foregroundStyle(Theme.Palette.textTertiary)
         .padding(.horizontal, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(trimmedQuery.isEmpty ? "\(count) available items" : "\(count) search results")
+        .accessibilityLabel(trimmedQuery.isEmpty ? L10n.format("%lld available items", count) : L10n.format("%lld search results", count))
     }
 
     private var searchField: some View {
@@ -64,7 +65,7 @@ struct MiniTuningPickerView: View {
                 .foregroundStyle(Theme.Palette.textTertiary)
             MenuBarTextField(
                 text: $query,
-                placeholder: "Search headphones & presets…",
+                placeholder: L10n.text("Search headphones & presets…"),
                 autoFocus: true
             )
             .frame(height: 20)
@@ -103,10 +104,10 @@ struct MiniTuningPickerView: View {
     @ViewBuilder
     private var defaultResults: some View {
         if browseAllHeadphones {
-            sectionLabel("Headphones")
+            sectionLabel(L10n.text("Headphones"))
             pickerRow(
-                title: "Generic / Flat",
-                subtitle: "No headphone correction",
+                title: L10n.text("Generic / Flat"),
+                subtitle: L10n.text("No headphone correction"),
                 icon: currentProfile == nil ? "checkmark.circle.fill" : "circle"
             ) {
                 onSelectHeadphone(nil)
@@ -114,17 +115,17 @@ struct MiniTuningPickerView: View {
             ForEach(profiles) { profile in
                 pickerRow(
                     title: profile.displayName,
-                    subtitle: "\(presetsForProfile(profile).count) presets",
+                    subtitle: L10n.format("%lld presets", presetsForProfile(profile).count),
                     icon: currentProfile?.id == profile.id ? "checkmark.circle.fill" : "headphones"
                 ) {
                     onSelectHeadphone(profile)
                 }
             }
         } else {
-            sectionLabel(currentProfile?.displayName ?? "Generic presets")
+            sectionLabel(currentProfile?.displayName ?? L10n.text("Generic presets"))
             let scopedPresets = presetsForProfile(currentProfile)
             if scopedPresets.isEmpty {
-                Text("No saved presets for this headphone.")
+                Text(L10n.text("No saved presets for this headphone."))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(Theme.Palette.textTertiary)
                     .padding(.vertical, 5)
@@ -136,7 +137,7 @@ struct MiniTuningPickerView: View {
             Button {
                 browseAllHeadphones = true
             } label: {
-                Label("Browse headphones", systemImage: "headphones")
+                Label(L10n.text("Browse headphones"), systemImage: "headphones")
                     .font(Theme.Typo.label)
                     .foregroundStyle(Theme.Palette.accent)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -151,17 +152,17 @@ struct MiniTuningPickerView: View {
         let matchedProfiles = matchingHeadphones(query: text)
         let matchedPresets = matchingPresets(query: text)
         if matchedProfiles.isEmpty && matchedPresets.isEmpty {
-            Text("No headphones or presets match “\(text)”.")
+            Text(L10n.format("No headphones or presets match “%@”.", String(text)))
                 .font(Theme.Typo.caption)
                 .foregroundStyle(Theme.Palette.textTertiary)
                 .padding(.vertical, 6)
         } else {
             if !matchedProfiles.isEmpty {
-                sectionLabel("Headphones")
+                sectionLabel(L10n.text("Headphones"))
                 ForEach(matchedProfiles) { profile in
                     pickerRow(
                         title: profile.displayName,
-                        subtitle: "\(presetsForProfile(profile).count) presets",
+                        subtitle: L10n.format("%lld presets", presetsForProfile(profile).count),
                         icon: "headphones"
                     ) {
                         onSelectHeadphone(profile)
@@ -169,7 +170,7 @@ struct MiniTuningPickerView: View {
                 }
             }
             if !matchedPresets.isEmpty {
-                sectionLabel("Presets")
+                sectionLabel(L10n.text("Presets"))
                 ForEach(matchedPresets) { preset in
                     presetRow(preset)
                 }
@@ -180,7 +181,7 @@ struct MiniTuningPickerView: View {
     private func presetRow(_ preset: EQPreset) -> some View {
         pickerRow(
             title: preset.name,
-            subtitle: "\(preset.activeBands.count) bands · \(preset.createdBy == .ai ? "AI" : "User")",
+            subtitle: L10n.format("%lld bands · %@", preset.activeBands.count, String(preset.createdBy == .ai ? L10n.text("AI") : L10n.text("User"))),
             icon: preset.id == currentPresetId ? "checkmark.circle.fill" : "slider.horizontal.3"
         ) {
             onSelectPreset(preset)

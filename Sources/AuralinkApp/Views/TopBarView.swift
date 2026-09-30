@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -61,7 +62,7 @@ struct TopBarView: View {
         HStack(spacing: 12) {
             AuraWaveformMark()
                 .frame(width: 28, height: 20)
-            Text("Auralink EQ")
+            Text(L10n.text("Auralink EQ"))
                 .font(Theme.Typo.title)
                 .foregroundStyle(Theme.Palette.textPrimary)
                 .fixedSize()
@@ -84,7 +85,7 @@ struct TopBarView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Open the preset library")
+            .help(L10n.text("Open the preset library"))
         }
     }
 
@@ -94,9 +95,9 @@ struct TopBarView: View {
             Rectangle()
                 .fill(Theme.Palette.lineSoft)
                 .frame(width: 1, height: 32)
-            readout("Rate", String(format: "%.1f kHz", model.audioState.sampleRate / 1000))
-            readout("Buffer", "\(model.audioState.bufferFrames)")
-            readout("Latency", String(format: "%.1f ms", model.audioState.latencyMs))
+            readout(L10n.text("Rate"), String(format: "%.1f kHz", model.audioState.sampleRate / 1000))
+            readout(L10n.text("Buffer"), "\(model.audioState.bufferFrames)")
+            readout(L10n.text("Latency"), String(format: "%.1f ms", model.audioState.latencyMs))
             Rectangle()
                 .fill(Theme.Palette.lineSoft)
                 .frame(width: 1, height: 32)
@@ -125,7 +126,7 @@ struct TopBarView: View {
                 }
             }
             if model.outputPickerSnapshot.options.isEmpty {
-                Text("No devices")
+                Text(L10n.text("No devices"))
             }
         } label: {
             HStack(spacing: 7) {
@@ -169,7 +170,7 @@ struct TopBarView: View {
                 Circle()
                     .fill(clipping ? Theme.Palette.danger : Theme.Palette.success)
                     .frame(width: 6, height: 6)
-                Text(clipping ? "Clipping" : "Clean")
+                Text(clipping ? L10n.text("Clipping") : L10n.text("Clean"))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(clipping ? Theme.Palette.danger : Theme.Palette.textSecondary)
             }
@@ -188,13 +189,13 @@ struct TopBarView: View {
             model.systemEQActive ? model.stopSystemEQ() : model.startSystemEQ()
         } label: {
             Label(
-                model.systemEQActive ? "Stop System EQ" : "Start System EQ",
+                model.systemEQActive ? L10n.text("Stop System EQ") : L10n.text("Start System EQ"),
                 systemImage: model.systemEQActive ? "stop.fill" : "play.fill"
             )
             .frame(minWidth: 112)
         }
         .buttonStyle(AuraButtonStyle(prominent: !model.systemEQActive, role: .route))
-        .help("Start or stop system-wide EQ routing")
+        .help(L10n.text("Start or stop system-wide EQ routing"))
     }
 
     private var controlStrip: some View {
@@ -222,11 +223,11 @@ struct TopBarView: View {
             get: { model.audioState.eqEnabled },
             set: { model.setEQEnabled($0) }
         )) {
-            Label("EQ", systemImage: "slider.horizontal.3")
+            Label(L10n.text("EQ"), systemImage: "slider.horizontal.3")
                 .font(Theme.Typo.label)
         }
         .toggleStyle(StudioToggleStyle(onColor: Theme.Palette.accent))
-        .help("Enable or bypass the equalizer")
+        .help(L10n.text("Enable or bypass the equalizer"))
     }
 
     private var safeModeToggle: some View {
@@ -234,7 +235,7 @@ struct TopBarView: View {
             get: { model.audioState.safeMode },
             set: { model.setSafeMode($0) }
         )) {
-            Label("Safe", systemImage: "shield")
+            Label(L10n.text("Safe"), systemImage: "shield")
                 .font(Theme.Typo.label)
         }
         .toggleStyle(StudioToggleStyle(onColor: Theme.Palette.success))
@@ -248,7 +249,7 @@ struct TopBarView: View {
             VStack(spacing: 2) {
                 Image(systemName: "arrow.left.arrow.right")
                     .font(.system(size: 12, weight: .medium))
-                Text(model.comparingBefore ? "Before" : "A/B")
+                Text(model.comparingBefore ? L10n.text("Before") : L10n.text("A/B"))
                     .font(Theme.Typo.caption)
             }
             .frame(minWidth: 36)
@@ -260,7 +261,7 @@ struct TopBarView: View {
 
     private var preampControl: some View {
         VStack(spacing: 2) {
-            Text("Preamp")
+            Text(L10n.text("Preamp"))
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(Theme.Palette.textTertiary)
             Text(preampReadout)
@@ -295,7 +296,7 @@ struct TopBarView: View {
             VStack(spacing: 2) {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 12, weight: .medium))
-                Text("Reset")
+                Text(L10n.text("Reset"))
                     .font(Theme.Typo.caption)
             }
             .frame(minWidth: 36)
@@ -311,7 +312,7 @@ struct TopBarView: View {
             VStack(spacing: 2) {
                 Image(systemName: "flask")
                     .font(.system(size: 12, weight: .medium))
-                Text("FIR")
+                Text(L10n.text("FIR"))
                     .font(Theme.Typo.caption)
             }
             .frame(minWidth: 40)

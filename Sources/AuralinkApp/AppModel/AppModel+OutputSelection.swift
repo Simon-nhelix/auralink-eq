@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import Darwin
 import AuralinkCore
@@ -11,18 +12,18 @@ extension AppModel {
             ?? devices.device(forUID: uid).flatMap({ $0.isVirtual ? nil : $0 }) {
             return selectOutputDevice(device)
         }
-        lastError = "Output device \(uid) not found."
+        lastError = L10n.format("Output device %@ not found.", String(uid))
         return false
     }
 
     @discardableResult
     func selectOutputDevice(_ device: OutputDevice) -> Bool {
         guard !device.isVirtual else {
-            lastError = "Choose a real playback output; loopback devices are capture-only."
+            lastError = L10n.text("Choose a real playback output; loopback devices are capture-only.")
             return false
         }
         guard !audioPathTransactionInProgress else {
-            statusMessage = "Audio path is already changing."
+            statusMessage = L10n.text("Audio path is already changing.")
             return false
         }
 
@@ -37,7 +38,7 @@ extension AppModel {
     func commitOutputSelectionWhenStopped(_ device: OutputDevice, publish: Bool = true) -> Bool {
         UserDefaults.standard.set(device.uid, forKey: Self.lastOutputDefaultsKey)
         guard engine.selectOutput(device: device) else {
-            lastError = "Couldn't move the audio path to \(device.name)."
+            lastError = L10n.format("Couldn't move the audio path to %@.", String(device.name))
             return false
         }
         if publish { publishCommittedOutput(device) }
@@ -100,13 +101,13 @@ extension AppModel {
                     publishCommittedOutput(target)
                     return false
                 }
-                statusMessage = "Output switched to \(target.name)."
+                statusMessage = L10n.format("Output switched to %@.", String(target.name))
                 return true
             } catch {
                 engine.stop()
                 try? devices.setDefaultOutputDevice(restoreTarget)
                 refreshDevices()
-                lastError = "Couldn't switch output: \(error.localizedDescription)"
+                lastError = L10n.format("Couldn't switch output: %@", String(error.localizedDescription))
                 return false
             }
         }

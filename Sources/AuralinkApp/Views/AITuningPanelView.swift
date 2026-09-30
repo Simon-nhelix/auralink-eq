@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -60,9 +61,9 @@ struct AITuningPanelView: View {
 
     private var headphoneSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            inspectorHeading("Headphone", systemImage: "headphones")
-            Picker("Headphone", selection: $headphoneId) {
-                Text("Generic / none").tag("")
+            inspectorHeading(L10n.text("Headphone"), systemImage: "headphones")
+            Picker(L10n.text("Headphone"), selection: $headphoneId) {
+                Text(L10n.text("Generic / none")).tag("")
                 ForEach(model.headphoneProfiles) { profile in
                     Text(profile.displayName).tag(profile.id)
                 }
@@ -78,8 +79,8 @@ struct AITuningPanelView: View {
 
     private var goalSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            inspectorHeading("Goal", systemImage: "scope")
-            Picker("Goal", selection: $targetCurveId) {
+            inspectorHeading(L10n.text("Goal"), systemImage: "scope")
+            Picker(L10n.text("Goal"), selection: $targetCurveId) {
                 ForEach(model.targetCurves) { curve in
                     Text(curve.name).tag(curve.id)
                 }
@@ -90,7 +91,7 @@ struct AITuningPanelView: View {
 
             if let curve = selectedCurve {
                 HStack(spacing: 6) {
-                    AuraTag(curve.category.displayName, tint: Theme.Palette.auraViolet)
+                    AuraTag(L10n.text(curve.category.displayName), tint: Theme.Palette.auraViolet)
                     Spacer(minLength: 0)
                 }
                 Text(curve.description)
@@ -105,9 +106,9 @@ struct AITuningPanelView: View {
 
     private var strengthSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            inspectorHeading("Strength", systemImage: "gauge.with.dots.needle.33percent")
-            strengthRow("Correction", value: $correctionStrength, tint: Theme.Palette.auraBlue)
-            strengthRow("Target blend", value: $targetBlend, tint: Theme.Palette.auraViolet)
+            inspectorHeading(L10n.text("Strength"), systemImage: "gauge.with.dots.needle.33percent")
+            strengthRow(L10n.text("Correction"), value: $correctionStrength, tint: Theme.Palette.auraBlue)
+            strengthRow(L10n.text("Target blend"), value: $targetBlend, tint: Theme.Palette.auraViolet)
         }
     }
 
@@ -130,8 +131,8 @@ struct AITuningPanelView: View {
 
     private var preferenceSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            inspectorHeading("Preference", systemImage: "slider.horizontal.3")
-            TextField("e.g. keep vocals, brighter guitars, a bit more kick",
+            inspectorHeading(L10n.text("Preference"), systemImage: "slider.horizontal.3")
+            TextField(L10n.text("e.g. keep vocals, brighter guitars, a bit more kick"),
                       text: $preference, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(Theme.Typo.body)
@@ -153,26 +154,26 @@ struct AITuningPanelView: View {
 
     private var safetySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            inspectorHeading("Safety", systemImage: "shield")
+            inspectorHeading(L10n.text("Safety"), systemImage: "shield")
 
             HStack {
-                Text("Max boost")
+                Text(L10n.text("Max boost"))
                     .font(Theme.Typo.body)
                     .foregroundStyle(Theme.Palette.textSecondary)
                 Spacer()
                 Text(Fmt.db(maxBoostDb))
                     .font(Theme.Typo.mono)
                     .foregroundStyle(Theme.Palette.accent)
-                Stepper("Max boost", value: $maxBoostDb, in: 0...18, step: 0.5)
+                Stepper(L10n.text("Max boost"), value: $maxBoostDb, in: 0...18, step: 0.5)
                     .labelsHidden()
             }
 
             Toggle(isOn: $avoidHarshTreble) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Avoid harsh treble")
+                    Text(L10n.text("Avoid harsh treble"))
                         .font(Theme.Typo.body)
                         .foregroundStyle(Theme.Palette.textPrimary)
-                    Text("Prefer cuts over boosts in the 5–9 kHz fatigue region.")
+                    Text(L10n.text("Prefer cuts over boosts in the 5–9 kHz fatigue region."))
                         .font(Theme.Typo.caption)
                         .foregroundStyle(Theme.Palette.textTertiary)
                 }
@@ -191,11 +192,11 @@ struct AITuningPanelView: View {
                 if model.isTuning {
                     ProgressView()
                         .controlSize(.small)
-                        .tint(Color.black.opacity(0.9))
-                    Text("Generating…")
+                        .tint(Theme.Palette.textOnAccent)
+                    Text(L10n.text("Generating…"))
                 } else {
                     Image(systemName: "wand.and.stars")
-                    Text("Generate Tuning")
+                    Text(L10n.text("Generate Tuning"))
                 }
             }
             .frame(maxWidth: .infinity)
@@ -210,7 +211,7 @@ struct AITuningPanelView: View {
                 Button {
                     model.makeWarmer()
                 } label: {
-                    Text("Warmer")
+                    Text(L10n.text("Warmer"))
                         .foregroundStyle(Theme.Palette.auraViolet)
                 }
                 .buttonStyle(.plain)
@@ -218,7 +219,7 @@ struct AITuningPanelView: View {
                 Button {
                     model.reduceHarshness()
                 } label: {
-                    Text("Reduce harshness")
+                    Text(L10n.text("Reduce harshness"))
                         .foregroundStyle(Theme.Palette.auraViolet)
                 }
                 .buttonStyle(.plain)

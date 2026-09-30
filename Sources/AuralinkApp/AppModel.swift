@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import Combine
 import AppKit
@@ -11,10 +12,10 @@ enum RightPanel: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .presets:     return "Presets"
-        case .headphone:   return "Headphone"
-        case .aiTuning:    return "AI Tuning"
-        case .diagnostics: return "Monitor"
+        case .presets:     return L10n.text("Presets")
+        case .headphone:   return L10n.text("Headphone")
+        case .aiTuning:    return L10n.text("AI Tuning")
+        case .diagnostics: return L10n.text("Monitor")
         }
     }
 }
@@ -32,7 +33,7 @@ struct OutputPickerSnapshot: Equatable {
     var options: [OutputPickerOption]
 
     static let empty = OutputPickerSnapshot(
-        selectedName: "Select device",
+        selectedName: L10n.text("Select device"),
         selectedUID: nil,
         options: []
     )
@@ -151,6 +152,9 @@ final class AppModel: ObservableObject {
     static let previousOutputDefaultsKey = "auralink.previousSystemOutputDeviceUID"
     static let lastPresetDefaultsKey = "auralink.lastPresetId"
     static let lastOutputDefaultsKey = "auralink.lastOutputDeviceUID"
+    static var initialReadyMessage: String {
+        L10n.text("Auralink is ready. Audio routing is stopped until you start it.")
+    }
 
     // MARK: Dependencies (Core + audio)
     let store: PresetStore
