@@ -26,23 +26,24 @@ struct AITuningPanelView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
+            VStack(alignment: .leading, spacing: 18) {
                 headphoneSection
-                Divider().overlay(Theme.Palette.line)
                 goalSection
-                Divider().overlay(Theme.Palette.line)
+                RailDivider()
                 strengthSection
-                Divider().overlay(Theme.Palette.line)
                 preferenceSection
-                Divider().overlay(Theme.Palette.line)
+                RailDivider()
                 safetySection
-                Divider().overlay(Theme.Palette.line)
-                generateButton
-                quickActions
+                VStack(spacing: 10) {
+                    generateButton
+                    quickActions
+                }
+                .padding(.top, 4)
             }
-            .padding(Theme.Metrics.pad)
+            .padding(.horizontal, Theme.Metrics.padLg)
+            .padding(.top, 2)
+            .padding(.bottom, Theme.Metrics.padLg)
         }
-        .background(Theme.Palette.bg)
         .onAppear(perform: seedFromModel)
         .onChange(of: model.currentPreset.headphone) { _, _ in
             seedFromModel()
@@ -60,8 +61,8 @@ struct AITuningPanelView: View {
     // MARK: Headphone
 
     private var headphoneSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            inspectorHeading(L10n.text("Headphone"), systemImage: "headphones")
+        VStack(alignment: .leading, spacing: 7) {
+            RailSectionTitle(L10n.text("Headphone"))
             Picker(L10n.text("Headphone"), selection: $headphoneId) {
                 Text(L10n.text("Generic / none")).tag("")
                 ForEach(model.headphoneProfiles) { profile in
@@ -78,8 +79,14 @@ struct AITuningPanelView: View {
     // MARK: Goal / target curve
 
     private var goalSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            inspectorHeading(L10n.text("Goal"), systemImage: "scope")
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                RailSectionTitle(L10n.text("Goal"))
+                Spacer(minLength: 0)
+                if let curve = selectedCurve {
+                    AuraTag(L10n.text(curve.category.displayName))
+                }
+            }
             Picker(L10n.text("Goal"), selection: $targetCurveId) {
                 ForEach(model.targetCurves) { curve in
                     Text(curve.name).tag(curve.id)
@@ -90,14 +97,12 @@ struct AITuningPanelView: View {
             .tint(Theme.Palette.accent)
 
             if let curve = selectedCurve {
-                HStack(spacing: 6) {
-                    AuraTag(L10n.text(curve.category.displayName))
-                    Spacer(minLength: 0)
-                }
                 Text(curve.description)
-                    .font(Theme.Typo.caption)
-                    .foregroundStyle(Theme.Palette.textTertiary)
+                    .font(Theme.Typo.label.weight(.regular))
+                    .foregroundStyle(Theme.Palette.textSecondary)
+                    .lineSpacing(2)
                     .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -106,79 +111,78 @@ struct AITuningPanelView: View {
 
     private var strengthSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            inspectorHeading(L10n.text("Strength"), systemImage: "gauge.with.dots.needle.33percent")
+            RailSectionTitle(L10n.text("Strength"))
             strengthRow(L10n.text("Correction"), value: $correctionStrength, tint: Theme.Palette.accent)
             strengthRow(L10n.text("Target blend"), value: $targetBlend, tint: Theme.Palette.accent)
         }
     }
 
     private func strengthRow(_ title: String, value: Binding<Double>, tint: Color) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Text(title)
-                .font(Theme.Typo.body)
-                .foregroundStyle(Theme.Palette.textSecondary)
-                .frame(width: 92, alignment: .leading)
+                .font(Theme.Typo.label.weight(.regular))
+                .foregroundStyle(Theme.Palette.textPrimary)
+                .frame(width: 88, alignment: .leading)
             Slider(value: value, in: 0...1, step: 0.05)
+                .controlSize(.small)
                 .tint(tint)
             Text(PresetFormatting.percent(value.wrappedValue))
                 .font(Theme.Typo.mono)
-                .foregroundStyle(tint)
-                .frame(width: 42, alignment: .trailing)
+                .foregroundStyle(Theme.Palette.textPrimary)
+                .frame(width: 40, alignment: .trailing)
         }
     }
 
     // MARK: Preference
 
     private var preferenceSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            inspectorHeading(L10n.text("Preference"), systemImage: "slider.horizontal.3")
+        VStack(alignment: .leading, spacing: 7) {
+            RailSectionTitle(L10n.text("Preference"))
             TextField(L10n.text("e.g. keep vocals, brighter guitars, a bit more kick"),
                       text: $preference, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(Theme.Typo.body)
                 .foregroundStyle(Theme.Palette.textPrimary)
-                .lineLimit(1...3)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                        .fill(Theme.Palette.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                                .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                        )
-                )
+                .lineLimit(2...3)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(RailFieldBackground())
         }
     }
 
     // MARK: Safety
 
     private var safetySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            inspectorHeading(L10n.text("Safety"), systemImage: "shield")
+        VStack(alignment: .leading, spacing: 12) {
+            RailSectionTitle(L10n.text("Safety"))
 
-            HStack {
+            HStack(spacing: 8) {
                 Text(L10n.text("Max boost"))
-                    .font(Theme.Typo.body)
-                    .foregroundStyle(Theme.Palette.textSecondary)
+                    .font(Theme.Typo.label.weight(.regular))
+                    .foregroundStyle(Theme.Palette.textPrimary)
                 Spacer()
                 Text(Fmt.db(maxBoostDb))
                     .font(Theme.Typo.mono)
-                    .foregroundStyle(Theme.Palette.accent)
+                    .foregroundStyle(Theme.Palette.textPrimary)
                 Stepper(L10n.text("Max boost"), value: $maxBoostDb, in: 0...18, step: 0.5)
                     .labelsHidden()
+                    .controlSize(.small)
             }
 
             Toggle(isOn: $avoidHarshTreble) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(L10n.text("Avoid harsh treble"))
-                        .font(Theme.Typo.body)
+                        .font(Theme.Typo.label.weight(.regular))
                         .foregroundStyle(Theme.Palette.textPrimary)
                     Text(L10n.text("Prefer cuts over boosts in the 5–9 kHz fatigue region."))
                         .font(Theme.Typo.caption)
                         .foregroundStyle(Theme.Palette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .toggleStyle(.switch)
+            .controlSize(.mini)
             .tint(Theme.Palette.accent)
 
         }
@@ -195,7 +199,7 @@ struct AITuningPanelView: View {
                         .tint(Theme.Palette.textOnAccent)
                     Text(L10n.text("Generating…"))
                 } else {
-                    Image(systemName: "wand.and.stars")
+                    Image(systemName: "sparkles")
                     Text(L10n.text("Generate Tuning"))
                 }
             }
@@ -207,7 +211,8 @@ struct AITuningPanelView: View {
 
     private var quickActions: some View {
         VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: Theme.Metrics.gap) {
+            HStack(spacing: 16) {
+                Spacer(minLength: 0)
                 Button {
                     model.makeWarmer()
                 } label: {
@@ -225,19 +230,9 @@ struct AITuningPanelView: View {
                 .buttonStyle(.plain)
                 Spacer(minLength: 0)
             }
+            .font(Theme.Typo.label)
             .disabled(model.isTuning)
-        }
-    }
-
-    private func inspectorHeading(_ title: String, systemImage: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.Palette.textSecondary)
-                .frame(width: 18)
-            Text(title)
-                .font(Theme.Typo.headline)
-                .foregroundStyle(Theme.Palette.textPrimary)
+            .opacity(model.isTuning ? 0.5 : 1)
         }
     }
 

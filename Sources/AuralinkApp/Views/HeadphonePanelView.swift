@@ -14,7 +14,7 @@ struct HeadphonePanelView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Metrics.gap) {
+            VStack(alignment: .leading, spacing: 12) {
                 header
                 if let profile = currentProfile {
                     profileCard(profile)
@@ -25,22 +25,17 @@ struct HeadphonePanelView: View {
                 presetList
                 pickList
             }
-            .padding(Theme.Metrics.pad)
+            .padding(.horizontal, Theme.Metrics.padLg)
+            .padding(.top, 2)
+            .padding(.bottom, Theme.Metrics.padLg)
         }
-        .background(Theme.Palette.bg)
     }
 
     // MARK: Header
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "headphones")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.Palette.accent)
-            Text(L10n.text("Headphone"))
-                .font(Theme.Typo.title)
-                .foregroundStyle(Theme.Palette.textPrimary)
-        }
+        RailPanelTitle(L10n.text("Headphone"))
+            .frame(height: 26)
     }
 
     // MARK: Profile card
@@ -51,8 +46,9 @@ struct HeadphonePanelView: View {
                 // Title + type + credibility
                 VStack(alignment: .leading, spacing: 6) {
                     Text(profile.displayName)
-                        .font(Theme.Typo.title)
+                        .font(Theme.Typo.headline)
                         .foregroundStyle(Theme.Palette.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 6) {
                         AuraTag(PresetFormatting.typeLabel(profile.type), tint: Theme.Palette.info)
                         AuraTag(L10n.text(profile.credibility.displayName), tint: PresetFormatting.credibilityTint(profile.credibility))
@@ -64,7 +60,7 @@ struct HeadphonePanelView: View {
                     SectionLabel(L10n.text("Signature"))
                     Text(profile.signature)
                         .font(Theme.Typo.body)
-                        .foregroundStyle(Theme.Palette.textPrimary)
+                        .foregroundStyle(Theme.Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 

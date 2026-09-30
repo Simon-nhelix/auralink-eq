@@ -37,14 +37,14 @@ struct SeismographView: View {
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: Theme.Metrics.radius)
-                .fill(Theme.Palette.bg)
+            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                .fill(Theme.Palette.inset)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Metrics.radius)
-                .stroke(Theme.Palette.line, lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                .strokeBorder(Theme.Palette.lineSoft, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.radius))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous))
     }
 
     /// The trace canvas, factored out so the active and idle branches draw the

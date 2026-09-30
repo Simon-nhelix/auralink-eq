@@ -54,9 +54,12 @@ struct DiagnosticsPanelView: View {
                 statsRow
 
                 SectionLabel(L10n.text("Incidents"))
+                    .padding(.top, 6)
                 incidentList
             }
-            .padding(Theme.Metrics.pad)
+            .padding(.horizontal, Theme.Metrics.padLg)
+            .padding(.top, 2)
+            .padding(.bottom, Theme.Metrics.padLg)
         }
     }
 
@@ -104,10 +107,12 @@ struct DiagnosticsPanelView: View {
     private func statCell(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label.uppercased())
-                .font(Theme.Typo.caption)
+                .font(Theme.Typo.micro.weight(.semibold))
+                .tracking(0.5)
                 .foregroundStyle(Theme.Palette.textTertiary)
+                .lineLimit(1)
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(Theme.Typo.monoLg)
                 .foregroundStyle(Theme.Palette.textPrimary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -166,7 +171,7 @@ struct DiagnosticsPanelView: View {
                 .foregroundStyle(Theme.Palette.accent)
             }
             Text(incident.report)
-                .font(.system(size: 10))
+                .font(Theme.Typo.micro)
                 .foregroundStyle(Theme.Palette.textSecondary)
                 .lineLimit(8)
                 .textSelection(.enabled)

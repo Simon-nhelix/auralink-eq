@@ -43,7 +43,7 @@ struct PermissionDialogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Metrics.gap) {
             header
-            Divider().overlay(Theme.Palette.line)
+            RailDivider()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
@@ -56,7 +56,7 @@ struct PermissionDialogView: View {
             }
             .frame(maxHeight: Theme.Layout.Proposal.contentMaxHeight)
 
-            Divider().overlay(Theme.Palette.line)
+            RailDivider()
             actionButtons
         }
         .padding(Theme.Metrics.pad)

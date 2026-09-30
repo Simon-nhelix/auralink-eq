@@ -31,7 +31,7 @@ struct AIResultView: View {
         AuraCard(padding: Theme.Metrics.pad) {
             VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
                 header(for: result)
-                Divider().overlay(Theme.Palette.line)
+                RailDivider()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Metrics.pad) {
@@ -44,7 +44,7 @@ struct AIResultView: View {
                 }
                 .frame(maxHeight: Theme.Layout.Proposal.contentMaxHeight)
 
-                Divider().overlay(Theme.Palette.line)
+                RailDivider()
                 footerMeta(for: result)
                 actions
             }
@@ -60,13 +60,10 @@ struct AIResultView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.Palette.accent)
-                    Text(L10n.text("Proposed Tuning"))
-                        .font(Theme.Typo.caption)
-                        .tracking(0.8)
-                        .foregroundStyle(Theme.Palette.textTertiary)
+                    SectionLabel(L10n.text("Proposed Tuning"))
                 }
                 Text(result.preset.name)
-                    .font(Theme.Typo.title)
+                    .font(Theme.Typo.headline)
                     .foregroundStyle(Theme.Palette.textPrimary)
                     .lineLimit(2)
                 if let hp = result.preset.headphone, !hp.isEmpty {

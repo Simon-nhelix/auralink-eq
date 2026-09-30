@@ -79,16 +79,9 @@ struct MiniTuningPickerView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 9)
+        .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                .fill(Theme.Palette.bg)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
-                        .strokeBorder(Theme.Palette.line, lineWidth: 1)
-                )
-        )
+        .background(RailFieldBackground())
     }
 
     @ViewBuilder

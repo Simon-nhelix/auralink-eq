@@ -242,6 +242,82 @@ public struct AuraTag: View {
     }
 }
 
+// MARK: - Right-rail building blocks
+
+/// Panel title at the top of a right-rail panel ("Presets", "Headphone").
+struct RailPanelTitle: View {
+    var text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        Text(text)
+            .font(Theme.Typo.headline)
+            .foregroundStyle(Theme.Palette.textPrimary)
+    }
+}
+
+/// Small heading for a group of controls inside a rail panel.
+struct RailSectionTitle: View {
+    var text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        Text(text)
+            .font(Theme.Typo.label.weight(.semibold))
+            .foregroundStyle(Theme.Palette.textSecondary)
+    }
+}
+
+/// Hairline between groups of controls in a rail panel.
+struct RailDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Theme.Palette.lineSoft)
+            .frame(height: 1)
+    }
+}
+
+/// Recessed well behind rail text fields (search, preference).
+struct RailFieldBackground: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+            .fill(Theme.Palette.inset)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                    .strokeBorder(Theme.Palette.lineSoft, lineWidth: 1)
+            )
+    }
+}
+
+/// List row in a rail panel: accent-tinted when selected, a faint highlight
+/// while hovered, otherwise flat on the rail.
+struct RailRowButtonStyle: ButtonStyle {
+    var selected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        RailRow(configuration: configuration, selected: selected)
+    }
+
+    private struct RailRow: View {
+        let configuration: ButtonStyleConfiguration
+        let selected: Bool
+        @State private var hovering = false
+
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Metrics.radiusSm, style: .continuous)
+                        .fill(selected
+                              ? Theme.Palette.accentSoft
+                              : (hovering || configuration.isPressed ? Theme.Palette.lineSoft : Color.clear))
+                )
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 }
+        }
+    }
+}
+
 /// A thin level meter: dBTP mapped from −60…0 onto the track width.
 struct PeakMeter: View {
     let peakDb: Double
