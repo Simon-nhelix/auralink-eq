@@ -34,6 +34,13 @@ Browser-originated requests are rejected, CORS is not enabled, and ControlServer
 write requests require JSON. Binding to loopback and token authentication do not
 protect a machine whose user account is already compromised.
 
+MCP tools that edit library files query the authenticated app state before
+writing. Read Only cannot be overridden by a client confirmation; Ask Before
+Write requires `confirmed:true`. If the app's permission mode cannot be verified
+(offline, authentication failure, or unsupported response), no library files are
+changed. This policy covers presets, headphone profiles, collection membership,
+and tuning feedback; read-tool cache maintenance is separate.
+
 ## Network behavior
 
 - The Swift app processes audio locally and does not upload audio.

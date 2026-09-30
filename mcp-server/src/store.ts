@@ -982,6 +982,8 @@ const GENERATED_AGENT_GUIDE = `# Auralink Agent EQ Guide
 
 Auralink is the local audio engine, preset store, validator, and live apply endpoint. It is not an AI model. The AI client must read evidence, decide explicit EQ bands, then use Auralink tools to validate, audition, save, and apply.
 
+Library writes require the running app's current permission mode. In ask_before_write, pass confirmed:true only after the user requested that file change. read_only always rejects writes. If permission is unavailable, launch the app and retry; offline reads and validation remain available. File confirmation alone does not authorize live audio.
+
 ## Default Workflow
 
 1. Read get_agent_eq_guide and get_current_audio_state before changing sound.

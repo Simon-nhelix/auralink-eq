@@ -57,6 +57,7 @@ import {
 } from "./types.js";
 import { registerHeadphoneBaseline, type RegisterHeadphoneBaselineInput } from "./register-headphone-baseline.js";
 import { jsonResult, errorResult, verifyAuralinkLiveRequest } from "./result.js";
+import { libraryWriteConfirmationSchema, libraryWriteDenial } from "./library-write-permission.js";
 import {
   bandSpecSchema,
   targetSchema,
@@ -404,10 +405,13 @@ export function registerTools(server: McpServer): void {
           .max(20)
           .optional()
           .describe("Optional snapshot of the bands that were auditioned, so the magnitude of the move is learnable."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
-    async ({ sentiment, headphone, presetId, presetName, perceivedIssue, goal, feedbackText, tags, bands }) => {
+    async ({ sentiment, headphone, presetId, presetName, perceivedIssue, goal, feedbackText, tags, bands, confirmed }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ recorded: false, ...denied });
       const entry: TuningFeedbackEntry = {
         id: `fb_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
         createdAt: new Date().toISOString(),
@@ -642,6 +646,7 @@ export function registerTools(server: McpServer): void {
           .enum(["measured", "manufacturer", "community", "estimated"])
           .default("estimated")
           .describe("Trust level. Use measured for graph data; estimated for text-only review inference."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
@@ -656,7 +661,10 @@ export function registerTools(server: McpServer): void {
       suggestedTargetCurveId,
       source,
       credibility,
+      confirmed,
     }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ saved: false, ...denied });
       const profileId = id && id.trim().length > 0 ? id.trim() : slugify(`${brand}-${model}`);
       if (profileId.length === 0) {
         return errorResult("Could not derive a profile id. Provide a non-empty id, brand, or model.");
@@ -708,6 +716,7 @@ export function registerTools(server: McpServer): void {
         "was added by mistake or asks to remove it. The running app is asked to reload knowledge afterward.",
       inputSchema: {
         id: z.string().min(1).describe("Profile id to delete, e.g. 'timeear-nh60'."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -716,7 +725,9 @@ export function registerTools(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ id }) => {
+    async ({ id, confirmed }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ deleted: false, ...denied });
       const deleted = await deleteHeadphoneProfile(id);
       if (!deleted) {
         return jsonResult({
@@ -820,10 +831,13 @@ export function registerTools(server: McpServer): void {
         "Does not change sound.",
       inputSchema: {
         id: z.string().min(1).describe("Preset id to add. Use list_presets to discover ids."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
-    async ({ id }) => {
+    async ({ id, confirmed }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ added: false, ...denied });
       const preset = await addPresetToCollection(id);
       if (!preset) {
         return errorResult(`No preset with id '${id}'. Call list_presets to see valid ids.`);
@@ -847,10 +861,13 @@ export function registerTools(server: McpServer): void {
         "loads untouched. Does not change sound.",
       inputSchema: {
         id: z.string().min(1).describe("Preset id to remove from the collection."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
-    async ({ id }) => {
+    async ({ id, confirmed }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ removed: false, ...denied });
       const removed = await removePresetFromCollection(id);
       return jsonResult({
         removed,
@@ -894,6 +911,7 @@ export function registerTools(server: McpServer): void {
         "If the deleted preset is currently loaded, the app is moved back to Flat when reachable.",
       inputSchema: {
         id: z.string().min(1).describe("Preset id to delete."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -902,8 +920,10 @@ export function registerTools(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ id }) => {
+    async ({ id, confirmed }) => {
       const stateBefore = await getState();
+      const denied = await libraryWriteDenial(confirmed, stateBefore);
+      if (denied) return jsonResult({ deleted: false, ...denied });
       const deleted = await deletePreset(id);
       if (!deleted) {
         return jsonResult({
@@ -1038,10 +1058,7 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .default(false)
           .describe("When true, apply the saved preset to live audio after writing. Requires confirmed:true."),
-        confirmed: z
-          .boolean()
-          .default(false)
-          .describe("Set true only when the user explicitly asked for this live-audio change."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
     },
@@ -1067,6 +1084,8 @@ export function registerTools(server: McpServer): void {
       applyNow,
       confirmed,
     }) => {
+      const denied = await libraryWriteDenial(confirmed);
+      if (denied) return jsonResult({ saved: false, ...denied });
       const rules = await loadSafetyRules();
 
       // Materialize a normalized 20-band preset from the sparse specs.
@@ -1472,10 +1491,13 @@ export function registerTools(server: McpServer): void {
         correctionNotes: z.array(z.string()).optional().describe("Optional correction notes override/extension."),
         harshRegionsHz: z.array(frequencyRangeSchema).optional(),
         refreshAutoEq: z.boolean().default(false).describe("Force re-download of AutoEq correction."),
+        confirmed: libraryWriteConfirmationSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async (args) => {
+      const denied = await libraryWriteDenial(args.confirmed);
+      if (denied) return jsonResult(denied);
       try {
         const result = await registerHeadphoneBaseline({
           headphone: args.headphone,

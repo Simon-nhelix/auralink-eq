@@ -36,6 +36,7 @@ const server = new McpServer(
       "the resolved baseline, safety limits, and a recommended starting point in one read — it prevents " +
       "missing the current state or the baseline to build on. " +
       "Auralink EQ is not an AI model. It is a local audio engine, preset library, validator, and live apply endpoint. " +
+      "Library writes require the running app's permission mode. Read Only rejects every library write; in Ask Before Write, pass confirmed:true only after the user requested that file change. If permission_unavailable is returned, launch the app before retrying; reads and validation still work offline. File confirmation alone does not authorize a live-audio change. " +
       "For natural-language tuning requests, first call get_agent_eq_guide/get_tuning_guidance and read the relevant eq:// resources, then the AI client should design explicit EQ bands. " +
       "MEASURED DATA FIRST: when the user names a headphone/IEM model, call get_autoeq_correction before inventing bands — it returns the AutoEq PEQ fallback and, when available, a dense GraphicEQ-derived measuredCorrection payload (oratory1990, crinacle, …). Preserve that payload in Auralink software presets and mark only subjective additions in preferenceBandIndexes; use PEQ alone for Luxsin X8. Only fall back to prose-derived guesses when no measurement exists. " +
       "After designing or editing bands, call get_response_curve to verify the combined curve actually matches the stated intent (bass shelf where intended, no accidental ripple) before auditioning. " +

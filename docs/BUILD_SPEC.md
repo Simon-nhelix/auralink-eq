@@ -262,6 +262,14 @@ capability at `~/Library/Application Support/Auralink/control-token` with mode
 never emit CORS headers, and require `application/json` for POST. All handlers
 hop to `@MainActor` to touch AppModel. Keep it dependency-free (no Vapor).
 
+MCP filesystem writes also require an authenticated `GET /state` permission
+check: `read_only` forbids every library mutation; `ask_before_write` requires
+`confirmed:true`; `allow_preset_creation` and `full_control` permit library
+writes. Missing, unknown, offline, or unauthorized policy responses fail closed
+with `{ok:false, written:false, reason:"permission_unavailable"}`. Apply this
+before preset/profile CRUD, collection changes, registration, and feedback;
+offline reads and validation do not need this check.
+
 ```swift
 // AuralinkApp.swift — @main
 @main struct AuralinkApp: App {

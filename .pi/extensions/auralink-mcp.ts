@@ -612,7 +612,7 @@ export default function auralinkMcpExtension(pi: ExtensionAPI) {
     promptSnippet: "Fallback: call an Auralink EQ MCP tool by name with raw arguments.",
     promptGuidelines: [
       "Prefer first-class Auralink MCP tools over auralink_mcp_call_tool when available.",
-      "Never use auralink_mcp_call_tool to pass confirmed:true unless the user explicitly requested the live-audio change.",
+      "Never use auralink_mcp_call_tool to pass confirmed:true unless the user explicitly requested the relevant file or live-audio change. File confirmation alone does not authorize live audio.",
     ],
     parameters: CALL_TOOL_SCHEMA as any,
     executionMode: "sequential",

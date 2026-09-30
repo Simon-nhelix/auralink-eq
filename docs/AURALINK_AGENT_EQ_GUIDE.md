@@ -155,6 +155,14 @@ These are starting points, not final answers.
 
 ## Tool Contracts
 
+Library writes require the running app so its current permission mode can be
+verified. In `ask_before_write`, pass `confirmed:true` only after the user has
+requested the relevant file change (saving, registration, feedback, or removal).
+`read_only` rejects writes regardless of confirmation. Offline or unverifiable
+permissions return `permission_unavailable` without changing files; launch the
+app and retry. Reads and validation still work offline. File confirmation does
+not authorize live audio unless the user also requested that live action.
+
 ### For Adding A Model
 
 Use:

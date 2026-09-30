@@ -62,6 +62,19 @@ Live and destructive tools are explicitly annotated in their MCP metadata.
 that produces a validation **error**. Because it can also apply the result to
 live audio (`applyNow:true` + `confirmed:true`), it is annotated destructive.
 
+Every library-writing tool checks the running app's permission mode before
+changing files, including preset/profile CRUD, collection membership, baseline
+registration, and tuning feedback. `read_only` rejects writes even with
+`confirmed:true`; `ask_before_write` requires that flag after the user has
+requested the file change. `allow_preset_creation` and `full_control` allow
+library writes without per-action confirmation. Confirmation of a file change
+does not apply audio unless a live action is also explicitly requested.
+
+If the app is offline, unauthenticated, or reports an unknown permission mode,
+library writes return `ok:false`, `written:false`, and
+`reason:"permission_unavailable"`. Launch the app and retry. Offline read and
+validation tools remain available.
+
 ### Resources (5)
 
 - `eq://current-state` — live `AudioState` (or an offline notice).

@@ -16,6 +16,8 @@ Auralink is the local audio engine, preset store, validator, and live apply endp
 
 ## Preset Policy
 
+- Library writes require the running app's current permission mode. In `ask_before_write`, use `confirmed:true` only after the user requested that file change. `read_only` always rejects writes. If permission is unavailable, launch the app and retry; offline reads and validation remain available. File confirmation alone does not authorize live audio.
+
 - Model baseline: saved preset. Name it `<Brand> <Model> - Harman Baseline` or another clear model baseline name.
 - Preference tuning: audition-only first. Examples: warmer, more exciting, smoother treble, more vocal, less bass.
 - Save-on-like: when the user says "좋아", "맘에 들어", "저장해줘", or equivalent, save the currently auditioned preset with a descriptive name and tags.
