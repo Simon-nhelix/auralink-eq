@@ -32,6 +32,13 @@ let package = Package(
             name: "AuralinkRT"
         ),
 
+        // Signed GitHub release downloads and atomic app replacement; no audio/UI.
+        .target(
+            name: "AuralinkUpdates",
+            dependencies: ["AuralinkLocalization"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+
         // UI copy only; core data, DSP, and API identifiers stay language-neutral.
         .target(
             name: "AuralinkLocalization",
@@ -43,7 +50,7 @@ let package = Package(
         // and the local HTTP control server the MCP server talks to.
         .executableTarget(
             name: "AuralinkApp",
-            dependencies: ["AuralinkCore", "AuralinkRT", "AuralinkLocalization"],
+            dependencies: ["AuralinkCore", "AuralinkRT", "AuralinkLocalization", "AuralinkUpdates"],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
                 // Work around macOS 26 / SwiftUI executor-check crashes where
@@ -87,6 +94,12 @@ let package = Package(
         .testTarget(
             name: "AuralinkLocalizationTests",
             dependencies: ["AuralinkLocalization"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+
+        .testTarget(
+            name: "AuralinkUpdatesTests",
+            dependencies: ["AuralinkUpdates"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]

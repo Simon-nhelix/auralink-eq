@@ -10,6 +10,7 @@ import AuralinkCore
 /// replaces secondary content with a searchable headphone/preset chooser.
 struct MenuBarView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var updates: UpdateModel
     @Environment(\.openWindow) private var openWindow
 
     @State private var tuningPickerExpanded = false
@@ -22,6 +23,7 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 11) {
             header
+            UpdateAvailableButton()
 
             if let notice = currentNotice {
                 noticeView(notice)
@@ -85,6 +87,11 @@ struct MenuBarView: View {
 
     private var overflowMenu: some View {
         Menu {
+            Button(L10n.text("Check for updates…"), systemImage: "arrow.down.app") {
+                openWindow(id: "updates")
+                updates.checkNow()
+            }
+            Divider()
             Button(L10n.text("Refresh audio setup"), systemImage: "arrow.clockwise") {
                 model.refreshAudioSetup()
             }

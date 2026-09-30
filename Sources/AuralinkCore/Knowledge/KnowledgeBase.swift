@@ -307,11 +307,9 @@ public final class KnowledgeBase {
 
     private static func bundledURL(for file: String) -> URL? {
         if let resources = Bundle.main.resourceURL {
-            let packagedURL = resources
-                .appendingPathComponent("Auralink_AuralinkCore.bundle", isDirectory: true)
-                .appendingPathComponent("data", isDirectory: true)
-                .appendingPathComponent("\(file).json", isDirectory: false)
-            if FileManager.default.fileExists(atPath: packagedURL.path) {
+            let bundleURL = resources.appendingPathComponent("Auralink_AuralinkCore.bundle", isDirectory: true)
+            if let bundle = Bundle(url: bundleURL),
+               let packagedURL = bundle.url(forResource: file, withExtension: "json", subdirectory: "data") {
                 return packagedURL
             }
         }

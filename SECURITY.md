@@ -44,9 +44,26 @@ and tuning feedback; read-tool cache maintenance is separate.
 ## Network behavior
 
 - The Swift app processes audio locally and does not upload audio.
+- A packaged app with an update public key checks public GitHub release metadata
+  automatically at most once a day, unless disabled in the update window.
+  Archives and detached signatures are downloaded only when the user chooses
+  installation. No audio, control token, preset or device data is sent.
 - The MCP server can fetch public AutoEq result files from GitHub when that tool
   is invoked. Results are cached under the user's Auralink Application Support
   directory.
 - Optional Luxsin X8 support communicates with a device on the local network and
   may scan private IPv4 addresses when device discovery is requested.
 - No analytics or crash-reporting service is included.
+
+## Update authenticity
+
+The app pins an Ed25519 public key in its signed bundle. HTTPS downloads are
+verified before extraction; the extracted app must match the release version,
+bundle identifier and public key and have a valid macOS code signature. A modified
+archive or signature is rejected before app replacement. The release private key
+is kept in the maintainer's login keychain, separate from MiSTer FTP's key. The
+GitHub account and release notes are not themselves authenticated by that key.
+
+Ad-hoc macOS signing is the current release workflow. Update authenticity does
+not imply Apple notarization. Key rotation is not supported automatically; a lost
+key requires recovery or a documented manual migration to a newly signed release.

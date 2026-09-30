@@ -21,6 +21,7 @@ struct EditorWindow: View {
 
             VStack(spacing: 0) {
                 TopBarView()
+                UpdateAvailableButton().padding(.horizontal, Theme.Metrics.pad)
 
                 HStack(spacing: 0) {
                     mainColumn

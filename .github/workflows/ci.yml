@@ -82,11 +82,13 @@ jobs:
       - name: Show Swift version
         run: swift --version
       - name: Bundle release app
-        run: ./scripts/bundle-app.sh
+        run: AURALINK_SIGN_IDENTITY=- ./scripts/bundle-app.sh --universal
+      - name: Archive app with executable permissions and signatures
+        run: ditto -c -k --sequesterRsrc --keepParent "build/Auralink EQ.app" build/Auralink-EQ-CI.zip
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
         with:
           name: Auralink-EQ-app
-          path: build/Auralink EQ.app
+          path: build/Auralink-EQ-CI.zip
           if-no-files-found: error
           retention-days: 7

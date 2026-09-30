@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>version</key>
+    <string>0.1.0-alpha.1</string>
+    <key>build</key>
+    <string>2</string>
+    <key>channel</key>
+    <string>alpha</string>
+    <key>repository</key>
+    <string>Simon-nhelix/auralink-eq</string>
+    <key>publicKey</key>
+    <string></string>
+</dict>
+</plist>

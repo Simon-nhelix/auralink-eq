@@ -2,6 +2,7 @@ import AuralinkLocalization
 import SwiftUI
 import AppKit
 import AuralinkCore
+import AuralinkUpdates
 
 /// Auralink EQ — the @main entry point.
 ///
@@ -20,6 +21,7 @@ struct AuralinkApp: App {
         MenuBarExtra(L10n.text("Auralink"), systemImage: "waveform") {
             MenuBarView()
                 .environmentObject(delegate.model)
+                .environmentObject(delegate.updates)
         }
         .menuBarExtraStyle(.window)
 
@@ -27,10 +29,17 @@ struct AuralinkApp: App {
         WindowGroup(L10n.text("Auralink EQ"), id: "editor") {
             EditorWindow()
                 .environmentObject(delegate.model)
+                .environmentObject(delegate.updates)
                 .frame(minWidth: Theme.Layout.Editor.minWidth,
                        minHeight: Theme.Layout.Editor.minHeight)
         }
         .windowResizability(.contentMinSize)
+        .commands { UpdateCommands(updates: delegate.updates) }
+
+        Window(L10n.text("Auralink updates"), id: "updates") {
+            UpdateView().environmentObject(delegate.updates)
+        }
+        .windowResizability(.contentSize)
 
         // MARK: Standalone live path monitor — small, floatable, made to sit
         // in a corner during long listening sessions.
@@ -56,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The one source of truth, owned for the app's lifetime. Created on the main
     /// thread when the delegate is instantiated (before any scene renders).
     let model: AppModel = MainActor.assumeIsolated { AppModel() }
+    let updates: UpdateModel = MainActor.assumeIsolated { UpdateModel() }
 
     /// The loopback HTTP API for the MCP server, held so it lives with the app.
     private var controlServer: ControlServer?
@@ -82,6 +92,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Wire up domain + device state. Live audio routing starts only after
             // an explicit user/MCP action so launching the app never steals sound.
             model.bootstrap()
+            updates.prepareForRestart = { [weak self] in
+                guard let self else { throw UpdateError.install("audio model unavailable") }
+                self.model.stopSystemEQ()
+                _ = self.model.restoreDanglingSystemOutputIfNeeded()
+                self.model.refreshDevices()
+                guard !self.model.systemOutputRoutedToAuralink else {
+                    throw UpdateError.install(self.model.lastError ?? L10n.text("No real output device is available to restore."))
+                }
+            }
+            updates.start()
             installPowerObservers()
             installActivationObservers()
             installWindowGateObservers()
@@ -91,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         MainActor.assumeIsolated {
+            updates.stop()
             model.stopSystemEQ()
             model.restoreDanglingSystemOutputIfNeeded()
             controlServer?.stop()

@@ -85,18 +85,20 @@ final class LocalizationTests: XCTestCase {
     func testEveryLiteralLookupInTheAppHasAResourceEntry() throws {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let app = root.appendingPathComponent("Sources/AuralinkApp")
-        let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))
         let regex = try NSRegularExpression(pattern: #"L10n\.(?:text|format)\(\s*("(?:\\.|[^"\\])*")"#)
         let english = try strings(language: "en")
         var lookups = 0
-        for case let file as URL in enumerator where file.pathExtension == "swift" {
-            let source = try String(contentsOf: file, encoding: .utf8)
-            for match in regex.matches(in: source, range: NSRange(source.startIndex..., in: source)) {
-                let range = try XCTUnwrap(Range(match.range(at: 1), in: source))
-                let key = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(source[range].utf8), options: .fragmentsAllowed) as? String)
-                XCTAssertNotNil(english[key], "\(file.lastPathComponent): \(key)")
-                lookups += 1
+        for target in ["AuralinkApp", "AuralinkUpdates"] {
+            let app = root.appendingPathComponent("Sources/\(target)")
+            let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))
+            for case let file as URL in enumerator where file.pathExtension == "swift" {
+                let source = try String(contentsOf: file, encoding: .utf8)
+                for match in regex.matches(in: source, range: NSRange(source.startIndex..., in: source)) {
+                    let range = try XCTUnwrap(Range(match.range(at: 1), in: source))
+                    let key = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(source[range].utf8), options: .fragmentsAllowed) as? String)
+                    XCTAssertNotNil(english[key], "\(file.lastPathComponent): \(key)")
+                    lookups += 1
+                }
             }
         }
         XCTAssertGreaterThan(lookups, 300)

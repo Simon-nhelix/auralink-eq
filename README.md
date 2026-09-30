@@ -192,6 +192,65 @@ open "build/Auralink EQ.app"
 This bundle is for local development. It is ad-hoc or locally signed and is not
 an official distributable release.
 
+### In-app updates and binary releases
+
+The packaged app checks this repository's GitHub releases at most once a day.
+Use **Check for updates…** in the app menu or the menu-bar overflow menu for a
+manual check. Update notifications also appear in the editor and menu-bar panel.
+The update window shows release notes, download progress, a skip-version option,
+and an automatic-check preference. Installation is always an explicit action.
+
+Updates use Ed25519 archive signatures, following MiSTer FTP's release model;
+they do not require Sparkle or a separate update server. Before replacing the
+app, Auralink verifies the archive, bundle identity, version, public key, macOS
+requirement and code signature. It then stops EQ and restores real system sound
+output. If output restoration fails, installation is aborted. The app restarts
+with EQ stopped; use **Start System EQ** when ready. Presets and collections live
+outside the app and survive replacement. Cancelling a download leaves the app
+and live audio alone.
+
+Release configuration is in [`Resources/Release.plist`](Resources/Release.plist):
+`version` (for example `0.1.0-alpha.1`), increasing numeric `build`, `channel`
+(`alpha`, `beta`, or `stable`), repository and public key. Alpha installations
+accept alpha, beta, release-candidate and stable releases; beta accepts beta,
+release-candidate and stable; stable accepts stable only. The updater examines
+the newest 100 published releases and orders prerelease versions correctly.
+
+On a Mac with an unlocked login keychain, the normal release workflow is:
+
+```bash
+scripts/release-app.sh
+```
+
+This creates the Auralink-specific signing key once, records its **public** key
+in Release.plist, builds a Universal app for Apple Silicon and Intel, and writes:
+
+```text
+build/Auralink-EQ-<version>.zip
+build/Auralink-EQ-<version>.zip.sig
+```
+
+Commit the public key and release metadata before distributing the first
+update-capable binary. The private key stays in the login keychain as
+**Auralink EQ update signing key**; back it up. A configured key is never replaced
+automatically. An SSH session without keychain access can build and test the app
+using `AURALINK_SIGN_IDENTITY=- scripts/bundle-app.sh --universal`, but cannot sign
+a release. Builds without an update public key disable update checks and install.
+
+Publish **both** files on a GitHub release tagged `v<version>`, with release notes.
+Mark alpha/beta/rc versions as prereleases. Update filenames must match the tag
+exactly; source-only releases and architecture-specific archives are ignored.
+An unsigned archive can be shown as a release-page download, but is never installed
+by the updater. CI artifacts preserve the app's permissions in a ZIP, but have
+no release-key signature and are not in-app update packages.
+
+The release script uses ad-hoc macOS code signing, as MiSTer FTP does. Ed25519
+proves the origin of updates but does not provide Apple notarization or bypass
+Gatekeeper. The first installation may require **System Settings → Privacy &
+Security → Open Anyway**. Move the app into a writable Applications folder before
+updating. BlackHole is still a separate installation and the optional Node/MCP
+server is not included in the app archive.
+
 The app shows a waveform glyph in the menubar and opens the editor window on
 launch. On first launch, grant the
 microphone permission when prompted; macOS gates audio *input* (which is how we
