@@ -5,7 +5,7 @@
  * notch) into Luxsin X8 headphone-DB entries (10 bands, PEAKING/LOW_SHELF/…)
  * and exposes them through the backend-agnostic {@link EqTarget} interface.
  *
- * Pure transformation logic (band mapping, 20→10 selection, entry building) is
+ * Pure transformation logic (band mapping, compatibility checks, entry building) is
  * exported and unit-tested; only {@link LuxsinX8Target} talks to the device.
  *
  * Nothing here changes live audio unless `confirmed` is set, and activation
@@ -86,7 +86,8 @@ export function bandToX8Filter(band: EQBand): X8Filter {
  * pass filters — they define the overall contour/surgical fixes); rank bells by
  * impact (|gain|, broader-first on ties) and keep the top ones that fit. If
  * structural bands alone exceed the limit, the lowest-impact are trimmed last.
- * Returns the kept bands (re-sorted by frequency) and notes describing drops.
+ * Returns a lossy suggestion for offline analysis only; device writes do NOT use
+ * this helper and reject over-limit presets instead.
  */
 export function selectBandsForX8(
   bands: EQBand[],
@@ -150,7 +151,16 @@ export function buildX8Change(req: ApplyTuningRequest, maxBands = X8_MAX_BANDS):
   appliedBands: EQBand[];
   notes: string[];
 } {
-  const { kept, notes } = selectBandsForX8(req.bands, maxBands);
+  const enabled = req.bands.filter((b) => b.enabled);
+  if (enabled.length > maxBands) throw new Error(`Luxsin supports ${maxBands} bands; this tuning has ${enabled.length}. Create a hardware-specific tuning; no bands were dropped.`);
+  if (enabled.some((b) => b.channel !== "stereo")) throw new Error("Luxsin PEQ cannot represent left/right-only bands; create a stereo tuning first.");
+  if (!Number.isFinite(req.preampDb) || req.preampDb < -24 || req.preampDb > 0) throw new Error("Invalid Luxsin preamp (-24…0 dB required).");
+  if (enabled.some((b) => !(b.type in BAND_TYPE_TO_X8_CODE) ||
+      !Number.isFinite(b.frequencyHz) || b.frequencyHz < 20 || b.frequencyHz > 20000 ||
+      !Number.isFinite(b.gainDb) || b.gainDb < -18 || b.gainDb > 18 ||
+      !Number.isFinite(b.q) || b.q < 0.1 || b.q > 10)) throw new Error("Invalid Luxsin filter parameters.");
+  const kept = [...enabled].sort((a, b) => a.frequencyHz - b.frequencyHz);
+  const notes: string[] = [];
   const rawFilters = kept.map((b) => ({
     type: BAND_TYPE_TO_X8_CODE[b.type] ?? 4,
     fc: round(b.frequencyHz, 2),
@@ -206,12 +216,13 @@ function round(n: number, digits: number): number {
  * explicit {@link selectHeadphone} call.
  */
 export class LuxsinX8Target implements EqTarget {
-  readonly id = "luxsin-x8" as const;
+  readonly id: "luxsin-x8" | "luxsin-x9";
   readonly capabilities = X8_CAPABILITIES;
   readonly client: LuxsinClient;
 
   constructor(client?: LuxsinClient) {
     this.client = client ?? new LuxsinClient();
+    this.id = this.client.model;
   }
 
   /** Full-fidelity device state (richer than the AudioState mapping). */
@@ -227,10 +238,8 @@ export class LuxsinX8Target implements EqTarget {
 
   async getState(): Promise<ControlResult<AudioState>> {
     try {
-      const [state, peq] = await Promise.all([
-        this.client.getDeviceInfo(),
-        this.client.getPeq(),
-      ]);
+      const state = await this.client.getDeviceInfo();
+      const peq = await this.client.getPeq();
       return { online: true, status: 200, data: mapState(state, peq) };
     } catch (err) {
       return { online: false, error: explain(err, this.client.baseUrl) };
@@ -240,7 +249,10 @@ export class LuxsinX8Target implements EqTarget {
   private async currentActiveEntryName(): Promise<string | undefined> {
     const state = await this.client.getDeviceInfo();
     const db = await this.client.getPeq();
-    const index = Number(state.peqSelect ?? 0);
+    const index = Number(state.peqSelect);
+    if (db.peq.length && (!Number.isInteger(index) || !db.peq[index])) {
+      throw new Error("Cannot establish the active Luxsin entry before mutation.");
+    }
     return db.peq[index]?.name;
   }
 
@@ -251,12 +263,44 @@ export class LuxsinX8Target implements EqTarget {
     const current = db.peq[Number(state.peqSelect ?? 0)]?.name;
     if (current === name) return undefined;
     const index = db.peq.findIndex((e) => e.name === name);
-    if (index < 0) return `could not restore active X8 entry "${name}" (not found)`;
+    if (index < 0) throw new Error(`Could not restore active X8 entry "${name}" (not found)`);
     await this.client.setSetting("peqSelect", index);
+    const restored = await this.client.getDeviceInfo();
+    const restoredDb = await this.client.getPeq();
+    if (restoredDb.peq[Number(restored.peqSelect)]?.name !== name) throw new Error("Previous Luxsin entry was not restored on read-back.");
     return `restored active X8 entry "${name}" after DB mutation`;
   }
 
+  private mutationQueue: Promise<unknown> = Promise.resolve();
+
+  private mutate<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.mutationQueue.then(() => this.client.withPinnedDevice(operation));
+    this.mutationQueue = run.catch(() => {});
+    return run;
+  }
+
   async applyTuning(req: ApplyTuningRequest, confirmed: boolean): Promise<ControlResult<ApplyTuningResult>> {
+    if (!confirmed) return this.performApply(req, false);
+    try { return await this.mutate(() => this.performApply(req, true)); }
+    catch (err) { return { online: false, error: explain(err, this.client.baseUrl) }; }
+  }
+
+  /** Serialize write, read-back and selection as one operation. */
+  async applyAndSelect(req: ApplyTuningRequest, confirmed: boolean): Promise<{
+    write: ControlResult<ApplyTuningResult>;
+    select?: ControlResult<{ ok: boolean; index?: number; processing?: boolean }>;
+  }> {
+    if (!confirmed) return { write: await this.performApply(req, false) };
+    try {
+      return await this.mutate(async () => {
+        const write = await this.performApply(req, true);
+        const select = write.data?.ok && write.data.ref ? await this.performSelect(write.data.ref) : undefined;
+        return { write, select };
+      });
+    } catch (err) { return { write: { online: false, error: explain(err, this.client.baseUrl) } }; }
+  }
+
+  private async performApply(req: ApplyTuningRequest, confirmed: boolean): Promise<ControlResult<ApplyTuningResult>> {
     const { payload, appliedBands, notes } = buildX8Change(req, this.capabilities.maxBands);
 
     if (!confirmed) {
@@ -276,25 +320,48 @@ export class LuxsinX8Target implements EqTarget {
 
     try {
       const previousActive = await this.currentActiveEntryName();
-      await this.client.peqChange(payload);
-      const restoreNote = await this.restoreActiveEntryByName(previousActive);
+      const existing = (await this.client.getPeq()).peq.filter((e) => e.name === payload.name);
+      if (existing.length > 1 || existing.some((e) => e.canDel !== 1)) {
+        return { online: true, data: { ok: false, appliedBands, notes }, error: "Luxsin entry name is ambiguous or protected. Choose another tuning name." };
+      }
+      let verified = false;
+      let restoreNote: string | undefined;
+      try {
+        await this.client.peqChange(payload);
+        const entries = (await this.client.getPeq()).peq.filter((e) => e.name === payload.name);
+        verified = entries.length === 1 && entryMatchesPayload(entries[0], payload);
+      } finally {
+        // Even a lost acknowledgement may follow a successful DB mutation.
+        restoreNote = await this.restoreActiveEntryByName(previousActive);
+      }
       return {
         online: true,
         status: 200,
-        data: { ok: true, ref: payload.name, appliedBands, notes: restoreNote ? [...notes, restoreNote] : notes },
+        data: { ok: verified, ref: payload.name, appliedBands, notes: restoreNote ? [...notes, restoreNote] : notes },
+        ...(!verified ? { error: "Device acknowledged the request but stored EQ did not match. Not selecting the entry." } : {}),
       };
     } catch (err) {
       return { online: false, error: explain(err, this.client.baseUrl) };
     }
   }
 
-  /** Delete a headphone entry by name (peqRemove), preserving active entry by name when possible. */
-  async deleteHeadphone(name: string): Promise<ControlResult<{ ok: boolean; restoredActive?: string }>> {
+  /** Delete only the named inactive entry; never let deletion switch live sound. */
+  async deleteHeadphone(name: string, confirmed = false): Promise<ControlResult<{ ok: boolean; needsConfirm?: boolean }>> {
+    if (!confirmed) return { online: true, data: { ok: false, needsConfirm: true } };
     try {
-      const previousActive = await this.currentActiveEntryName();
-      await this.client.peqRemove(name);
-      const restoreNote = previousActive === name ? undefined : await this.restoreActiveEntryByName(previousActive);
-      return { online: true, status: 200, data: { ok: true, restoredActive: restoreNote } };
+      return await this.mutate(async () => {
+        const previousActive = await this.currentActiveEntryName();
+        if (previousActive === name) return { online: true, data: { ok: false }, error: "Select another entry before deleting the active Luxsin preset." };
+        const before = await this.client.getPeq();
+        const entries = before.peq.filter((e) => e.name === name);
+        if (entries.length === 0) return { online: true, data: { ok: true } };
+        if (entries.length !== 1 || entries[0].canDel !== 1) return { online: true, data: { ok: false }, error: "Entry is ambiguous or protected; not deleted." };
+        try { await this.client.peqRemove(name); }
+        finally { await this.restoreActiveEntryByName(previousActive); }
+        const after = await this.client.getPeq();
+        const ok = !after.peq.some((e) => e.name === name);
+        return { online: true, data: { ok }, ...(!ok ? { error: "Deletion was not confirmed by device read-back." } : {}) };
+      });
     } catch (err) {
       return { online: false, error: explain(err, this.client.baseUrl) };
     }
@@ -312,22 +379,50 @@ export class LuxsinX8Target implements EqTarget {
   }
 
   /** Explicitly activate a headphone entry by name (changes live audio). */
-  async selectHeadphone(name: string): Promise<ControlResult<{ ok: boolean; index?: number }>> {
+  async selectHeadphone(name: string, confirmed = false): Promise<ControlResult<{ ok: boolean; index?: number; processing?: boolean; needsConfirm?: boolean }>> {
+    if (!confirmed) return { online: true, data: { ok: false, needsConfirm: true } };
+    try { return await this.mutate(() => this.performSelect(name)); }
+    catch (err) { return { online: false, error: explain(err, this.client.baseUrl) }; }
+  }
+
+  private async performSelect(name: string): Promise<ControlResult<{ ok: boolean; index?: number; processing?: boolean }>> {
     try {
       const db = await this.client.getPeq();
       const index = db.peq.findIndex((e) => e.name === name);
       if (index === -1) return { online: true, status: 200, data: { ok: false }, error: `no X8 entry named "${name}"` };
       await this.client.setSetting("peqSelect", index);
-      return { online: true, status: 200, data: { ok: true, index } };
+      const state = await this.client.getDeviceInfo();
+      const after = await this.client.getPeq();
+      const selected = Number(state.peqSelect);
+      const ok = Number.isInteger(selected) && after.peq[selected]?.name === name;
+      const processing = state.dsp_enable === 1 && state.peqEnable === 1 && state.audio_enable !== 0;
+      return { online: true, status: 200, data: { ok, index: selected, processing },
+        ...(!ok ? { error: "Requested Luxsin entry was not selected on read-back." } : {}) };
     } catch (err) {
       return { online: false, error: explain(err, this.client.baseUrl) };
     }
   }
 }
 
+/** Verify real stored filters, not the firmware's unconditional HTTP 200 ack. */
+export function entryMatchesPayload(entry: X8PeqDb["peq"][number], payload: X8PeqChange): boolean {
+  try {
+    const filters = JSON.parse(entry.filters) as X8Filter[];
+    const typeNames = ["LOW_PASS", "HIGH_PASS", "BPF", "NOTCH", "PEAKING", "LOW_SHELF", "HIGH_SHELF", "APF"];
+    const close = (a: number, b: number) => Number.isFinite(a) && Math.abs(a - b) <= 0.011;
+    return entry.name === payload.name && close(entry.preamp, payload.preamp) && entry.autoPre === 0 &&
+      Array.isArray(filters) && filters.length === payload.filters.length && filters.every((filter, i) => {
+        const expected = payload.filters[i];
+        return filter.type === typeNames[expected.type] && close(filter.fc, expected.fc) &&
+          close(filter.gain, expected.gain) && close(filter.q, expected.q);
+      });
+  } catch { return false; }
+}
+
 /** Map X8 device state into Auralink's AudioState (best-effort, lossy). */
-function mapState(state: X8DeviceState, peq: X8PeqDb): AudioState {
-  const active = typeof state.peqSelect === "number" ? peq.peq[state.peqSelect] : undefined;
+export function mapState(state: X8DeviceState, peq: X8PeqDb): AudioState {
+  const index = Number(state.peqSelect);
+  const active = Number.isInteger(index) ? peq.peq[index] : undefined;
   const sampleRate = parseSampleRate(state.audioFormat);
   return {
     eqEnabled: state.peqEnable === 1,
@@ -364,11 +459,11 @@ function mapState(state: X8DeviceState, peq: X8PeqDb): AudioState {
 
 function parseSampleRate(audioFormat?: string): number {
   if (!audioFormat) return 0;
-  const m = audioFormat.match(/(\d+)\s*kHz/i);
-  return m ? parseInt(m[1], 10) * 1000 : 0;
+  const m = audioFormat.match(/(\d+(?:\.\d+)?)\s*kHz/i);
+  return m ? parseFloat(m[1]) * 1000 : 0;
 }
 
 function explain(err: unknown, baseUrl: string): string {
   const msg = err instanceof Error ? err.message : String(err);
-  return `Luxsin X8 unreachable at ${baseUrl} (${msg}). Make sure the device is on and on the same network, or omit target:'luxsin-x8' to use Auralink only.`;
+  return `Luxsin operation failed at ${baseUrl} (${msg}). Make sure the device is on and on the same network, check the configured hardware address. Do not switch audio targets automatically.`;
 }

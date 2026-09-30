@@ -7,7 +7,7 @@ import {
 } from "./store.js";
 import { getState } from "./control.js";
 import { createX8Target, type ApplyTuningRequest } from "./targets/index.js";
-import { responseCurve, logFrequencies } from "./validate.js";
+import { responseCurve, logFrequencies, validatePreset } from "./validate.js";
 import {
   AudioState,
   EQPreset,
@@ -112,57 +112,49 @@ export async function x8ApplyRequestFromPreset(preset: EQPreset): Promise<ApplyT
 export async function applyPresetToX8(
   preset: EQPreset,
   confirmed: boolean,
-  options: { select?: boolean } = {}
+  options: { select?: boolean; target?: "luxsin-x8" | "luxsin-x9"; device?: ReturnType<typeof createX8Target> } = {}
 ): Promise<Record<string, unknown>> {
-  const selectAfterWrite = options.select !== false; // default true for backward compatibility
-  const target = createX8Target();
-  const request = await x8ApplyRequestFromPreset(preset);
-  const write = await target.applyTuning(request, confirmed);
-  if (!write.online) {
-    return {
-      target: "luxsin-x8",
-      applied: false,
-      online: false,
-      message: write.error,
-    };
-  }
-
-  if (!write.data) {
-    return {
-      target: "luxsin-x8",
-      applied: false,
-      message: write.error ?? "The X8 target returned no response body.",
-    };
-  }
-
-  const body = write.data;
-  let select: unknown = { selected: false, skipped: true };
-  if (confirmed && body.ok === true && body.ref && selectAfterWrite) {
-    const selected = await target.selectHeadphone(String(body.ref));
-    select = selected.online
-      ? {
-          selected: selected.data?.ok === true,
-          index: selected.data?.index,
-          message: selected.data?.ok === true ? `Selected '${body.ref}' on the X8.` : (selected.error ?? "The X8 did not select the entry."),
-        }
-      : { selected: false, online: false, message: selected.error };
-  } else if (confirmed && body.ok === true && !selectAfterWrite) {
-    select = {
-      selected: false,
-      skipped: true,
-      message: "Import-only: left the previous X8 entry selected (applyTuning restores active entry by name).",
-    };
-  }
-
-  return {
-    target: "luxsin-x8",
-    applied: body.ok === true,
-    needsConfirm: body.needsConfirm === true,
-    entryName: body.ref,
-    appliedBandCount: body.appliedBands?.length,
-    notes: body.notes,
-    select,
+  const targetId = options.target ?? "luxsin-x8";
+  if (targetId === "luxsin-x9") return {
+    target: targetId, applied: false, written: false, reason: "unverified_device_writes",
+    message: "X9 supports local tuning preparation and experimental reads. Device writes are disabled until its firmware protocol is verified.",
   };
+  const validation = validatePreset(preset, await loadSafetyRules(), 48_000, "standard_iir");
+  if (!validation.ok) return { target: targetId, applied: false, written: false, validation, message: "Invalid hardware PEQ; no device write attempted." };
+  const selectAfterWrite = options.select !== false;
+  const target = options.device ?? createX8Target();
+  try {
+    const request = await x8ApplyRequestFromPreset(preset);
+    const result = selectAfterWrite
+      ? await target.applyAndSelect(request, confirmed)
+      : { write: await target.applyTuning(request, confirmed), select: undefined };
+    const body = result.write.data;
+    const selected = result.select?.data?.ok === true;
+    const processing = result.select?.data?.processing === true;
+    const applied = body?.ok === true && selected && processing;
+    return {
+      target: targetId,
+      online: result.write.online && result.select?.online !== false,
+      written: body?.ok === true,
+      applied,
+      selected,
+      processing,
+      needsConfirm: body?.needsConfirm === true,
+      entryName: body?.ref,
+      appliedBandCount: body?.appliedBands.length,
+      notes: body?.notes,
+      validation,
+      select: result.select?.data ?? { selected: false, skipped: true },
+      message: result.write.error ?? result.select?.error ??
+        (applied ? "Stored EQ and selection verified; device reports DSP and PEQ enabled. Physical audibility has not been measured." :
+          body?.needsConfirm ? "Preview only; no device settings changed." :
+          body?.ok && !selectAfterWrite ? "EQ stored and verified; activation was not requested." :
+          selected && !processing ? "EQ stored and selected, but DSP or PEQ processing is disabled. Enable it on the device before listening." :
+          "Device EQ application was not verified."),
+    };
+  } catch (error) {
+    return { target: targetId, applied: false, written: false, message: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export function profileDisplayName(profile: HeadphoneProfile): string {

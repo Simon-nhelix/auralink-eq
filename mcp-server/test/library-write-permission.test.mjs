@@ -214,3 +214,48 @@ test("preference writes cannot overwrite a baseline or tune another variation as
     assert.deepEqual(await store.getPreset(before.id), before);
   });
 });
+
+
+test("X8 compatibility is checked by offline validation before library creation", async () => {
+  await withFixture(state("full_control"), async ({ invoke, root, requests }) => {
+    const bands = Array.from({ length: 11 }, (_, i) => ({ frequencyHz: 100 + 100 * i, gainDb: -1 }));
+    const validation = await invoke("validate_eq_preset", { target: "luxsin-x8", bands });
+    assert.equal(validation.validation.ok, false);
+    assert.equal(validation.readyToApply, false);
+    assert.deepEqual(requests, []);
+    const before = await snapshot(root);
+    const created = await invoke("create_eq_preset", { name: "Too many", target: "luxsin-x8", bands });
+    assert.equal(created.saved, false);
+    assert.deepEqual(await snapshot(root), before);
+  });
+});
+
+test("X9 apply and audition never fall back to Auralink or hardware writes", async () => {
+  await withFixture(state("full_control"), async ({ invoke, requests }) => {
+    const apply = await invoke("apply_eq_preset", { id: "preset_test", target: "luxsin-x9", confirmed: true });
+    assert.equal(apply.applied, false);
+    assert.equal(apply.x8.reason, "unverified_device_writes");
+    const audition = await invoke("audition_eq_preset", {
+      name: "X9 trial", target: "luxsin-x9", confirmed: true, bands: [{ frequencyHz: 100, gainDb: -1 }],
+    });
+    assert.equal(audition.auditioned, false);
+    assert.equal(audition.x8.reason, "unverified_device_writes");
+    const deletion = await invoke("delete_luxsin_preset", { name: "Original", target: "luxsin-x9", confirmed: true });
+    assert.equal(deletion.deleted, false);
+    assert.equal(deletion.reason, "unverified_device_writes");
+    assert.deepEqual(requests, []);
+  });
+});
+
+test("target capabilities are available offline with unverified model limits explicit", async () => {
+  await withFixture(() => { throw new Error("offline"); }, async ({ invoke, requests }) => {
+    const result = await invoke("list_eq_targets", {});
+    assert.equal(result.targets["luxsin-x8"].deviceWrite, true);
+    assert.equal(result.targets["luxsin-x9"].deviceWrite, false);
+    assert.equal(result.targets["luxsin-x9"].maxBands, null);
+    const validation = await invoke("validate_eq_preset", { id: "preset_test", target: "luxsin-x9" });
+    assert.equal(validation.validation.ok, true);
+    assert.equal(validation.readyToApply, false);
+    assert.deepEqual(requests, []);
+  });
+});

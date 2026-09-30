@@ -47,12 +47,16 @@ Use this when the user asks for a sound change after a model/baseline exists: wa
 Use this when the user wants the EQ to live on the Luxsin X8 DAC/headphone amp instead of only in the macOS Auralink software path. This is the right path for listening from non-Mac inputs into the X8.
 
 1. Keep the headphone/profile workflow the same: `get_autoeq_correction` first, `upsert_headphone_profile` for new or image-derived models, then design explicit Auralink-vocabulary bands.
-2. Read X8 state with `get_current_audio_state` and `target:"luxsin-x8"`. If it returns `online:false`, the X8 is absent/offline; fall back to normal Auralink or tell the user the hardware target was not found. Do not treat missing X8 as an MCP failure.
+2. Read X8 state with `get_current_audio_state` and `target:"luxsin-x8"`. If it returns `online:false`, the X8 is absent/offline; report that the hardware target could not be reached; do not change to software audio automatically. Do not treat missing X8 as an MCP failure.
 3. To save a preset and put it on the X8, call `create_eq_preset` with `target:"luxsin-x8"`, `applyNow:true`, and `confirmed:true` only after the user explicitly asked to hear/test the X8 hardware change.
 4. To put an already saved preset on the X8, call `apply_eq_preset` with `target:"luxsin-x8"` and `confirmed:true`.
 5. `audition_eq_preset` also accepts `target:"luxsin-x8"`; unlike software audition, it writes/selects a hardware X8 entry. Use descriptive temporary names and do not spray many experiments into the X8 database.
 6. The MCP server handles X8 implementation details: local IP discovery/cache, custom base64 codec, `peqChange`, numeric filter type codes, 10-band limit, safe transparent padding, and active-entry restoration. Do not call the X8 CGI endpoints directly unless debugging the adapter.
-7. X8 entries support 10 bands. The target adapter trims Auralink's 20-band preset to the most important enabled bands and pads the rest with transparent `PEAKING 0 dB` filters. This prevents the firmware's unsafe `LOW_PASS@0` auto-padding. X8 remains PEQ-only; `measuredCorrection` is portable preset metadata but is not rendered by the hardware target.
+7. X8 entries support 10 bands. The adapter rejects more than 10 enabled bands and non-stereo bands instead of dropping or merging them. Create a separate hardware-specific tuning within those limits. It pads unused slots with transparent `PEAKING 0 dB` filters. This prevents the firmware's unsafe `LOW_PASS@0` auto-padding. X8 remains PEQ-only; `measuredCorrection` is portable preset metadata but is not rendered by the hardware target.
+
+8. Writes verify the stored name, all filters, preamp and auto-preamp state. Activation verifies selection and enabled DSP/PEQ processing. A request acknowledgement alone is not success and does not prove physical audibility.
+9. Use `delete_luxsin_preset` for an exact inactive hardware entry name. Local `delete_preset` does not delete hardware entries. Active/protected entries are refused.
+10. Use `list_eq_targets` to check model support. `luxsin-x9` is experimental read-only and requires `X9_URL`. Local tuning preparation is available, but X9 device writes remain disabled pending firmware verification. See [Luxsin support](LUXSIN_SUPPORT.md).
 
 ### Remember The User's Taste
 

@@ -52,7 +52,12 @@ and tuning feedback; read-tool cache maintenance is separate.
   is invoked. Results are cached under the user's Auralink Application Support
   directory.
 - Optional Luxsin X8 support communicates with a device on the local network and
-  may scan private IPv4 addresses when device discovery is requested.
+  may scan private IPv4 addresses when device discovery is requested. Explicit
+  addresses disable automatic discovery by default. Writes are bound to a verified
+  model/address (and MAC when available), serialized and never automatically
+  replayed after ambiguous transport errors. Stored EQ and selection are read back.
+- Luxsin X9 access is experimental and read-only, requires an explicit `X9_URL`,
+  and does not reuse X8 discovery. Device write methods reject X9 requests.
 - No analytics or crash-reporting service is included.
 
 ## Update authenticity

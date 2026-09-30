@@ -157,3 +157,26 @@ return a clear `online: false` notice instead of failing.
 - The on-disk preset JSON matches the app's `JSONEncoder` output (camelCase
   fields, snake_case enum values, ISO-8601 dates, sorted keys), so presets the AI
   creates load directly in the app and vice versa.
+
+## Luxsin hardware targets
+
+`list_eq_targets` reports model capabilities and verification status. X8 supports
+read-back-verified PEQ writes via `target:"luxsin-x8"`; use at most 10 enabled
+stereo bands. Overflow and left/right-only filters are rejected without changing
+the device. Stored filters, preamp and selection are checked before reporting
+success; disabled DSP/PEQ is reported rather than silently enabled.
+
+`delete_luxsin_preset` deletes an exact inactive hardware entry name after the user
+requests it. It verifies removal and preserves the prior active entry. Protected
+or active entries are refused. `delete_preset` continues to affect only local files.
+
+An explicit `X8_URL` pins the address and disables automatic failover by default.
+Unconfigured X8 connections retain local discovery. Mutations are serialized and
+pinned to the initially verified device; ambiguous write failures are not retried.
+
+X9 supports experimental read-only access with `target:"luxsin-x9"` and an explicit
+`X9_URL`. It does not reuse X8 discovery or fall back to Auralink. X9 device writes
+are disabled until its firmware protocol is verified; local tuning files can still
+be prepared. Other Luxsin models are not advertised as supported.
+
+See [research and verification limits](../docs/LUXSIN_SUPPORT.md).

@@ -1,3 +1,4 @@
+import { mapState, buildX8Change } from "./targets/luxsin/adapter.js";
 import { randomUUID } from "node:crypto";
 import { buildPreferenceTuning, isPureBaseline } from "./preference-tuning.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -40,7 +41,7 @@ import {
   restoreSystemAudio,
   stopRouting,
 } from "./control.js";
-import { createX8Target } from "./targets/index.js";
+import { createX8Target, createLuxsinTarget, LUXSIN_SUPPORT } from "./targets/index.js";
 import {
   validatePreset,
   responseCurve,
@@ -82,6 +83,29 @@ import {
 export function registerTools(server: McpServer): void {
   // MARK: - Tools
 
+  server.registerTool("list_eq_targets", {
+    title: "List EQ target support",
+    description: "Returns supported targets and verification limits without network access. X8 supports verified PEQ writes; X9 is experimental read-only. Unlisted models are not enabled.",
+    inputSchema: {},
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  }, async () => jsonResult({ targets: { auralink: { deviceRead: true, deviceWrite: true, maxBands: 20 }, ...LUXSIN_SUPPORT } }));
+
+  server.registerTool("delete_luxsin_preset", {
+    title: "Delete an inactive Luxsin hardware preset",
+    description: "Deletes one exact hardware entry name after the user's deletion request, verifies removal and preserves the active entry. Refuses active/protected entries. Does not delete the local Auralink preset. X9 writes are not enabled.",
+    inputSchema: {
+      name: z.string().min(1),
+      target: z.enum(["luxsin-x8", "luxsin-x9"]).default("luxsin-x8"),
+      confirmed: z.boolean().default(false).describe("True only when the user requested deleting this hardware preset."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true, idempotentHint: true },
+  }, async ({ name, target, confirmed }) => {
+    if (target !== "luxsin-x8") return jsonResult({ deleted: false, reason: "unverified_device_writes", message: "X9 is experimental read-only." });
+    const result = await createX8Target().deleteHeadphone(name, confirmed);
+    return jsonResult({ target, name, online: result.online, deleted: result.data?.ok === true,
+      needsConfirm: result.data?.needsConfirm === true, message: result.error });
+  });
+
   // 1. get_current_audio_state — live state from the app (read).
   server.registerTool(
     "get_current_audio_state",
@@ -90,31 +114,28 @@ export function registerTools(server: McpServer): void {
       description:
         "Returns the live AudioState from the running Auralink app (EQ on/off, current preset, " +
         "output device, sample rate, latency, clipping, MCP/permission mode). If the app is offline, " +
-        "returns a clear offline notice instead of failing. Pass target:'luxsin-x8' to read the LAN X8 hardware state instead.",
+        "returns a clear offline notice instead of failing. Hardware targets: luxsin-x8, or experimental read-only luxsin-x9 with X9_URL configured.",
       inputSchema: {
         target: targetSchema,
       },
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
     async ({ target }) => {
-      if (target === "luxsin-x8") {
-        const x8 = createX8Target();
-        const [mapped, full] = await Promise.all([x8.getState(), x8.getX8State()]);
-        if (!mapped.online || !full.online) {
+      if (target !== "auralink") {
+        try {
+          const device = createLuxsinTarget(target);
+          const full = await device.getX8State();
           return jsonResult({
-            target,
-            online: false,
-            message: mapped.error ?? full.error,
-            hint: "Make sure the Luxsin X8 is powered on and reachable on the local network (default http://192.168.1.2 or X8_URL).",
+            target, online: full.online, support: LUXSIN_SUPPORT[target],
+            state: full.data ? mapState(full.data.state, full.data.peq) : undefined,
+            device: full.data,
+            ...(target === "luxsin-x8" ? { x8: full.data } : {}),
+            message: full.error,
+            note: "Read-only. No presets or live settings were changed.",
           });
+        } catch (error) {
+          return jsonResult({ target, online: false, message: error instanceof Error ? error.message : String(error) });
         }
-        return jsonResult({
-          target,
-          online: true,
-          state: mapped.data,
-          x8: full.data,
-          note: "Read-only. This does not write presets or affect live audio.",
-        });
       }
 
       const res = await getState();
@@ -1190,8 +1211,15 @@ export function registerTools(server: McpServer): void {
         draft,
         rules,
         48_000,
-        target === "luxsin-x8" ? "standard_iir" : "all"
+        target !== "auralink" ? "standard_iir" : "all"
       );
+      if (target === "luxsin-x8") {
+        try { buildX8Change({ headphone: draft.name, preampDb: draft.preampDb, bands: draft.bands }); }
+        catch (error) {
+          validation.ok = false;
+          validation.issues.push({ severity: "error", message: error instanceof Error ? error.message : String(error) });
+        }
+      }
       if (!validation.ok) {
         return jsonResult({
           saved: false,
@@ -1223,8 +1251,8 @@ export function registerTools(server: McpServer): void {
             message:
               "Preset was saved but not applied. Pass confirmed:true only when the user explicitly asked to hear it now.",
           };
-        } else if (target === "luxsin-x8") {
-          liveApply = await applyPresetToX8(saved, true);
+        } else if (target !== "auralink") {
+          liveApply = await applyPresetToX8(saved, true, { target });
         } else {
           const res = await applyPreset(saved.id, true);
           if (res.online) {
@@ -1418,8 +1446,15 @@ export function registerTools(server: McpServer): void {
         draft,
         rules,
         48_000,
-        target === "luxsin-x8" ? "standard_iir" : "all"
+        target !== "auralink" ? "standard_iir" : "all"
       );
+      if (target === "luxsin-x8") {
+        try { buildX8Change({ headphone: draft.name, preampDb: draft.preampDb, bands: draft.bands }); }
+        catch (error) {
+          validation.ok = false;
+          validation.issues.push({ severity: "error", message: error instanceof Error ? error.message : String(error) });
+        }
+      }
       if (!validation.ok) {
         return jsonResult({
           auditioned: false,
@@ -1434,8 +1469,8 @@ export function registerTools(server: McpServer): void {
         safety: { autoGainEnabled: autoGain, clippingRisk: validation.clippingRisk },
       };
 
-      if (target === "luxsin-x8") {
-        const x8 = await applyPresetToX8(finalPreset, true);
+      if (target !== "auralink") {
+        const x8 = await applyPresetToX8(finalPreset, true, { target });
         return jsonResult({
           auditioned: x8.applied === true,
           online: x8.online !== false,
@@ -1444,8 +1479,9 @@ export function registerTools(server: McpServer): void {
           preset: finalPreset,
           validation,
           x8,
-          nextStep:
-            "If the user likes this sound, keep the X8 entry. If not, delete or replace that X8 entry before further listening.",
+          nextStep: x8.applied === true
+            ? "Record the user's reaction. Use delete_luxsin_preset for unwanted inactive hardware entries."
+            : "Application was not verified. Read the hardware result before asking the user to judge the sound.",
         });
       }
 
@@ -1881,9 +1917,17 @@ export function registerTools(server: McpServer): void {
         preset,
         rules,
         48_000,
-        target === "luxsin-x8" ? "standard_iir" : "all"
+        target !== "auralink" ? "standard_iir" : "all"
       );
-      return jsonResult({ validation, evaluatedOffline: true, target });
+      if (target === "luxsin-x8") {
+        try { buildX8Change({ headphone: preset.name, preampDb: preset.preampDb, bands: preset.bands }); }
+        catch (error) {
+          validation.ok = false;
+          validation.issues.push({ severity: "error", message: error instanceof Error ? error.message : String(error) });
+        }
+      }
+      return jsonResult({ validation, evaluatedOffline: true, target, readyToApply: validation.ok && target !== "luxsin-x9",
+        ...(target === "luxsin-x9" ? { note: "Generic PEQ safety checked only; X9 hardware compatibility and writes are unverified." } : {}) });
     }
   );
 
@@ -2121,8 +2165,8 @@ export function registerTools(server: McpServer): void {
         return errorResult(`No preset with id '${id}' in the library; cannot apply.`);
       }
 
-      if (target === "luxsin-x8") {
-        const x8 = await applyPresetToX8(onDisk, confirmed);
+      if (target !== "auralink") {
+        const x8 = await applyPresetToX8(onDisk, confirmed, { target });
         return jsonResult({
           target,
           online: x8.online !== false,
@@ -2135,7 +2179,7 @@ export function registerTools(server: McpServer): void {
             x8.needsConfirm === true
               ? "The X8 entry was previewed but not written/selected. Pass confirmed:true only when the user explicitly asked to hear it."
               : x8.applied === true
-                ? `Wrote and selected '${onDisk.name}' on the Luxsin X8.`
+                ? `Verified stored EQ, selection and enabled processing for '${onDisk.name}' on Luxsin X8.`
                 : (x8.message ?? "The X8 target did not apply the preset."),
         });
       }
