@@ -249,23 +249,24 @@ extension AppModel {
     /// (`running == false`) and the zombie state where the engines claim to run
     /// but no frames flow, then triggers a recovery attempt.
     func updateWatchdog(with telemetry: AudioTelemetry) {
-        guard routingRequested else {
-            stalledTelemetryTicks = 0
-            healthyTelemetryTicks = 0
-            feedbackSuspectTicks = 0
-            return
-        }
+        let actions = routingWatchdog.update(
+            routingRequested: routingRequested,
+            isBackgrounded: isBackgrounded,
+            running: telemetry.running,
+            systemOutputRoutedToAuralink: systemOutputRoutedToAuralink,
+            clipping: telemetry.clipping,
+            capturePeakDb: telemetry.capturePeakDb,
+            renderCallbacks: telemetry.renderCallbacks,
+            captureCallbacks: telemetry.captureCallbacks,
+            recoveryPending: pendingEngineRecovery != nil
+        )
 
-        // While backgrounded, macOS throttles the capture device's I/O cadence
-        // (and can suspend render callbacks for the output engine), so zero
-        // capture/render callbacks in a window is *expected*, not a dead engine.
-        // Restarting into that throttle would only add a real glitch, so we hold
-        // the watchdog and let it re-evaluate once the app is active again.
-        // A genuine hard stop (`running == false`) is still surfaced, since that
-        // is a definite state, not a cadence artifact.
-        if isBackgrounded && telemetry.running {
-            stalledTelemetryTicks = 0
-            healthyTelemetryTicks = 0
+        // A feedback stop takes priority over attempting to repair the path.
+        if actions.stopFeedback {
+            noteAudioEvent(kind: "feedback-stop", detail: "sustained full-scale feedback signature; System EQ stopped")
+            stopSystemEQ()
+            lastError = "Auralink detected a sustained full-scale feedback signature and stopped System EQ. "
+                + "Mac sound was restored to a real output. Try Start System EQ again."
             return
         }
 
@@ -273,9 +274,7 @@ extension AppModel {
         // the system default when the default changes — and the default is the
         // loopback while System EQ is on, which turns our output into a
         // feedback loop. Re-pin in place; if it won't stick, rebuild the path.
-        bindingCheckTicks += 1
-        if telemetry.running, bindingCheckTicks >= 10 {
-            bindingCheckTicks = 0
+        if actions.checkOutputBinding {
             if engine.outputBindingHealthy() {
                 bindingMismatchStreak = 0
             } else {
@@ -292,45 +291,11 @@ extension AppModel {
             }
         }
 
-        // Feedback breaker. A mis-bound output feeds our own signal back into
-        // the loopback; the loop saturates to full scale within milliseconds
-        // and stays pinned there. Real program material can graze 0 dBFS, but
-        // not in every single 100 ms window for 5 s straight with clipping lit.
-        if telemetry.running && systemOutputRoutedToAuralink
-            && telemetry.clipping && telemetry.capturePeakDb >= -0.02 {
-            feedbackSuspectTicks += 1
-            if feedbackSuspectTicks >= 50 {
-                feedbackSuspectTicks = 0
-                noteAudioEvent(kind: "feedback-stop", detail: "sustained full-scale feedback signature; System EQ stopped")
-                stopSystemEQ()
-                lastError = "Auralink detected a sustained full-scale feedback signature and stopped System EQ. "
-                    + "Mac sound was restored to a real output. Try Start System EQ again."
-                return
-            }
-        } else {
-            feedbackSuspectTicks = 0
+        if actions.recoverStall {
+            scheduleEngineRecovery(reason: "audio engine stalled")
         }
-
-        // No render callbacks ⇒ the output side is dead. No capture callbacks
-        // while the system mix is supposed to flow into us ⇒ capture is dead.
-        let stalled = !telemetry.running
-            || telemetry.renderCallbacks == 0
-            || (systemOutputRoutedToAuralink && telemetry.captureCallbacks == 0)
-
-        if stalled {
-            healthyTelemetryTicks = 0
-            stalledTelemetryTicks += 1
-            if stalledTelemetryTicks >= Self.stallTicksBeforeRecovery, pendingEngineRecovery == nil {
-                stalledTelemetryTicks = 0
-                scheduleEngineRecovery(reason: "audio engine stalled")
-            }
-        } else {
-            stalledTelemetryTicks = 0
-            healthyTelemetryTicks += 1
-            if healthyTelemetryTicks >= Self.healthyTicksToReset {
-                healthyTelemetryTicks = 0
-                autoRecoveryAttempts = 0
-            }
+        if actions.resetRecoveryAttempts {
+            autoRecoveryAttempts = 0
         }
     }
 
@@ -471,7 +436,7 @@ extension AppModel {
                     self.deferredRecoveryReason = reason
                     return
                 }
-                self.stalledTelemetryTicks = 0
+                self.routingWatchdog.reset()
                 if self.startRouting() {
                     self.statusMessage = "Audio engine recovered (\(reason))."
                 } else if self.autoRecoveryAttempts >= Self.maxAutoRecoveryAttempts {

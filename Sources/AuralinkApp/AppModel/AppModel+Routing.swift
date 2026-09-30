@@ -148,8 +148,7 @@ extension AppModel {
         pendingEngineRecovery?.cancel()
         pendingEngineRecovery = nil
         autoRecoveryAttempts = 0
-        stalledTelemetryTicks = 0
-        healthyTelemetryTicks = 0
+        routingWatchdog.reset()
         routingRequested = false
         // Drop any background-deferred restart: the path is being torn down on
         // purpose, so it must not spring back to life on the next foreground.

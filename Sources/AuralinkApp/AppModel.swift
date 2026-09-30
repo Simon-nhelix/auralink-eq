@@ -200,27 +200,16 @@ final class AppModel: ObservableObject {
     let hardwareMonitor = AudioHardwareMonitor()
     var pendingHardwareRefresh: Task<Void, Never>?
     var pendingEngineRecovery: Task<Void, Never>?
-    /// Consecutive ~100 ms telemetry windows in which the engine looked dead.
-    var stalledTelemetryTicks = 0
-    /// Consecutive healthy windows; a long healthy stretch forgets past attempts.
-    var healthyTelemetryTicks = 0
+    /// Telemetry decisions stay testable independently of CoreAudio and focus.
+    var routingWatchdog = AudioRoutingWatchdog()
     /// Auto-restart attempts since the last healthy stretch or manual action.
     var autoRecoveryAttempts = 0
-    /// Consecutive windows whose capture peak sat pinned at full scale with
-    /// clipping lit — the signature of a routing feedback loop.
-    var feedbackSuspectTicks = 0
-    /// Telemetry ticks since the last output-binding check (checked ~1×/s).
-    var bindingCheckTicks = 0
     /// Consecutive binding checks that found (and tried to fix) a mismatch.
     var bindingMismatchStreak = 0
     static let maxAutoRecoveryAttempts = 3
     /// Coalesce live graph/table edits to roughly one display frame before
     /// rebuilding the realtime filter cascade.
     static let liveEditEngineApplyDelayNs: UInt64 = 16_000_000
-    /// ~3 s of continuous stall before the watchdog intervenes.
-    static let stallTicksBeforeRecovery = 30
-    /// ~10 s of continuous health clears the attempt counter.
-    static let healthyTicksToReset = 100
 
     /// Timestamped trail of audible/notable path incidents (underruns,
     /// resyncs, recovery restarts…), newest last, capped. Exposed via /debug

@@ -78,8 +78,7 @@ extension AppModel {
                 try devices.setDefaultOutputDevice(restoreTarget)
                 engine.stop()
                 routingRequested = false
-                stalledTelemetryTicks = 0
-                healthyTelemetryTicks = 0
+                routingWatchdog.reset()
                 autoRecoveryAttempts = 0
                 recoveryDeferredWhileBackgrounded = false
                 deferredRecoveryReason = nil
