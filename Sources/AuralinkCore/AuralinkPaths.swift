@@ -100,16 +100,20 @@ public enum AuralinkPaths {
         supportDirectory.appendingPathComponent("library", isDirectory: true)
     }
 
-    /// True when a pre-split install still has profiles in the old location and
-    /// the new collection has none — the one case that needs a migration prompt.
+    /// True when a pre-split install still has data in the old location that the
+    /// collection lacks — the case that needs a migration prompt.
     ///
     /// Checks all legacy sources:
     /// - `library/headphones/` (mirror directory)
     /// - `library/presets/` (curated presets)
     /// - `data/headphone-profiles.json` (aggregate)
     ///
-    /// A partial migration (collection has some records but legacy has more)
-    /// also triggers the prompt.
+    /// An empty collection prompts when any legacy source has data. Once the
+    /// collection has records, only a legacy *headphone profile* missing from it
+    /// re-prompts (an interrupted migration). A legacy preset alone does not:
+    /// migration never deletes the old copies, and users curate which presets
+    /// their collection keeps, so a preset left out on purpose would otherwise
+    /// keep the notice up forever.
     public static var needsCollectionMigration: Bool {
         needsCollectionMigration(
             legacyHeadphonesDirectory: legacyLibraryDirectory.appendingPathComponent("headphones", isDirectory: true),
@@ -144,21 +148,11 @@ public enum AuralinkPaths {
             return true
         }
 
-        // Partial migration: collection has some records but legacy has more.
-        // Compare IDs to see if any legacy record is missing from collection.
+        // Partial migration: a legacy headphone profile the collection lacks.
+        // Presets are not compared — see the doc comment.
         let collectionHeadphoneIDs = Set(collectionHeadphones.map { $0.replacingOccurrences(of: ".json", with: "") })
-        let collectionPresetIDs = Set(collectionPresets.map { $0.replacingOccurrences(of: ".json", with: "") })
-
-        // Check if any legacy headphone ID is missing from collection.
         for legacyID in legacyHeadphones.map({ $0.replacingOccurrences(of: ".json", with: "") }) + legacyAggregate {
             if !collectionHeadphoneIDs.contains(legacyID) {
-                return true // Missing from collection → needs migration
-            }
-        }
-
-        // Check if any legacy preset ID is missing from collection.
-        for legacyID in legacyPresets.map({ $0.replacingOccurrences(of: ".json", with: "") }) {
-            if !collectionPresetIDs.contains(legacyID) {
                 return true // Missing from collection → needs migration
             }
         }
