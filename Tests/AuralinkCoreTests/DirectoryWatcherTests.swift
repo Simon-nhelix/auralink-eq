@@ -117,7 +117,7 @@ final class DirectoryWatcherTests: XCTestCase {
         let callback = expectation(description: "No callback after cancellation")
         callback.isInverted = true
         watcher = DirectoryWatcher(url: target) { callback.fulfill() }
-        weak let released = watcher
+        weak var released = watcher
         watcher?.cancel()
         watcher = nil
         XCTAssertNil(released)
