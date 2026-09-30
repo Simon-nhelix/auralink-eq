@@ -19,6 +19,10 @@ license the original Auralink source, documentation, icon, and UI screenshots.
 - The Swift package has no third-party SwiftPM dependencies. Apple SDK
   frameworks are referenced from the host development platform and are not
   copied into this repository.
+- The in-app updater and its integration tests adapt MiSTer FTP's MIT-licensed
+  signature, download and app-replacement code. Its full license is included at
+  `third_party/licenses/MiSTer-FTP-LICENSE`. Native bundles include the project
+  license, NOTICE, third-party notices and copied license texts in Resources/Legal.
 - `mcp-server/package-lock.json` resolves 95 Node packages: 84 MIT, 7 ISC,
   2 BSD-3-Clause, 1 BSD-2-Clause, and 1 Apache-2.0. No package has an
   undeclared, copyleft, source-available, or proprietary license in the lock

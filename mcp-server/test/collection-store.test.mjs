@@ -32,6 +32,7 @@ async function withTempEnv(fn) {
   process.env.AURALINK_COLLECTION_DIR = collection;
   process.env.AURALINK_USER_DATA_DIR = userData;
   process.env.AURALINK_PRESETS_DIR = presets;
+  process.env.AURALINK_REVISIONS_DIR = path.join(tmp, "revisions");
   process.env.AURALINK_DATA_DIR = data;
 
   try {
@@ -164,6 +165,57 @@ test("savePreset writes only the working copy, never the collection", async () =
   });
 });
 
+test("overwriting a preset preserves every previous version for Swift rollback", async () => {
+  await withTempEnv(async (store, { tmp }) => {
+    const first = await store.savePreset(samplePreset(store));
+    const second = await store.savePreset({ ...first, name: "Second", preampDb: -4 });
+    const third = await store.savePreset({ ...second, name: "Third", preampDb: -6 });
+    assert.equal(third.version, 3);
+    assert.equal(third.createdAt, first.createdAt);
+    const revisions = path.join(tmp, "revisions", first.id);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v1.json"), "utf8")), JSON.parse(JSON.stringify(first)));
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v2.json"), "utf8")), JSON.parse(JSON.stringify(second)));
+    assert.deepEqual(await store.getPreset(first.id), third);
+  });
+});
+
+test("editing a collection-only preset snapshots its version without changing the collection", async () => {
+  await withTempEnv(async (store, { tmp, collection }) => {
+    const original = samplePreset(store, { version: 7, createdAt: "2026-01-01T00:00:00Z" });
+    const file = path.join(collection, "presets", `${original.id}.json`);
+    const contents = JSON.stringify(original);
+    await fs.writeFile(file, contents);
+    const saved = await store.savePreset({ ...original, name: "Edited" });
+    assert.equal(saved.version, 8);
+    assert.equal(saved.createdAt, original.createdAt);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(tmp, "revisions", original.id, "v7.json"), "utf8")), JSON.parse(JSON.stringify(original)));
+    assert.equal(await fs.readFile(file, "utf8"), contents);
+  });
+});
+
+test("snapshot failure leaves the working preset unchanged", async () => {
+  await withTempEnv(async (store, { tmp, presets }) => {
+    const first = await store.savePreset(samplePreset(store));
+    const file = path.join(presets, `${first.id}.json`);
+    const contents = await fs.readFile(file, "utf8");
+    await fs.writeFile(path.join(tmp, "revisions"), "blocks the revision directory");
+    await assert.rejects(store.savePreset({ ...first, name: "Must not overwrite" }));
+    assert.equal(await fs.readFile(file, "utf8"), contents);
+  });
+});
+
+test("concurrent MCP saves allocate separate revisions", async () => {
+  await withTempEnv(async (store, { tmp }) => {
+    const original = samplePreset(store);
+    const saved = await Promise.all(["One", "Two", "Three"].map(name => store.savePreset({ ...original, name })));
+    assert.deepEqual(saved.map(p => p.version), [1, 2, 3]);
+    const revisions = path.join(tmp, "revisions", original.id);
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v1.json"), "utf8")), JSON.parse(JSON.stringify(saved[0])));
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(revisions, "v2.json"), "utf8")), JSON.parse(JSON.stringify(saved[1])));
+    assert.deepEqual(await store.getPreset(original.id), saved[2]);
+  });
+});
+
 test("addPresetToCollection is the only way in, and is reversible", async () => {
   await withTempEnv(async (store, { collection, presets }) => {
     await store.savePreset(samplePreset(store, { id: "preset_promote" }));
@@ -236,6 +288,102 @@ test("a missing collection directory is tolerated, not fatal", async () => {
     assert.deepEqual(await store.loadHeadphoneProfiles(), []);
     assert.deepEqual(await store.collectionPresetIds(), []);
     assert.deepEqual(await store.loadAllPresets(), []);
+  });
+});
+
+test("malformed preset metadata is isolated without hiding healthy records", async () => {
+  await withTempEnv(async (store, { presets, collection }) => {
+    const healthy = samplePreset(store, { id: "healthy" });
+    await fs.writeFile(path.join(presets, "healthy.json"), JSON.stringify(healthy));
+    const badFields = [
+      { correction: { measuredCorrection: {} } },
+      { correction: { measuredCorrection: { measurementId: 3 } } },
+      { bands: [null] },
+      { bands: [{ index: 1, type: "invalid" }] },
+      { updatedAt: 123 },
+      { tags: "not an array" },
+      { id: "../unsafe" },
+      { safety: { autoGainEnabled: "false", clippingRisk: "low" } },
+    ];
+    for (const [i, fields] of badFields.entries()) {
+      const bad = { ...healthy, id: `bad_${i}`, ...fields };
+      const dir = i % 2 ? presets : path.join(collection, "presets");
+      await fs.writeFile(path.join(dir, `bad_${i}.json`), JSON.stringify(bad));
+    }
+    assert.deepEqual((await store.loadAllPresets()).map(p => p.id), ["healthy"]);
+    assert.deepEqual(await store.collectionPresetIds(), []);
+    assert.equal(await store.getPreset("bad_0"), null);
+    assert.equal(await store.getPreset("bad_1"), null);
+  });
+});
+
+test("a malformed working copy falls back to a valid collection copy", async () => {
+  await withTempEnv(async (store, { presets, collection }) => {
+    const valid = samplePreset(store);
+    await fs.writeFile(path.join(collection, "presets", `${valid.id}.json`), JSON.stringify(valid));
+    await fs.writeFile(path.join(presets, `${valid.id}.json`), JSON.stringify({ ...valid, correction: { measuredCorrection: {} } }));
+    assert.equal((await store.getPreset(valid.id)).name, valid.name);
+    assert.deepEqual((await store.loadAllPresets()).map(p => p.id), [valid.id]);
+  });
+});
+
+test("legacy optional metadata gets Swift-compatible defaults", async () => {
+  await withTempEnv(async (store, { presets }) => {
+    await fs.writeFile(path.join(presets, "legacy.json"), JSON.stringify({ id: "legacy", name: "Legacy", bands: [] }));
+    const loaded = await store.getPreset("legacy");
+    assert.equal(loaded.preampDb, 0);
+    assert.equal(loaded.bands.length, 20);
+    assert.equal(loaded.version, 1);
+    assert.deepEqual(loaded.tags, []);
+    assert.deepEqual(loaded.safety, { autoGainEnabled: false, clippingRisk: "low" });
+  });
+});
+
+test("getPreset rejects a valid file whose embedded id does not match the requested id", async () => {
+  await withTempEnv(async (store, { presets }) => {
+    await fs.writeFile(path.join(presets, "requested.json"), JSON.stringify(samplePreset(store, { id: "different" })));
+    assert.equal(await store.getPreset("requested"), null);
+  });
+});
+
+test("replacing a malformed working preset preserves its original bytes", async () => {
+  await withTempEnv(async (store, { tmp, presets }) => {
+    const preset = samplePreset(store);
+    const damaged = JSON.stringify({ ...preset, correction: { measuredCorrection: {} } });
+    await fs.writeFile(path.join(presets, `${preset.id}.json`), damaged);
+    await store.savePreset(preset);
+    const revisions = path.join(tmp, "revisions", preset.id);
+    const files = await fs.readdir(revisions);
+    assert.equal(files.length, 1);
+    assert.match(files[0], /^\.corrupt-/);
+    assert.equal(await fs.readFile(path.join(revisions, files[0]), "utf8"), damaged);
+    assert.equal((await store.getPreset(preset.id)).name, preset.name);
+  });
+});
+
+test("stored measured curves retain invalid hashes, point order, and future schema versions", async () => {
+  await withTempEnv(async (store, { presets }) => {
+    const { measuredPayloadFIREligibility } = await import(path.join(dist, "validate.js"));
+    for (const schemaVersion of [1, 2]) {
+      const payload = {
+        schemaVersion, measurementId: "measurement", sourceFormat: "autoeq_graphic_eq",
+        source: "test", provenanceURL: "https://example.invalid/curve",
+        sourcePreampDb: -6, contentHash: "0".repeat(64), channel: "stereo",
+        phaseData: "magnitude_only", usableLowHz: 40, usableHighHz: 10000,
+        points: [{ frequencyHz: 1000, gainDb: 1 }, { frequencyHz: 20, gainDb: 30 }],
+      };
+      const preset = samplePreset(store, {
+        id: `measured_${schemaVersion}`,
+        correction: {
+          role: "baseline", sourceConfidence: "measured", correctionStrength: 1,
+          targetBlend: 1, preferenceBandIndexes: [], measuredCorrection: payload,
+        },
+      });
+      await fs.writeFile(path.join(presets, `${preset.id}.json`), JSON.stringify(preset));
+      const loaded = await store.getPreset(preset.id);
+      assert.deepEqual(JSON.parse(JSON.stringify(loaded.correction.measuredCorrection)), payload);
+      assert.equal(measuredPayloadFIREligibility(loaded.correction.measuredCorrection).eligible, false);
+    }
   });
 });
 

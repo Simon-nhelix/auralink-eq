@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -70,26 +71,26 @@ struct EQGraphView: View {
             }
         }
         .overlay(alignment: .topLeading) { headerOverlay }
-        .frame(minHeight: 240)
+        .frame(minHeight: Theme.Layout.Editor.graphMinHeight)
     }
 
     // MARK: - Header chrome
 
     private var headerOverlay: some View {
         HStack(spacing: 8) {
-            SectionLabel("Frequency Response")
+            SectionLabel(L10n.text("Frequency Response"))
             AuraTag(model.currentPreset.name, tint: Theme.Palette.auraBlue)
-            AuraTag("\(model.currentPreset.activeBands.count) bands", tint: model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent)
+            AuraTag(L10n.format("%lld bands", model.currentPreset.activeBands.count), tint: model.currentPreset.activeBands.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent)
             if let role = model.currentCorrectionRoleText {
                 AuraTag(role, tint: Theme.Palette.auraViolet)
             }
             Spacer()
             if model.comparingBefore {
-                AuraTag("Comparing: Before", tint: Theme.Palette.warning)
+                AuraTag(L10n.text("Comparing: Before"), tint: Theme.Palette.warning)
             }
             if let i = model.selectedBandIndex,
                let band = band(at: i) {
-                AuraTag("Band \(band.index) · \(Fmt.hz(band.frequencyHz)) · \(band.type.qShortName) \(Fmt.q(band.q))",
+                AuraTag(L10n.format("Band %@ · %@ · %@ %@", String(band.index), String(Fmt.hz(band.frequencyHz)), L10n.text(band.type.qShortName), String(Fmt.q(band.q))),
                         tint: tint(for: band.channel))
             }
         }
@@ -303,7 +304,7 @@ struct EQGraphView: View {
                 .fill(tintColor.opacity(band.enabled ? 0.9 : 0.4))
                 .frame(width: isSelected ? 15 : 12, height: isSelected ? 15 : 12)
                 .overlay(
-                    Circle().stroke(Color.black.opacity(0.35), lineWidth: 1)
+                    Circle().stroke(Theme.Palette.nodeOutline, lineWidth: 1)
                 )
                 .shadow(color: band.enabled ? tintColor.opacity(0.7) : .clear,
                         radius: isSelected ? 7 : 4)
@@ -311,7 +312,7 @@ struct EQGraphView: View {
             // Index label inside the node.
             Text("\(band.index)")
                 .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(Color.black.opacity(0.7))
+                .foregroundStyle(Theme.Palette.nodeLabel)
         }
         .opacity(band.enabled ? 1.0 : 0.5)
         .position(pos)

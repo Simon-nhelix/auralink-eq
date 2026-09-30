@@ -84,9 +84,9 @@ export const measuredCorrectionSchema = z.object({
 });
 
 export const targetSchema = z
-  .enum(["auralink", "luxsin-x8"])
+  .enum(["auralink", "luxsin-x8", "luxsin-x9"])
   .default("auralink")
-  .describe("EQ backend target. Default auralink uses the macOS software EQ; luxsin-x8 writes/selects a hardware PEQ entry on the LAN X8.");
+  .describe("EQ backend target. Default auralink uses the macOS software EQ; luxsin-x8 writes/selects a hardware PEQ entry on the LAN X8; luxsin-x9 is experimental read-only (set X9_URL).");
 
 export const correctionInputSchema = {
   correctionRole: correctionRoleSchema

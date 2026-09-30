@@ -34,12 +34,51 @@ Browser-originated requests are rejected, CORS is not enabled, and ControlServer
 write requests require JSON. Binding to loopback and token authentication do not
 protect a machine whose user account is already compromised.
 
+MCP tools that edit library files query the authenticated app state before
+writing. Read Only cannot be overridden by a client confirmation; Ask Before
+Write requires `confirmed:true`. If the app's permission mode cannot be verified
+(offline, authentication failure, or unsupported response), no library files are
+changed. This policy covers presets, headphone profiles, collection membership,
+and tuning feedback; read-tool cache maintenance is separate.
+
 ## Network behavior
 
 - The Swift app processes audio locally and does not upload audio.
+- A packaged app with an update public key checks public GitHub release metadata
+  automatically at most once a day, unless disabled in the update window.
+  Archives and detached signatures are downloaded only when the user chooses
+  installation. No audio, control token, preset or device data is sent.
 - The MCP server can fetch public AutoEq result files from GitHub when that tool
   is invoked. Results are cached under the user's Auralink Application Support
   directory.
 - Optional Luxsin X8 support communicates with a device on the local network and
-  may scan private IPv4 addresses when device discovery is requested.
+  may scan private IPv4 addresses when device discovery is requested. Explicit
+  addresses disable automatic discovery by default. Writes are bound to a verified
+  model/address (and MAC when available), serialized and never automatically
+  replayed after ambiguous transport errors. Stored EQ and selection are read back.
+- Luxsin X9 access is experimental and read-only, requires an explicit `X9_URL`,
+  and does not reuse X8 discovery. Device write methods reject X9 requests.
 - No analytics or crash-reporting service is included.
+
+## Update authenticity
+
+The app pins an Ed25519 public key in its signed bundle. HTTPS downloads are
+verified before extraction; the extracted app must match the release version,
+bundle identifier and public key and have a valid macOS code signature. A modified
+archive or signature is rejected before app replacement. The release private key
+is kept in the maintainer's login keychain, separate from MiSTer FTP's key. The
+GitHub account and release notes are not themselves authenticated by that key.
+
+Ad-hoc macOS signing is the current release workflow. Update authenticity does
+not imply Apple notarization. Key rotation is not supported automatically; a lost
+key requires recovery or a documented manual migration to a newly signed release.
+
+### MCP tuning persistence
+
+A request to register a device or tune its EQ includes saving the resulting
+baseline or preference preset. MCP tuning tools write both the working preset
+library and the configured user collection; they do not commit or publish it.
+The existing app permission mode still governs these writes. A separate user
+request to hear a result is required for live application. `delete_preset`
+removes working and collection copies plus revision history; it does not cascade
+to other presets. Explicitly unsaved listening trials remain available.

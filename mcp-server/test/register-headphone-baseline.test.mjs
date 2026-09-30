@@ -25,6 +25,7 @@ async function withTempEnv(fn) {
   process.env.AURALINK_COLLECTION_DIR = collection;
   process.env.AURALINK_USER_DATA_DIR = userData;
   process.env.AURALINK_PRESETS_DIR = presets;
+  process.env.AURALINK_REVISIONS_DIR = path.join(tmp, "revisions");
   process.env.AURALINK_DATA_DIR = data;
 
   try {
@@ -219,5 +220,117 @@ test("validation failure leaves no orphan profile in the collection", async () =
     assert.deepEqual(await fs.readdir(path.join(collection, "headphones")), []);
     assert.deepEqual(await fs.readdir(path.join(collection, "presets")), []);
     assert.deepEqual(await fs.readdir(presets), []);
+  });
+});
+
+test("registration with preferences saves a pure baseline and a separate linked tuning", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection }) => {
+    const result = await registerHeadphoneBaseline({
+      headphone: "Example IEM", type: "iem", bands: explicitBands,
+      preferenceBands: [{ index: 1, type: "low_shelf", frequencyHz: 80, gainDb: 2 }],
+    });
+    assert.equal(result.ok, true);
+    const baseline = JSON.parse(await fs.readFile(result.written.baseline, "utf8"));
+    const tuning = JSON.parse(await fs.readFile(result.written.preset, "utf8"));
+    assert.notEqual(baseline.id, tuning.id);
+    assert.equal(baseline.correction.role, "baseline");
+    assert.deepEqual(baseline.correction.preferenceBandIndexes, []);
+    assert.equal(baseline.bands.filter(b => b.enabled).length, 2);
+    assert.equal(tuning.correction.role, "combined");
+    assert.equal(tuning.correction.baselinePresetId, baseline.id);
+    assert.deepEqual(tuning.correction.preferenceBandIndexes, [3]);
+    assert.deepEqual(tuning.bands.slice(0, 2), baseline.bands.slice(0, 2));
+    assert.equal((await fs.readdir(path.join(collection, "presets"))).length, 2);
+
+    const original = await fs.readFile(result.written.baseline, "utf8");
+    const second = await registerHeadphoneBaseline({
+      headphone: "Example IEM", type: "iem", bands: [{ frequencyHz: 500, gainDb: 1 }],
+      preferenceLabel: "Vocal", preferenceBands: [{ frequencyHz: 2500, gainDb: -1 }],
+    });
+    assert.equal(second.baselineReused, true);
+    assert.notEqual(second.preset.id, tuning.id);
+    assert.equal(await fs.readFile(result.written.baseline, "utf8"), original);
+    assert.deepEqual(second.baseline.bands, baseline.bands);
+  });
+});
+
+test("too many preference bands fail before writing a partial registration", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection, presets }) => {
+    await assert.rejects(registerHeadphoneBaseline({
+      headphone: "Full Can", type: "open_back",
+      bands: Array.from({ length: 20 }, (_, i) => ({ frequencyHz: 100 + i * 100, gainDb: -1 })),
+      preferenceBands: [{ frequencyHz: 80, gainDb: 1 }],
+    }), /baseline bands cannot be replaced or dropped/);
+    assert.deepEqual(await fs.readdir(path.join(collection, "headphones")), []);
+    assert.deepEqual(await fs.readdir(path.join(collection, "presets")), []);
+    assert.deepEqual(await fs.readdir(presets), []);
+  });
+});
+
+test("AutoEq registration preserves measured FIR in both baseline and preference copy", async () => {
+  const { parseGraphicEQ, parseParametricEQ } = await import("../dist/autoeq.js");
+  const peq = parseParametricEQ(await fs.readFile(path.join(here, "fixtures", "sennheiser-hd600-parametric-eq.txt"), "utf8"));
+  const measuredCorrection = parseGraphicEQ(
+    await fs.readFile(path.join(here, "fixtures", "sennheiser-hd600-graphic-eq.txt"), "utf8"),
+    peq.preampDb,
+    { measurementId: "hd600", source: "oratory1990", provenanceURL: "https://example.test/hd600" }
+  );
+  await withTempEnv(async ({ registerHeadphoneBaseline }) => {
+    const result = await registerHeadphoneBaseline({
+      headphone: "Sennheiser HD 600", preferenceBands: [{ frequencyHz: 2000, gainDb: -1 }],
+    }, {
+      getAutoEqCorrection: async () => ({ found: true, suggestions: [], alternates: [], correction: {
+        name: "Sennheiser HD 600", source: "oratory1990", url: "https://example.test/hd600",
+        ...peq, measuredCorrection,
+      } }),
+    });
+    assert.equal(result.ok, true);
+    const tuning = JSON.parse(await fs.readFile(result.written.preset, "utf8"));
+    assert.deepEqual(result.baseline.correction.measuredCorrection, measuredCorrection);
+    assert.deepEqual(tuning.correction.measuredCorrection, JSON.parse(JSON.stringify(measuredCorrection)));
+    assert.deepEqual(tuning.correction.preferenceBandIndexes, [11]);
+    assert.equal(result.baseline.preampDb, peq.preampDb);
+  });
+});
+
+test("legacy mixed baseline id is preserved while a separate pure baseline is registered", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }) => {
+    const store = await import("../dist/store.js");
+    const first = await registerHeadphoneBaseline({ headphone: "Legacy Can", type: "iem", bands: explicitBands });
+    const legacy = await store.savePreset({
+      ...first.baseline, correction: { ...first.baseline.correction, role: "combined", preferenceBandIndexes: [2] },
+    });
+    await store.addPresetToCollection(legacy.id);
+    const next = await registerHeadphoneBaseline({ headphone: "Legacy Can", type: "iem", bands: explicitBands });
+    assert.equal(next.ok, true);
+    assert.notEqual(next.baseline.id, legacy.id);
+    assert.deepEqual(await store.getPreset(legacy.id), legacy);
+    assert.equal(next.baseline.correction.role, "baseline");
+    const repeat = await registerHeadphoneBaseline({ headphone: "Legacy Can", type: "iem", bands: explicitBands });
+    assert.equal(repeat.baseline.id, next.baseline.id);
+    assert.equal(repeat.baselineReused, true);
+  });
+});
+
+test("registration respects sparse baseline slots without dropping auto-assigned bands", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }) => {
+    const result = await registerHeadphoneBaseline({
+      headphone: "Sparse Can", type: "iem",
+      bands: [{ frequencyHz: 100, gainDb: -1 }, { index: 1, frequencyHz: 200, gainDb: -2 }],
+      preferenceBands: [{ index: 1, frequencyHz: 300, gainDb: -3 }],
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.baseline.bands[0].frequencyHz, 200);
+    assert.equal(result.baseline.bands[1].frequencyHz, 100);
+    assert.deepEqual(result.preset.preferenceBandIndexes, [3]);
+  });
+});
+
+test("AutoEq results cannot silently be relabeled as another target", async () => {
+  await withTempEnv(async ({ registerHeadphoneBaseline }, { collection }) => {
+    await assert.rejects(registerHeadphoneBaseline({
+      headphone: "Sennheiser HD 600", targetCurveId: "crinacle-ief-2025",
+    }), /AutoEq supplies Harman/);
+    assert.deepEqual(await fs.readdir(path.join(collection, "presets")), []);
   });
 });

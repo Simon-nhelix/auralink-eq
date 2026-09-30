@@ -152,7 +152,7 @@ Two roots, with different owners — see `AuralinkPaths.swift`:
   the control token into an issue or config file.
 - `~/auralink-collection` (override with `AURALINK_COLLECTION_DIR`) is **your**
   headphone profiles and curated presets. Auralink never ships content here and only
-  writes to it when you ask. It is meant to be a git repository you own — see
+  writes requested device baselines and MCP tunings there automatically. It is meant to be a git repository you own — see
   [docs/DATA_COLLECTION.md](docs/DATA_COLLECTION.md).
 
 ---
@@ -191,6 +191,65 @@ open "build/Auralink EQ.app"
 
 This bundle is for local development. It is ad-hoc or locally signed and is not
 an official distributable release.
+
+### In-app updates and binary releases
+
+The packaged app checks this repository's GitHub releases at most once a day.
+Use **Check for updates…** in the app menu or the menu-bar overflow menu for a
+manual check. Update notifications also appear in the editor and menu-bar panel.
+The update window shows release notes, download progress, a skip-version option,
+and an automatic-check preference. Installation is always an explicit action.
+
+Updates use Ed25519 archive signatures, following MiSTer FTP's release model;
+they do not require Sparkle or a separate update server. Before replacing the
+app, Auralink verifies the archive, bundle identity, version, public key, macOS
+requirement and code signature. It then stops EQ and restores real system sound
+output. If output restoration fails, installation is aborted. The app restarts
+with EQ stopped; use **Start System EQ** when ready. Presets and collections live
+outside the app and survive replacement. Cancelling a download leaves the app
+and live audio alone.
+
+Release configuration is in [`Resources/Release.plist`](Resources/Release.plist):
+`version` (for example `0.1.0-alpha.1`), increasing numeric `build`, `channel`
+(`alpha`, `beta`, or `stable`), repository and public key. Alpha installations
+accept alpha, beta, release-candidate and stable releases; beta accepts beta,
+release-candidate and stable; stable accepts stable only. The updater examines
+the newest 100 published releases and orders prerelease versions correctly.
+
+On a Mac with an unlocked login keychain, the normal release workflow is:
+
+```bash
+scripts/release-app.sh
+```
+
+This creates the Auralink-specific signing key once, records its **public** key
+in Release.plist, builds a Universal app for Apple Silicon and Intel, and writes:
+
+```text
+build/Auralink-EQ-<version>.zip
+build/Auralink-EQ-<version>.zip.sig
+```
+
+Commit the public key and release metadata before distributing the first
+update-capable binary. The private key stays in the login keychain as
+**Auralink EQ update signing key**; back it up. A configured key is never replaced
+automatically. An SSH session without keychain access can build and test the app
+using `AURALINK_SIGN_IDENTITY=- scripts/bundle-app.sh --universal`, but cannot sign
+a release. Builds without an update public key disable update checks and install.
+
+Publish **both** files on a GitHub release tagged `v<version>`, with release notes.
+Mark alpha/beta/rc versions as prereleases. Update filenames must match the tag
+exactly; source-only releases and architecture-specific archives are ignored.
+An unsigned archive can be shown as a release-page download, but is never installed
+by the updater. CI artifacts preserve the app's permissions in a ZIP, but have
+no release-key signature and are not in-app update packages.
+
+The release script uses ad-hoc macOS code signing, as MiSTer FTP does. Ed25519
+proves the origin of updates but does not provide Apple notarization or bypass
+Gatekeeper. The first installation may require **System Settings → Privacy &
+Security → Open Anyway**. Move the app into a writable Applications folder before
+updating. BlackHole is still a separate installation and the optional Node/MCP
+server is not included in the app archive.
 
 The app shows a waveform glyph in the menubar and opens the editor window on
 launch. On first launch, grant the
@@ -244,6 +303,67 @@ Build and register it with Claude Desktop (`claude_desktop_config.json`) — see
 the MCP section of **[docs/SETUP.md](docs/SETUP.md)**.
 
 ---
+
+## Preparing UI design changes
+
+The current UI has one fixed dark theme. Its design entry points are
+[`Theme.swift`](Sources/AuralinkApp/Views/DesignSystem/Theme.swift) and
+[`Components.swift`](Sources/AuralinkApp/Views/DesignSystem/Components.swift):
+
+- `Theme.Palette`, `Gradients`, and `Typo` define shared colors and text styles.
+- `Theme.Metrics` defines shared spacing, radii, and button padding.
+- `Theme.Layout` defines menu-bar, editor, monitor, proposal, and band-table
+  dimensions. Change the shared graph minimum or table columns here so their
+  callers stay aligned.
+- `Components.swift` owns cards, action buttons, status dots, labels, tags,
+  and the waveform brand mark shared by the editor and menu bar.
+
+Change screen composition in `EditorWindow`, `MenuBarView`, and `TopBarView`.
+Keep controls bound to the existing `AppModel` intents and output-picker
+snapshot; appearance changes should preserve routing, permission handling,
+and the UI publish gate. DSP ranges and graph coordinate transforms remain
+in their existing logic modules.
+
+These entry points preserve the existing visual defaults. Runtime theme
+selection, a light theme, and isolated screen previews are future work. Some
+local control sizes and icon fonts still live in views. UI copy is localized
+through `AuralinkLocalization`, including enum labels at the presentation layer.
+Verify design changes at the editor minimum size, with long preset/device
+names, and in the menu-bar search and proposal states. Use `swift build` and
+`swift test` for compilation and logic checks; those checks do not establish
+visual correctness.
+
+## UI languages
+
+English (`en`), Korean (`ko`), and Japanese (`ja`) UI resources live in
+[`Sources/AuralinkLocalization/Resources`](Sources/AuralinkLocalization/Resources).
+The app selects the first supported macOS preferred language when it launches,
+including regional variants such as `ko-KR` and `ja-JP`, and falls back to English.
+Use macOS language settings and restart the app to change its UI language.
+There is no separate in-app language preference yet.
+
+Use `L10n.text("English source phrase")` for fixed app-owned copy and
+`L10n.format("Loaded %@", name)` for complete sentences with arguments. Add the
+same key to all three `Localizable.strings` files. Preserve argument types;
+positional placeholders such as `%2$@` can change word order. Count templates
+use `Localizable.stringsdict` for English singular/plural rules and Korean and
+Japanese count labels. Shared components receive already localized Strings.
+
+Localization changes display text, not stored preset names, headphone/device
+names, tags, enum raw values, API identifiers, or DSP numeric editing. User and
+collection content, generated tuning explanations/validation details, external
+errors, and copied diagnostic reports retain their original text. Localizing
+the UI does not extend the tuning engine's free-text keyword vocabulary.
+
+`scripts/bundle-app.sh` includes the localization bundle, declares the three
+languages in app metadata, and places translated microphone permission copy in
+the main bundle. This follows Apple's
+[Swift package resource localization](https://developer.apple.com/documentation/xcode/localizing-package-resources)
+structure. `swift test` checks language selection, translation-key parity,
+format arguments, plurals, privacy copy, and literal lookup coverage, so these
+checks run in the existing CI workflow. When redesigning screens, also check
+long labels, device/preset names, search results, and proposal actions in each
+language at the minimum editor size and in the menu-bar popover.
 
 ## Status
 

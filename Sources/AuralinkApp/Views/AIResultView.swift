@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AuralinkCore
 
@@ -18,7 +19,7 @@ struct AIResultView: View {
         // Defensive: if the proposal vanished, render nothing rather than crash.
         if let result = model.pendingProposal {
             card(for: result)
-                .frame(maxWidth: 540)
+                .frame(maxWidth: Theme.Layout.Proposal.maxWidth)
                 .padding(Theme.Metrics.pad)
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
@@ -41,7 +42,7 @@ struct AIResultView: View {
                         }
                     }
                 }
-                .frame(maxHeight: 320)
+                .frame(maxHeight: Theme.Layout.Proposal.contentMaxHeight)
 
                 Divider().overlay(Theme.Palette.line)
                 footerMeta(for: result)
@@ -59,7 +60,7 @@ struct AIResultView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.Gradients.aura)
-                    Text("Proposed Tuning")
+                    Text(L10n.text("Proposed Tuning"))
                         .font(Theme.Typo.caption)
                         .tracking(0.8)
                         .foregroundStyle(Theme.Palette.textTertiary)
@@ -83,13 +84,13 @@ struct AIResultView: View {
             HStack(spacing: 6) {
                 Image(systemName: v.ok ? "checkmark.shield.fill" : "exclamationmark.triangle.fill")
                     .font(.system(size: 11, weight: .bold))
-                Text(v.ok ? "Validated" : "Has errors")
+                Text(v.ok ? L10n.text("Validated") : L10n.text("Has errors"))
                     .font(Theme.Typo.label)
             }
             .foregroundStyle(v.ok ? Theme.Palette.success : Theme.Palette.danger)
 
             StatusDot(color: tint,
-                      label: "Clipping: \(v.clippingRisk.displayName)",
+                      label: L10n.format("Clipping: %@", L10n.text(v.clippingRisk.displayName)),
                       glow: v.clippingRisk == .high)
         }
     }
@@ -98,9 +99,9 @@ struct AIResultView: View {
 
     private func intentSection(_ intent: [String]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Intent")
+            SectionLabel(L10n.text("Intent"))
             if intent.isEmpty {
-                Text("No stated intent.")
+                Text(L10n.text("No stated intent."))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(Theme.Palette.textTertiary)
             } else {
@@ -124,9 +125,9 @@ struct AIResultView: View {
 
     private func changesSection(_ changes: [TuningChange]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Changes")
+            SectionLabel(L10n.text("Changes"))
             if changes.isEmpty {
-                Text("No band changes vs the current preset.")
+                Text(L10n.text("No band changes vs the current preset."))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(Theme.Palette.textTertiary)
             } else {
@@ -155,7 +156,7 @@ struct AIResultView: View {
 
     private func basisSection(_ basis: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Basis")
+            SectionLabel(L10n.text("Basis"))
             Text(basis)
                 .font(Theme.Typo.caption)
                 .foregroundStyle(Theme.Palette.textSecondary)
@@ -168,17 +169,17 @@ struct AIResultView: View {
     private func footerMeta(for result: TuningResult) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: Theme.Metrics.pad) {
-                metaItem(label: "Preamp", value: Fmt.db(result.preset.preampDb))
-                metaItem(label: "Peak gain", value: Fmt.db(result.validation.estimatedPeakGainDb))
-                metaItem(label: "Bands", value: "\(result.preset.activeBands.count) active")
+                metaItem(label: L10n.text("Preamp"), value: Fmt.db(result.preset.preampDb))
+                metaItem(label: L10n.text("Peak gain"), value: Fmt.db(result.validation.estimatedPeakGainDb))
+                metaItem(label: L10n.text("Bands"), value: L10n.format("%lld active", result.preset.activeBands.count))
                 Spacer(minLength: 0)
             }
 
             if let correction = result.preset.correction {
                 HStack(spacing: Theme.Metrics.pad) {
-                    metaItem(label: "Role", value: PresetFormatting.roleLabel(correction.role))
-                    metaItem(label: "Correction", value: PresetFormatting.percent(correction.correctionStrength))
-                    metaItem(label: "Target", value: PresetFormatting.percent(correction.targetBlend))
+                    metaItem(label: L10n.text("Role"), value: PresetFormatting.roleLabel(correction.role))
+                    metaItem(label: L10n.text("Correction"), value: PresetFormatting.percent(correction.correctionStrength))
+                    metaItem(label: L10n.text("Target"), value: PresetFormatting.percent(correction.targetBlend))
                     Spacer(minLength: 0)
                 }
             }
@@ -221,7 +222,7 @@ struct AIResultView: View {
                 Button {
                     model.applyProposal()
                 } label: {
-                    Label("Apply", systemImage: "checkmark.circle.fill")
+                    Label(L10n.text("Apply"), systemImage: "checkmark.circle.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: true))
@@ -229,7 +230,7 @@ struct AIResultView: View {
                 Button {
                     model.saveProposalAsDraft()
                 } label: {
-                    Label("Save Draft", systemImage: "tray.and.arrow.down")
+                    Label(L10n.text("Save Draft"), systemImage: "tray.and.arrow.down")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: false))
@@ -240,12 +241,12 @@ struct AIResultView: View {
                     if let proposal = model.pendingProposal {
                         model.auditionTransientPreset(
                             proposal.preset,
-                            message: "Comparing the proposal against the previous preset."
+                            message: L10n.text("Comparing the proposal against the previous preset.")
                         )
                     }
                     model.toggleAB()
                 } label: {
-                    Label(model.comparingBefore ? "A/B: Before" : "Compare A/B",
+                    Label(model.comparingBefore ? L10n.text("A/B: Before") : L10n.text("Compare A/B"),
                           systemImage: "arrow.left.arrow.right")
                         .frame(maxWidth: .infinity)
                 }
@@ -254,7 +255,7 @@ struct AIResultView: View {
                 Button {
                     onEditManually()
                 } label: {
-                    Label("Edit Manually", systemImage: "slider.horizontal.3")
+                    Label(L10n.text("Edit Manually"), systemImage: "slider.horizontal.3")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: false))
@@ -262,7 +263,7 @@ struct AIResultView: View {
                 Button(role: .destructive) {
                     model.discardProposal()
                 } label: {
-                    Label("Discard", systemImage: "xmark")
+                    Label(L10n.text("Discard"), systemImage: "xmark")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AuraButtonStyle(prominent: false))

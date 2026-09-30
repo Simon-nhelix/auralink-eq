@@ -41,12 +41,13 @@ rollback tools require the app.
 | `delete_headphone_profile` | write | Deletes a profile from the collection. |
 | `list_presets` | read | Working library + collection presets, flagged with `inCollection` (offline). |
 | `get_preset` | read | One full preset by id (offline). |
-| `add_preset_to_collection` | write | Copies a preset into the user's collection. Ask first. |
+| `add_preset_to_collection` | write | Copies an existing working preset into the collection; requested tunings are already saved automatically. |
 | `remove_preset_from_collection` | write | Drops a collection entry, keeping the working copy. |
 | `delete_preset` | write | Deletes a local preset and refreshes the app when online. |
-| `create_eq_preset` | write | **Validates before writing**; never touches live audio unless explicitly asked with `applyNow:true` + `confirmed:true`. |
+| `create_preference_tuning` | write | Copies a pure baseline, adds subjective bands, and automatically saves a separate tuning to library + collection. |
+| `create_eq_preset` | write | **Validates before writing**, automatically saves to library + collection; never touches live audio unless explicitly asked with `applyNow:true` + `confirmed:true`. |
 | `audition_eq_preset` | **live** | Applies an unsaved, validated preset temporarily after confirmation. |
-| `register_headphone_baseline` | write | One-shot headphone registration: upserts the profile and saves its measured/explicit baseline into the collection. |
+| `register_headphone_baseline` | write | One-shot headphone registration: upserts the profile and saves its pure measured/explicit baseline into the collection, plus a separate tuning if preference bands are provided. |
 | `get_autoeq_correction` | network read | Fetches/caches measured AutoEq PEQ and GraphicEQ data with provenance. |
 | `get_response_curve` | read | Computes the combined left/right response before auditioning. |
 | `validate_eq_preset` | read | Offline safety + clipping check for an id or inline bands. |
@@ -61,6 +62,19 @@ Live and destructive tools are explicitly annotated in their MCP metadata.
 `create_eq_preset` always runs the validator first and refuses to write a preset
 that produces a validation **error**. Because it can also apply the result to
 live audio (`applyNow:true` + `confirmed:true`), it is annotated destructive.
+
+Every library-writing tool checks the running app's permission mode before
+changing files, including preset/profile CRUD, collection membership, baseline
+registration, and tuning feedback. `read_only` rejects writes even with
+`confirmed:true`; `ask_before_write` requires that flag after the user has
+requested the file change. `allow_preset_creation` and `full_control` allow
+library writes without per-action confirmation. Confirmation of a file change
+does not apply audio unless a live action is also explicitly requested.
+
+If the app is offline, unauthenticated, or reports an unknown permission mode,
+library writes return `ok:false`, `written:false`, and
+`reason:"permission_unavailable"`. Launch the app and retry. Offline read and
+validation tools remain available.
 
 ### Resources (5)
 
@@ -143,3 +157,26 @@ return a clear `online: false` notice instead of failing.
 - The on-disk preset JSON matches the app's `JSONEncoder` output (camelCase
   fields, snake_case enum values, ISO-8601 dates, sorted keys), so presets the AI
   creates load directly in the app and vice versa.
+
+## Luxsin hardware targets
+
+`list_eq_targets` reports model capabilities and verification status. X8 supports
+read-back-verified PEQ writes via `target:"luxsin-x8"`; use at most 10 enabled
+stereo bands. Overflow and left/right-only filters are rejected without changing
+the device. Stored filters, preamp and selection are checked before reporting
+success; disabled DSP/PEQ is reported rather than silently enabled.
+
+`delete_luxsin_preset` deletes an exact inactive hardware entry name after the user
+requests it. It verifies removal and preserves the prior active entry. Protected
+or active entries are refused. `delete_preset` continues to affect only local files.
+
+An explicit `X8_URL` pins the address and disables automatic failover by default.
+Unconfigured X8 connections retain local discovery. Mutations are serialized and
+pinned to the initially verified device; ambiguous write failures are not retried.
+
+X9 supports experimental read-only access with `target:"luxsin-x9"` and an explicit
+`X9_URL`. It does not reuse X8 discovery or fall back to Auralink. X9 device writes
+are disabled until its firmware protocol is verified; local tuning files can still
+be prepared. Other Luxsin models are not advertised as supported.
+
+See [research and verification limits](../docs/LUXSIN_SUPPORT.md).

@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
@@ -14,7 +15,7 @@ enum PresetFileIO {
     @MainActor
     static func importPanel() -> URL? {
         let panel = NSOpenPanel()
-        panel.title = "Import Preset"
+        panel.title = L10n.text("Import Preset")
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.json]
@@ -27,7 +28,7 @@ enum PresetFileIO {
     @MainActor
     static func exportPanel(suggestedName: String) -> URL? {
         let panel = NSSavePanel()
-        panel.title = "Export Preset"
+        panel.title = L10n.text("Export Preset")
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "\(safeFileName(suggestedName)).json"
         guard panel.runModal() == .OK else { return nil }

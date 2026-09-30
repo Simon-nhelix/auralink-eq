@@ -8,17 +8,20 @@ Auralink is the local audio engine, preset store, validator, and live apply endp
 2. **Measured data first.** When the user names a model, call `get_autoeq_correction` before designing anything. A hit returns the AutoEq parametric correction computed from real measurements (oratory1990, crinacle, …) — use those exact bands and AutoEq's preamp as the baseline, record the source in tags (e.g. `autoeq`, `oratory1990`). Only design bands from prose when no measurement exists.
 3. If the user provides headphone or earphone data and says to add it, call `register_headphone_baseline`. AutoEq models: pass the name. Non-AutoEq (squig.link, Super* Review, manufacturer graph): pass `bands` + `type` + `provenance` + `credibility`. The tool writes the profile and its baseline preset into the user's own collection. Do not write `scripts/`, do not commit, and do not use this tool for Luxsin X8.
    - **Auralink ships no headphone database.** An empty headphone list on a fresh install is expected, not a defect: the collection belongs to the user. Look models up with `get_autoeq_correction` rather than assuming data should already be there.
-   - Nothing else enters the collection on its own. Call `add_preset_to_collection` only when the user asks to keep or share a preset; auditions and experiments stay machine-local.
+   - Registration always saves a pure baseline separately. Optional `preferenceBands` create an additional saved tuning. Existing baselines are reused, not overwritten.
 4. Use Harman Neutral as the default baseline target unless the user, evidence, or measurement source clearly says otherwise.
 5. **Verify before audition.** After designing or editing bands, call `get_response_curve` and check the combined curve matches the stated intent (shelf where intended, no accidental ripple, sane preamp headroom).
-6. For later preference changes, audition first. Do not save every experiment. Save only when the user says it is good, wants to keep it, or asks to save.
+6. For preference changes, call `create_preference_tuning` with the baseline id and subjective bands only. It preserves correction data and automatically saves the tuning in the working library and collection. No separate save request is needed. Use `audition_eq_preset` only for an explicitly unsaved trial.
 7. If the user explicitly asks to hear a change now, audition/apply with `confirmed:true`. Never claim live sound changed unless the app reports `routingActive` and `systemOutputRoutedToAuralink`.
 
 ## Preset Policy
 
+- Library writes require the running app's current permission mode. In `ask_before_write`, use `confirmed:true` when the user requested registration, tuning (which includes automatic saving), or deletion. Do not ask a redundant save question. `read_only` always rejects writes. If permission is unavailable, launch the app and retry; offline reads and validation remain available. File confirmation alone does not authorize live audio.
+
 - Model baseline: saved preset. Name it `<Brand> <Model> - Harman Baseline` or another clear model baseline name.
-- Preference tuning: audition-only first. Examples: warmer, more exciting, smoother treble, more vocal, less bass.
-- Save-on-like: when the user says "좋아", "맘에 들어", "저장해줘", or equivalent, save the currently auditioned preset with a descriptive name and tags.
+- Preference tuning: automatically save requested changes as a separate named preset. Use an existing preference id to revise it, or omit id to create a variation. Never overwrite its baseline.
+- Delete unwanted tunings with `delete_preset`; it removes working and collection copies plus revision history. Deleting a baseline does not delete its self-contained preference presets.
+- “Flat” means the device correction toward a documented target, not zero-gain bypass and not guaranteed acoustic flatness. Do not invent a measured baseline when data is unavailable.
 - Default audition level policy: preserve volume and dynamics. Use `preampDb:0` and `autoGain:false` unless the user asks for protected/safe mode or the EQ has extreme boosts.
 - The clipping meter and user's ears are feedback. Warnings are useful, but small positive boosts are acceptable for quick listening tests.
 
@@ -36,7 +39,7 @@ For "add this model":
 - `baselinePreset`: explicit bands, headphone display name, goal, tags including `ai`, `baseline`, `harman-neutral`, and the profile id.
 
 For "tune this sound":
-- `auditionPreset`: explicit bands, headphone display name, goal, `preampDb:0`, `autoGain:false`, tags including `ai` and `audition`.
+- `preferencePreset`: baseline id, subjective bands, descriptive name and goal; automatically saved by `create_preference_tuning`.
 - `rationale`: short explanation of audible intent and any risk/caveat.
 
 ## Band Design Defaults

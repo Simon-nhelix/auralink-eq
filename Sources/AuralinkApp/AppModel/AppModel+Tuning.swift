@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import AuralinkCore
 
@@ -21,18 +22,18 @@ extension AppModel {
     }
 
     var safeModeStatusText: String {
-        guard audioState.safeMode else { return "Preamp guard off" }
+        guard audioState.safeMode else { return L10n.text("Preamp guard off") }
         if safeModeGuardReductionDb < -0.05 {
-            return "Guard \(Self.formatDb(effectivePreampDb)) active"
+            return L10n.format("Guard %@ active", String(Self.formatDb(effectivePreampDb)))
         }
-        return "Guard ready"
+        return L10n.text("Guard ready")
     }
 
     var preampStatusText: String {
         if audioState.safeMode && safeModeGuardReductionDb < -0.05 {
-            return "\(Self.formatDb(currentPreset.preampDb)) -> \(Self.formatDb(effectivePreampDb)) effective"
+            return L10n.format("%@ -> %@ effective", String(Self.formatDb(currentPreset.preampDb)), String(Self.formatDb(effectivePreampDb)))
         }
-        return "\(Self.formatDb(currentPreset.preampDb)) preset"
+        return L10n.format("%@ preset", String(Self.formatDb(currentPreset.preampDb)))
     }
 
     /// Measured FIR is available only when the preset carries a valid dense
@@ -55,21 +56,21 @@ extension AppModel {
     var measuredFIRHelpText: String {
         if let rejection = measuredFIRRejectionReason { return rejection }
         guard measuredFIRAvailable else {
-            return "Measured FIR requires a measured AutoEq GraphicEQ baseline for this preset."
+            return L10n.text("Measured FIR requires a measured AutoEq GraphicEQ baseline for this preset.")
         }
         if let quality = engine.measuredFIRQuality() {
             let state = audioState.hqCorrectionMode
-                ? "active"
-                : (measuredFIRRequested ? "ready / awaiting RT commit" : "available")
+                ? L10n.text("active")
+                : (measuredFIRRequested ? L10n.text("ready / awaiting RT commit") : L10n.text("available"))
             return String(
-                format: "Measured FIR %@: %d taps, %.3f dB RMS; %.3f dB better than PEQ.",
+                format: L10n.text("Measured FIR %@: %d taps, %.3f dB RMS; %.3f dB better than PEQ."),
                 state,
                 quality.tapCount,
                 quality.rmsErrorDb,
                 quality.absoluteRmsImprovementDb
             )
         }
-        return "Measured FIR will verify target fidelity at the current sample rate before activation."
+        return L10n.text("Measured FIR will verify target fidelity at the current sample rate before activation.")
     }
 
     var currentBaselinePreset: EQPreset? {
@@ -90,7 +91,7 @@ extension AppModel {
     func setSafeMode(_ on: Bool) {
         audioState.safeMode = on
         engine.setSafeMode(on)
-        statusMessage = on ? "Safe Mode: \(safeModeStatusText)" : "Safe Mode off"
+        statusMessage = on ? L10n.format("Safe Mode: %@", String(safeModeStatusText)) : L10n.text("Safe Mode off")
     }
 
     func setHQCorrectionMode(_ on: Bool) {
@@ -99,15 +100,15 @@ extension AppModel {
             _ = engine.setRenderMode(.standardIIR)
             audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
             statusMessage = audioState.hqCorrectionMode
-                ? "Measured FIR off requested — PEQ commits at the next audio buffer."
-                : "Measured FIR off — using the parametric fallback."
+                ? L10n.text("Measured FIR off requested — PEQ commits at the next audio buffer.")
+                : L10n.text("Measured FIR off — using the parametric fallback.")
             return
         }
         guard measuredFIRAvailable else {
             audioState.hqCorrectionRequested = false
             _ = engine.setRenderMode(.standardIIR)
             audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
-            statusMessage = "Measured FIR unavailable: this preset has no valid dense measured baseline."
+            statusMessage = L10n.text("Measured FIR unavailable: this preset has no valid dense measured baseline.")
             return
         }
         guard engine.setRenderMode(.hqFIR),
@@ -116,7 +117,7 @@ extension AppModel {
             audioState.hqCorrectionRequested = false
             audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
             measuredFIRRejectionReason = engine.measuredFIRQuality()?.rejectionReason
-                ?? "Measured FIR is locked at this sample rate because it did not improve target accuracy enough."
+                ?? L10n.text("Measured FIR is locked at this sample rate because it did not improve target accuracy enough.")
             statusMessage = measuredFIRRejectionReason
             return
         }
@@ -125,8 +126,8 @@ extension AppModel {
         audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
         statusMessage = String(
             format: audioState.routingActive
-                ? "Measured FIR ready — committing at the next audio buffer (%d taps, %.3f dB RMS; PEQ %.3f dB)."
-                : "Measured FIR ready — it will become active when routing starts (%d taps, %.3f dB RMS; PEQ %.3f dB).",
+                ? L10n.text("Measured FIR ready — committing at the next audio buffer (%d taps, %.3f dB RMS; PEQ %.3f dB).")
+                : L10n.text("Measured FIR ready — it will become active when routing starts (%d taps, %.3f dB RMS; PEQ %.3f dB)."),
             quality.tapCount,
             quality.rmsErrorDb,
             quality.peqRmsErrorDb
@@ -159,16 +160,16 @@ extension AppModel {
             let applied: EQPreset
             if let existing = try store.get(id: preset.id) {
                 applied = existing
-                statusMessage = "Loaded saved \(profile.displayName) correction."
+                statusMessage = L10n.format("Loaded saved %@ correction.", String(profile.displayName))
             } else {
                 applied = try store.save(preset)
-                statusMessage = "Applied \(profile.displayName): \(applied.activeBands.count) active bands."
+                statusMessage = L10n.format("Applied %@: %@ active bands.", String(profile.displayName), String(applied.activeBands.count))
             }
             loadPresets()
             load(preset: applied, audition: true)
         } catch {
             load(preset: preset, audition: true)
-            lastError = "Applied in memory, but couldn't save headphone tuning: \(error.localizedDescription)"
+            lastError = L10n.format("Applied in memory, but couldn't save headphone tuning: %@", String(error.localizedDescription))
         }
 
         rightPanel = .headphone
@@ -177,7 +178,7 @@ extension AppModel {
     func tuneAndApply(command rawText: String) {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
-            lastError = "Type a tuning request first."
+            lastError = L10n.text("Type a tuning request first.")
             return
         }
 
@@ -199,9 +200,9 @@ extension AppModel {
             preset.name = "\(currentPreset.name) – Tuned"
         }
 
-        auditionTransientPreset(preset, message: "Auditioning \(preset.name). Save it if you like this version.")
+        auditionTransientPreset(preset, message: L10n.format("Auditioning %@. Save it if you like this version.", String(preset.name)))
         if !systemOutputRoutedToAuralink {
-            statusMessage = (statusMessage ?? "") + " Mac sound is still direct; click Start System EQ."
+            statusMessage = (statusMessage ?? "") + L10n.text(" Mac sound is still direct; click Start System EQ.")
         }
     }
 
@@ -222,13 +223,16 @@ extension AppModel {
         } else {
             load(preset: EQPreset.flat(), audition: true)
         }
-        statusMessage = "Loaded Flat / generic tuning."
+        statusMessage = L10n.text("Loaded Flat / generic tuning.")
     }
 
     // MARK: Preset loading / editing
 
-    func load(preset: EQPreset, audition: Bool = true) {
+    func load(preset: EQPreset, audition: Bool = true, recordUndo: Bool = true) {
         let p = preset.normalized()
+        if audition && recordUndo {
+            presetUndo.captureBeforeApplying(current: currentPreset, next: p)
+        }
         measuredFIRRejectionReason = nil
         if measuredFIRRequested,
            !(p.correction?.sourceConfidence == .measured
@@ -253,7 +257,7 @@ extension AppModel {
     func auditionTransientPreset(_ preset: EQPreset, message: String? = nil) {
         captureBeforeSnapshot()
         load(preset: preset.normalized(), audition: true)
-        statusMessage = message ?? "Auditioning \"\(currentPreset.name)\". It is not saved yet."
+        statusMessage = message ?? L10n.format("Auditioning \"%@\". It is not saved yet.", String(currentPreset.name))
     }
 
     /// Live edit from the graph or the parameter table.
@@ -319,7 +323,7 @@ extension AppModel {
         audioState.currentPresetId = saved.id
         audioState.currentPresetName = saved.name
         loadPresets()
-        statusMessage = "Saved \"\(saved.name)\" (v\(saved.version))"
+        statusMessage = L10n.format("Saved \"%@\" (v%@)", String(saved.name), String(saved.version))
         return saved
     }
 
@@ -327,7 +331,7 @@ extension AppModel {
         do {
             _ = try saveLoadedPreset()
         } catch {
-            lastError = "Save failed: \(error.localizedDescription)"
+            lastError = L10n.format("Save failed: %@", String(error.localizedDescription))
         }
     }
 
@@ -343,7 +347,7 @@ extension AppModel {
             let copy = try store.duplicate(id: preset.id, newName: preset.name + " Copy")
             loadPresets()
             load(preset: copy)
-        } catch { lastError = "Duplicate failed: \(error.localizedDescription)" }
+        } catch { lastError = L10n.format("Duplicate failed: %@", String(error.localizedDescription)) }
     }
 
     func delete(_ preset: EQPreset) {
@@ -351,7 +355,7 @@ extension AppModel {
             try store.delete(id: preset.id)
             loadPresets()
             if currentPreset.id == preset.id, let first = presets.first { load(preset: first) }
-        } catch { lastError = "Delete failed: \(error.localizedDescription)" }
+        } catch { lastError = L10n.format("Delete failed: %@", String(error.localizedDescription)) }
     }
 
     /// Copies a preset into the user's collection. Explicit by design: nothing
@@ -361,8 +365,8 @@ extension AppModel {
         do {
             try store.addToCollection(id: preset.id)
             refreshCollectionMembership()
-            statusMessage = "\"\(preset.name)\" added to your collection."
-        } catch { lastError = "Couldn't add to collection: \(error.localizedDescription)" }
+            statusMessage = L10n.format("\"%@\" added to your collection.", String(preset.name))
+        } catch { lastError = L10n.format("Couldn't add to collection: %@", String(error.localizedDescription)) }
     }
 
     func removeFromCollection(_ preset: EQPreset) {
@@ -370,8 +374,8 @@ extension AppModel {
             try store.removeFromCollection(id: preset.id)
             refreshCollectionMembership()
             loadPresets()
-            statusMessage = "\"\(preset.name)\" removed from your collection."
-        } catch { lastError = "Couldn't remove from collection: \(error.localizedDescription)" }
+            statusMessage = L10n.format("\"%@\" removed from your collection.", String(preset.name))
+        } catch { lastError = L10n.format("Couldn't remove from collection: %@", String(error.localizedDescription)) }
     }
 
     func refreshCollectionMembership() {
@@ -381,20 +385,20 @@ extension AppModel {
     func rename(_ preset: EQPreset, to name: String) {
         var p = preset; p.name = name
         do { _ = try store.save(p); loadPresets() }
-        catch { lastError = "Rename failed: \(error.localizedDescription)" }
+        catch { lastError = L10n.format("Rename failed: %@", String(error.localizedDescription)) }
     }
 
     func importPreset(from url: URL) {
         do {
             let p = try store.importPreset(from: url)
             loadPresets(); load(preset: p)
-            statusMessage = "Imported \"\(p.name)\""
-        } catch { lastError = "Import failed: \(error.localizedDescription)" }
+            statusMessage = L10n.format("Imported \"%@\"", String(p.name))
+        } catch { lastError = L10n.format("Import failed: %@", String(error.localizedDescription)) }
     }
 
     func exportPreset(_ preset: EQPreset, to url: URL) {
         do { try store.export(preset, to: url) }
-        catch { lastError = "Export failed: \(error.localizedDescription)" }
+        catch { lastError = L10n.format("Export failed: %@", String(error.localizedDescription)) }
     }
 
     // MARK: A/B compare & rollback
@@ -414,35 +418,30 @@ extension AppModel {
             abLoudnessMatchDb = match.adjustmentDb
             applyPresetToEngineNow(match.preset)
             statusMessage = abs(match.adjustmentDb) > 0.05
-                ? "A/B Before matched \(Self.formatDb(match.adjustmentDb))"
-                : "A/B Before"
+                ? L10n.format("A/B Before matched %@", String(Self.formatDb(match.adjustmentDb)))
+                : L10n.text("A/B Before")
         } else {
             abLoudnessMatchDb = 0
             applyPresetToEngineNow(currentPreset)
-            statusMessage = "A/B Current"
+            statusMessage = L10n.text("A/B Current")
         }
     }
 
     @discardableResult
     func rollback() -> EQPreset? {
         do {
-            if let prev = try store.previousRevision(of: currentPreset.id),
-               prev.normalized() != currentPreset.normalized() {
-                load(preset: prev)
-                statusMessage = "Rolled back to v\(prev.version)"
+            let id = currentPreset.id
+            if let target = try presetUndo.rollbackTarget(current: currentPreset, previousRevision: {
+                try store.previousRevision(of: id)
+            }) {
+                load(preset: target, recordUndo: false)
+                statusMessage = L10n.format("Reverted to \"%@\" (v%@)", String(target.name), String(target.version))
                 return currentPreset
             }
-            if let before = beforeSnapshot,
-               before.normalized() != currentPreset.normalized() {
-                beforeSnapshot = nil
-                load(preset: before)
-                statusMessage = "Reverted unsaved changes"
-                return currentPreset
-            }
-            statusMessage = "Nothing to roll back."
+            statusMessage = L10n.text("Nothing to roll back.")
             return nil
         } catch {
-            lastError = "Rollback failed: \(error.localizedDescription)"
+            lastError = L10n.format("Rollback failed: %@", String(error.localizedDescription))
             return nil
         }
     }
@@ -475,13 +474,13 @@ extension AppModel {
         load(preset: p.preset, audition: true)
         saveCurrent()
         pendingProposal = nil
-        statusMessage = "Applied \"\(p.preset.name)\""
+        statusMessage = L10n.format("Applied \"%@\"", String(p.preset.name))
     }
 
     func saveProposalAsDraft() {
         guard let p = pendingProposal else { return }
-        do { _ = try store.save(p.preset); loadPresets(); statusMessage = "Saved draft" }
-        catch { lastError = "Save draft failed: \(error.localizedDescription)" }
+        do { _ = try store.save(p.preset); loadPresets(); statusMessage = L10n.text("Saved draft") }
+        catch { lastError = L10n.format("Save draft failed: %@", String(error.localizedDescription)) }
         pendingProposal = nil
     }
 
@@ -504,7 +503,7 @@ extension AppModel {
         if measuredFIRRequested, engine.measuredFIRQuality()?.eligible != true {
             audioState.hqCorrectionRequested = false
             measuredFIRRejectionReason = engine.measuredFIRQuality()?.rejectionReason
-                ?? "Measured FIR is locked because the updated preset did not pass its quality gate."
+                ?? L10n.text("Measured FIR is locked because the updated preset did not pass its quality gate.")
             _ = engine.setRenderMode(.standardIIR)
             audioState.requestedRenderGeneration = engine.requestedRenderStateGeneration()
             statusMessage = measuredFIRRejectionReason
@@ -524,7 +523,7 @@ extension AppModel {
                 if self.measuredFIRRequested, self.engine.measuredFIRQuality()?.eligible != true {
                     self.audioState.hqCorrectionRequested = false
                     self.measuredFIRRejectionReason = self.engine.measuredFIRQuality()?.rejectionReason
-                        ?? "Measured FIR is locked because the edit did not pass its quality gate."
+                        ?? L10n.text("Measured FIR is locked because the edit did not pass its quality gate.")
                     _ = self.engine.setRenderMode(.standardIIR)
                     self.audioState.requestedRenderGeneration = self.engine.requestedRenderStateGeneration()
                     self.statusMessage = self.measuredFIRRejectionReason

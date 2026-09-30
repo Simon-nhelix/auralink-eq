@@ -5,14 +5,12 @@
  * Luxsin X8 DAC/headphone amp on the LAN whose PEQ lives in a per-headphone
  * database on the device.
  *
- * Nothing here is wired into the MCP tool surface yet (see `mcp-server/src/index.ts`);
- * this module is the migration target. Adding the `target` parameter to the
- * apply/audition tools is a separate, deliberate step.
+ * X9 exposes experimental reads only until its write protocol is verified.
  */
 import type { BandType, EQBand, AudioState } from "../types.js";
 import type { ControlResult } from "../control.js";
 
-export type TargetId = "auralink" | "luxsin-x8";
+export type TargetId = "auralink" | "luxsin-x8" | "luxsin-x9";
 
 /** What a given EQ backend can express. Used to clamp/transform band lists. */
 export interface EqTargetCapabilities {

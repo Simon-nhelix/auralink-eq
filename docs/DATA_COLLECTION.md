@@ -99,25 +99,25 @@ baseline from an estimate.
 Lookups are cached, so a model you have already registered still resolves offline.
 A model you have never looked up needs the network once.
 
-## Nothing enters your collection by itself
+## Automatic tuning registration
 
-Registering a headphone puts that headphone and its baseline in the collection: a
-profile with no baseline would be useless, and you asked for the headphone.
+Registering a headphone saves its profile and pure baseline in the collection and
+working library. Optional preference bands produce a separate tuning. Subsequent
+MCP requests through `create_preference_tuning` or `create_eq_preset` automatically
+save the requested tuning to both locations; no separate save request is needed.
+App permission modes still apply. A tuning request authorizes its associated save,
+while live application remains a separate action.
 
-Everything else is explicit. Auditions, preference experiments, and saved tweaks
-stay in the working library until you promote them:
+Use `list_presets` to find a tuning and `delete_preset` to delete it from both
+locations and remove its revision history. Deleting a preference does not delete
+its baseline. Deleting a baseline does not cascade: saved preferences contain the
+complete correction and remain usable, although their baseline reference is then
+missing. The tool reports live fallback separately when deleting the current preset.
 
-- In the app: right-click a preset, **Add to My Collection**. Collection presets
-  carry a `Collection` badge.
-- Via MCP: `add_preset_to_collection` / `remove_preset_from_collection`.
-
-An earlier version guessed at this from id prefixes and tags, which meant presets
-appeared in a git-tracked directory without anyone deciding they should. Your
-repository should only contain things you put there.
-
-Removing a preset from the collection leaves the working copy alone. Deleting a
-preset outright removes both — otherwise it would come back on the next reload and
-the delete would look like it failed.
+Explicitly unsaved trials use `audition_eq_preset`. App-created working presets can
+still be promoted with **Add to My Collection** or `add_preset_to_collection`.
+`remove_preset_from_collection` removes only the collection entry and keeps the
+working copy.
 
 ## Migrating from a pre-split install
 

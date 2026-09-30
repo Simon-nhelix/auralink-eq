@@ -24,7 +24,7 @@ export function registerResources(server: McpServer): void {
     {
       title: "Agent EQ guide",
       description:
-        "Operational workflow for AI agents: add model baselines, audition preference tunings, and save only liked variations.",
+        "Operational workflow for AI agents: register separate device baselines, automatically save preference tunings, and delete unwanted variations.",
       mimeType: MIME_MARKDOWN,
     },
     async (uri) => {

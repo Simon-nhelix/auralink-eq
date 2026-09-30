@@ -5,6 +5,17 @@ not relicensed by Auralink EQ; their original terms continue to apply.
 
 ## Included source dependencies and fixtures
 
+### MiSTer FTP update code
+
+The signature verification, download, atomic replacement and relaunch code, and
+their integration tests, were adapted from MiSTer FTP. Auralink adds prerelease
+ordering, release channels, HTTPS enforcement and an audio shutdown gate.
+
+- Copyright: (c) 2026 Simon-nhelix
+- License: MIT
+- Source: <https://github.com/Simon-nhelix/mister-ftp>
+- Included license text: `third_party/licenses/MiSTer-FTP-LICENSE`
+
 ### AutoEq
 
 The MCP integration reads public equalization results from the

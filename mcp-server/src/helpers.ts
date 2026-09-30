@@ -1,3 +1,4 @@
+import { isPureBaseline } from "./preference-tuning.js";
 import {
   loadHeadphoneProfiles,
   loadAgentEQGuide,
@@ -6,7 +7,7 @@ import {
 } from "./store.js";
 import { getState } from "./control.js";
 import { createX8Target, type ApplyTuningRequest } from "./targets/index.js";
-import { responseCurve, logFrequencies } from "./validate.js";
+import { responseCurve, logFrequencies, validatePreset } from "./validate.js";
 import {
   AudioState,
   EQPreset,
@@ -111,57 +112,49 @@ export async function x8ApplyRequestFromPreset(preset: EQPreset): Promise<ApplyT
 export async function applyPresetToX8(
   preset: EQPreset,
   confirmed: boolean,
-  options: { select?: boolean } = {}
+  options: { select?: boolean; target?: "luxsin-x8" | "luxsin-x9"; device?: ReturnType<typeof createX8Target> } = {}
 ): Promise<Record<string, unknown>> {
-  const selectAfterWrite = options.select !== false; // default true for backward compatibility
-  const target = createX8Target();
-  const request = await x8ApplyRequestFromPreset(preset);
-  const write = await target.applyTuning(request, confirmed);
-  if (!write.online) {
-    return {
-      target: "luxsin-x8",
-      applied: false,
-      online: false,
-      message: write.error,
-    };
-  }
-
-  if (!write.data) {
-    return {
-      target: "luxsin-x8",
-      applied: false,
-      message: write.error ?? "The X8 target returned no response body.",
-    };
-  }
-
-  const body = write.data;
-  let select: unknown = { selected: false, skipped: true };
-  if (confirmed && body.ok === true && body.ref && selectAfterWrite) {
-    const selected = await target.selectHeadphone(String(body.ref));
-    select = selected.online
-      ? {
-          selected: selected.data?.ok === true,
-          index: selected.data?.index,
-          message: selected.data?.ok === true ? `Selected '${body.ref}' on the X8.` : (selected.error ?? "The X8 did not select the entry."),
-        }
-      : { selected: false, online: false, message: selected.error };
-  } else if (confirmed && body.ok === true && !selectAfterWrite) {
-    select = {
-      selected: false,
-      skipped: true,
-      message: "Import-only: left the previous X8 entry selected (applyTuning restores active entry by name).",
-    };
-  }
-
-  return {
-    target: "luxsin-x8",
-    applied: body.ok === true,
-    needsConfirm: body.needsConfirm === true,
-    entryName: body.ref,
-    appliedBandCount: body.appliedBands?.length,
-    notes: body.notes,
-    select,
+  const targetId = options.target ?? "luxsin-x8";
+  if (targetId === "luxsin-x9") return {
+    target: targetId, applied: false, written: false, reason: "unverified_device_writes",
+    message: "X9 supports local tuning preparation and experimental reads. Device writes are disabled until its firmware protocol is verified.",
   };
+  const validation = validatePreset(preset, await loadSafetyRules(), 48_000, "standard_iir");
+  if (!validation.ok) return { target: targetId, applied: false, written: false, validation, message: "Invalid hardware PEQ; no device write attempted." };
+  const selectAfterWrite = options.select !== false;
+  const target = options.device ?? createX8Target();
+  try {
+    const request = await x8ApplyRequestFromPreset(preset);
+    const result = selectAfterWrite
+      ? await target.applyAndSelect(request, confirmed)
+      : { write: await target.applyTuning(request, confirmed), select: undefined };
+    const body = result.write.data;
+    const selected = result.select?.data?.ok === true;
+    const processing = result.select?.data?.processing === true;
+    const applied = body?.ok === true && selected && processing;
+    return {
+      target: targetId,
+      online: result.write.online && result.select?.online !== false,
+      written: body?.ok === true,
+      applied,
+      selected,
+      processing,
+      needsConfirm: body?.needsConfirm === true,
+      entryName: body?.ref,
+      appliedBandCount: body?.appliedBands.length,
+      notes: body?.notes,
+      validation,
+      select: result.select?.data ?? { selected: false, skipped: true },
+      message: result.write.error ?? result.select?.error ??
+        (applied ? "Stored EQ and selection verified; device reports DSP and PEQ enabled. Physical audibility has not been measured." :
+          body?.needsConfirm ? "Preview only; no device settings changed." :
+          body?.ok && !selectAfterWrite ? "EQ stored and verified; activation was not requested." :
+          selected && !processing ? "EQ stored and selected, but DSP or PEQ processing is disabled. Enable it on the device before listening." :
+          "Device EQ application was not verified."),
+    };
+  } catch (error) {
+    return { target: targetId, applied: false, written: false, message: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export function profileDisplayName(profile: HeadphoneProfile): string {
@@ -207,7 +200,7 @@ export async function tuningGuidePayload(options: {
       source: agentGuide.source,
       path: agentGuide.path ?? null,
       summary:
-        "Use the agent guide for the product workflow: adding a model saves a Harman baseline; preference tuning auditions first and saves only when the user likes it.",
+        "Use the agent guide for the product workflow: adding a model saves a Harman baseline; preference tuning automatically saves a separate variation and can be deleted through MCP.",
     },
     roleSplit: {
       aiClient:
@@ -265,17 +258,17 @@ export async function tuningGuidePayload(options: {
     },
     workflow: [
       "Call get_agent_eq_guide and get_current_audio_state. If needsVirtualDevice is true, do not route or promise audible changes.",
-      "Resolve the headphone with list_headphone_profiles/get_headphone_profile, or add it with upsert_headphone_profile when the user provides enough model data.",
+      "Resolve the headphone with list_headphone_profiles/get_headphone_profile, or register it with register_headphone_baseline when the user provides enough model data.",
       "MEASURED FIRST: call get_autoeq_correction with the model name. A hit returns AutoEq's measured PEQ fallback and, when published, a dense measuredCorrection payload. Use the exact bands/preamp as the baseline and copy measuredCorrection unchanged into Auralink software presets so Measured FIR can reproduce the dense curve. Record the source/rig in the preset goal or tags.",
       "Only when no measurement exists: read eq://target-curves and eq://safety-rules and design a conservative baseline from the profile's correction notes.",
-      "For a newly added model, save the baseline with create_eq_preset (tags: baseline + the evidence source, e.g. autoeq-oratory1990).",
-      "For preference changes, preserve measuredCorrection, mark only the new subjective slots in preferenceBandIndexes, and audition with audition_eq_preset instead of saving every experiment. Measured FIR then renders the dense baseline plus those preference bands, without applying baseline PEQ twice.",
+      "For a newly added model, use register_headphone_baseline to save a separate pure baseline automatically.",
+      "For preference changes, call create_preference_tuning with the baseline id and only subjective bands. It preserves measuredCorrection and automatically saves a separate combined preset in the library and collection. No separate save request is needed.",
       "After designing or editing bands, call get_response_curve and check the curve does what the user asked (e.g. '+3 dB shelf below 100 Hz, mids flat, 7 kHz dip') before auditioning.",
       "Prefer 3-8 meaningful bands for preference moves; measured baselines may legitimately use 10.",
       "Favor cuts for harsh/problem regions. If the user says a change is too subtle, scale the relevant moves up (±3-4 dB) rather than adding more tiny bands.",
       "Audition level: keep AutoEq's preamp for measured baselines. For small tweaks preampDb:0/autoGain:false preserves level; for bigger boost stacks enable autoGain.",
       "Call validate_eq_preset for a dry run when uncertain. The write/audition paths validate again.",
-      "If the user says they like the current audition or asks to save it, call save_current_preset.",
+      "Requested tunings are saved automatically. Use delete_preset when the user wants to remove one. Reserve audition_eq_preset for explicitly unsaved trials.",
       "If the user only asked to add/save a profile or baseline preset, do not apply it unless they also asked to hear it.",
       "Call apply_eq_preset separately only when applying an already-saved preset. Pass confirmed:true only for explicit user requests.",
       "Call route_system_audio only when the user asked for live system sound routing and state shows a loopback device is available.",
@@ -401,16 +394,9 @@ export function headphoneMatchesPreset(preset: EQPreset, needle: string): boolea
   return haystack.includes(n);
 }
 
-/** True when a preset is a measured/Harman baseline (not a preference variation).
- *  Per the agent guide, baselines are saved with the `harman-neutral` tag and/or a
- *  measured source (autoeq/crinacle/oratory); preference variations carry other tags. */
+/** Resolve only pure baselines; inherited source/target tags do not identify one. */
 export function presetIsBaseline(preset: EQPreset): boolean {
-  if (preset.correction?.role === "baseline") return true;
-  const tags = preset.tags.map((t) => t.toLowerCase());
-  if (tags.includes("baseline")) return true;
-  if (tags.includes("harman-neutral")) return true;
-  const blob = `${preset.name} ${preset.correction?.source ?? ""} ${preset.goal ?? ""} ${tags.join(" ")}`.toLowerCase();
-  return /autoeq|crinacle|oratory|\bmeasured\b|harman.?baseline/.test(blob);
+  return isPureBaseline(preset);
 }
 
 /** Resolve the best baseline preset for a headphone + list the alternates.

@@ -7,8 +7,8 @@
 #   1. `swift build -c release` in the repo root.
 #   2. Create build/Auralink EQ.app/Contents/{MacOS,Resources}.
 #   3. Copy the built `AuralinkApp` binary into Contents/MacOS.
-#   4. Copy the SwiftPM-generated AuralinkCore resource bundle next to it
-#      (the app loads bundled JSON via Bundle.module).
+#   4. Copy the SwiftPM core/localization bundles and localized privacy copy
+#      into Contents/Resources (modules load resources via Bundle.module).
 #   5. Copy the app icon and setup guide into Contents/Resources.
 #   6. Generate Contents/Info.plist (regular app with menubar extra, mic usage,
 #      bundle id, min OS).
@@ -16,7 +16,7 @@
 #   8. Print how to run it and the next setup steps.
 #
 # This is a workflow script, so it must be deterministic: no UUID()/Date()
-# baked into the bundle, no network calls.
+# baked into the bundle.
 set -euo pipefail
 
 # --- Locations -------------------------------------------------------------
@@ -30,8 +30,41 @@ EXECUTABLE="AuralinkApp"
 BUNDLE_ID="com.auralink.eq"
 MIN_MACOS="14.0"
 ICON_FILE="AuralinkAppIcon.icns"
-APP_VERSION="0.1.0"
-RELEASE_CHANNEL="alpha"
+RELEASE_PLIST="${REPO_ROOT}/Resources/Release.plist"
+/usr/bin/plutil -lint "${RELEASE_PLIST}" >/dev/null
+release_value() { /usr/libexec/PlistBuddy -c "Print :$1" "${RELEASE_PLIST}"; }
+UPDATE_VERSION="$(release_value version)"
+APP_VERSION="${UPDATE_VERSION%%[-+]*}"
+APP_BUILD="$(release_value build)"
+RELEASE_CHANNEL="$(release_value channel)"
+UPDATE_REPOSITORY="$(release_value repository)"
+UPDATE_PUBLIC_KEY="$(release_value publicKey)"
+
+# Reject values which could corrupt generated metadata or produce a mismatched
+# release filename. The archive signature and embedded public key must agree.
+if [[ ! "${UPDATE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?$ ]] ||
+   [[ ! "${APP_BUILD}" =~ ^[1-9][0-9]*$ ]] ||
+   [[ ! "${UPDATE_REPOSITORY}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] ||
+   [[ ! "${UPDATE_PUBLIC_KEY}" =~ ^([A-Za-z0-9+/]{43}=)?$ ]]; then
+    echo "error: invalid release metadata in ${RELEASE_PLIST}" >&2
+    exit 1
+fi
+case "${RELEASE_CHANNEL}" in
+  alpha|beta|stable) ;;
+  *) echo "error: unknown release channel: ${RELEASE_CHANNEL}" >&2; exit 1 ;;
+esac
+if [[ "${UPDATE_VERSION}" == *-* ]]; then
+  if [[ "${RELEASE_CHANNEL}" == stable ]] ||
+     [[ "${RELEASE_CHANNEL}" == beta && "${UPDATE_VERSION}" == *-alpha.* ]]; then
+    echo "error: release version and channel disagree" >&2; exit 1
+  fi
+fi
+BUILD_FLAGS=(-c release --product "${EXECUTABLE}" --package-path "${REPO_ROOT}")
+case "${1:-}" in
+  --universal) BUILD_FLAGS+=(--arch arm64 --arch x86_64) ;;
+  "") ;;
+  *) echo "usage: $0 [--universal]" >&2; exit 2 ;;
+esac
 
 BUILD_DIR="${REPO_ROOT}/build"
 APP_DIR="${BUILD_DIR}/${APP_NAME}.app"
@@ -43,11 +76,11 @@ SETUP_GUIDE="${REPO_ROOT}/docs/SETUP.md"
 
 # --- 1. Build --------------------------------------------------------------
 echo "==> Building ${EXECUTABLE} (release)…"
-swift build -c release --package-path "${REPO_ROOT}"
+swift build "${BUILD_FLAGS[@]}"
 
 # Ask SwiftPM where it put the release products rather than guessing the
 # arch-specific path (works on Apple Silicon and Intel alike).
-RELEASE_BIN_DIR="$(swift build -c release --package-path "${REPO_ROOT}" --show-bin-path)"
+RELEASE_BIN_DIR="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)"
 BUILT_BINARY="${RELEASE_BIN_DIR}/${EXECUTABLE}"
 
 if [[ ! -x "${BUILT_BINARY}" ]]; then
@@ -57,6 +90,14 @@ fi
 
 # --- 2. Assemble the bundle skeleton --------------------------------------
 echo "==> Assembling ${APP_NAME}.app…"
+while IFS= read -r pid; do
+    [[ -n "${pid}" ]] || continue
+    running_command="$(ps -p "${pid}" -o command= 2>/dev/null || true)"
+    if [[ "${running_command}" == "${MACOS_DIR}/${EXECUTABLE}"* ]]; then
+        echo "error: this build bundle is running (PID ${pid}); refusing to replace live audio files" >&2
+        exit 1
+    fi
+done < <(pgrep -x "${EXECUTABLE}" 2>/dev/null || true)
 rm -rf "${APP_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 
@@ -98,6 +139,33 @@ for required in target-curves.json safety-rules.json; do
     fi
 done
 
+# UI translations must ship alongside the executable, not just exist in the
+# checkout. Privacy prompts read InfoPlist.strings from the main app bundle.
+LOCALIZATION_BUNDLE="${RELEASE_BIN_DIR}/Auralink_AuralinkLocalization.bundle"
+if [[ ! -d "${LOCALIZATION_BUNDLE}" ]]; then
+    echo "error: localization resource bundle missing: ${LOCALIZATION_BUNDLE}" >&2
+    exit 1
+fi
+cp -R "${LOCALIZATION_BUNDLE}" "${RESOURCES_DIR}/"
+LOCALIZATION_RESOURCES="${LOCALIZATION_BUNDLE}"
+if [[ -d "${LOCALIZATION_BUNDLE}/Contents/Resources" ]]; then
+    # Multi-architecture SwiftPM builds use Xcode's standard bundle layout.
+    LOCALIZATION_RESOURCES="${LOCALIZATION_BUNDLE}/Contents/Resources"
+fi
+for language in en ko ja; do
+    LOCALIZED_DIR="${LOCALIZATION_RESOURCES}/${language}.lproj"
+    for required in Localizable.strings Localizable.stringsdict InfoPlist.strings; do
+        if [[ ! -f "${LOCALIZED_DIR}/${required}" ]]; then
+            echo "error: missing ${language} translation resource: ${required}" >&2
+            exit 1
+        fi
+        /usr/bin/plutil -lint "${LOCALIZED_DIR}/${required}" >/dev/null
+    done
+    mkdir -p "${RESOURCES_DIR}/${language}.lproj"
+    cp "${LOCALIZED_DIR}/InfoPlist.strings" "${RESOURCES_DIR}/${language}.lproj/"
+done
+echo "    bundled UI languages: en, ko, ja"
+
 # --- 5. Copy the app icon ---------------------------------------------------
 if [[ -f "${APP_ICON}" ]]; then
     cp "${APP_ICON}" "${RESOURCES_DIR}/${ICON_FILE}"
@@ -112,6 +180,10 @@ if [[ -f "${SETUP_GUIDE}" ]]; then
 else
     echo "    warning: setup guide not found at ${SETUP_GUIDE}" >&2
 fi
+
+mkdir -p "${RESOURCES_DIR}/Legal"
+cp "${REPO_ROOT}/LICENSE" "${REPO_ROOT}/NOTICE" "${REPO_ROOT}/THIRD_PARTY_NOTICES.md" "${RESOURCES_DIR}/Legal/"
+cp -R "${REPO_ROOT}/third_party/licenses" "${RESOURCES_DIR}/Legal/"
 
 # --- 6. Generate Info.plist -----------------------------------------------
 # NSMicrophoneUsageDescription is required because system-audio capture goes
@@ -140,6 +212,16 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
     <string>${APP_NAME}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>ko</string>
+        <string>ja</string>
+    </array>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleExecutable</key>
@@ -153,7 +235,13 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
     <key>CFBundleShortVersionString</key>
     <string>${APP_VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${APP_BUILD}</string>
+    <key>AuralinkUpdateVersion</key>
+    <string>${UPDATE_VERSION}</string>
+    <key>AuralinkUpdateRepository</key>
+    <string>${UPDATE_REPOSITORY}</string>
+    <key>AuralinkUpdatePublicKey</key>
+    <string>${UPDATE_PUBLIC_KEY}</string>
     <key>AuralinkReleaseChannel</key>
     <string>${RELEASE_CHANNEL}</string>
     <key>LSMinimumSystemVersion</key>
@@ -200,6 +288,8 @@ fi
 # A minimal PkgInfo keeps Launch Services happy for a classic .app.
 printf 'APPL????' > "${CONTENTS_DIR}/PkgInfo"
 
+swift "${SCRIPT_DIR}/verify-bundle.swift" "${APP_DIR}"
+
 # --- 7. Codesign (inside-out) -----------------------------------------------
 # Prefer a stable local identity ("Auralink Dev Signing", create one with
 # scripts/setup-dev-signing.sh; override via $AURALINK_SIGN_IDENTITY): a stable
@@ -213,13 +303,19 @@ SIGN_IDENTITY="${AURALINK_SIGN_IDENTITY:-Auralink Dev Signing}"
 # Sign by the identity's SHA-1 hash, not its name: the trust-setup flow leaves
 # both the identity and a bare trusted copy of its certificate in the keychain,
 # and codesign refuses a name that matches more than one entry ("ambiguous").
-SIGN_ID="$(security find-identity -v -p codesigning 2>/dev/null \
-  | awk -v id="${SIGN_IDENTITY}" '$0 ~ id { print $2; exit }')"
+SIGN_ID=""
+if [[ "${SIGN_IDENTITY}" != "-" ]]; then
+  SIGN_ID="$(security find-identity -v -p codesigning 2>/dev/null \
+    | awk -v id="${SIGN_IDENTITY}" 'index($0, "\"" id "\"") || $2 == id { print $2; exit }')"
+  if [[ -z "${SIGN_ID}" && -n "${AURALINK_SIGN_IDENTITY:-}" ]]; then
+    echo "error: requested signing identity not found: ${SIGN_IDENTITY}" >&2; exit 1
+  fi
+fi
 if [ -n "${SIGN_ID}" ]; then
   echo "==> Codesigning with identity: ${SIGN_IDENTITY} (${SIGN_ID})"
 else
   SIGN_ID="-"
-  echo "==> Ad-hoc codesigning (no stable identity; run scripts/setup-dev-signing.sh once to fix the permission re-prompts)…"
+  echo "==> Ad-hoc codesigning (development/release ZIP; Apple notarization is not applied)…"
 fi
 codesign -s "${SIGN_ID}" --force --timestamp=none "${MACOS_DIR}/${EXECUTABLE}"
 codesign -s "${SIGN_ID}" --force --timestamp=none "${APP_DIR}"

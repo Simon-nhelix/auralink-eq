@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import Combine
 import AppKit
@@ -11,10 +12,10 @@ enum RightPanel: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .presets:     return "Presets"
-        case .headphone:   return "Headphone"
-        case .aiTuning:    return "AI Tuning"
-        case .diagnostics: return "Monitor"
+        case .presets:     return L10n.text("Presets")
+        case .headphone:   return L10n.text("Headphone")
+        case .aiTuning:    return L10n.text("AI Tuning")
+        case .diagnostics: return L10n.text("Monitor")
         }
     }
 }
@@ -32,7 +33,7 @@ struct OutputPickerSnapshot: Equatable {
     var options: [OutputPickerOption]
 
     static let empty = OutputPickerSnapshot(
-        selectedName: "Select device",
+        selectedName: L10n.text("Select device"),
         selectedUID: nil,
         options: []
     )
@@ -90,7 +91,11 @@ final class AppModel: ObservableObject {
 
     // MARK: A/B compare
     /// Snapshot captured before an edit/AI change, for A/B comparison & rollback.
-    var beforeSnapshot: EQPreset? = nil { willSet { uiChanged() } }
+    var presetUndo = PresetUndoState() { willSet { uiChanged() } }
+    var beforeSnapshot: EQPreset? {
+        get { presetUndo.before }
+        set { presetUndo.before = newValue }
+    }
     /// When true the engine is auditioning the "before" snapshot.
     var comparingBefore: Bool = false { willSet { uiChanged() } }
     /// Temporary preamp cut applied only while auditioning the before snapshot.
@@ -147,6 +152,9 @@ final class AppModel: ObservableObject {
     static let previousOutputDefaultsKey = "auralink.previousSystemOutputDeviceUID"
     static let lastPresetDefaultsKey = "auralink.lastPresetId"
     static let lastOutputDefaultsKey = "auralink.lastOutputDeviceUID"
+    static var initialReadyMessage: String {
+        L10n.text("Auralink is ready. Audio routing is stopped until you start it.")
+    }
 
     // MARK: Dependencies (Core + audio)
     let store: PresetStore
@@ -157,11 +165,10 @@ final class AppModel: ObservableObject {
     let devices: AudioDeviceManager
 
     let responseFrequencies = FrequencyResponse.logFrequencies(count: 240)
-    let fileWatchQueue = DispatchQueue(label: "com.auralink.eq.file-watch")
-    var presetsWatcher: DispatchSourceFileSystemObject?
-    var knowledgeWatcher: DispatchSourceFileSystemObject?
-    var collectionHeadphonesWatcher: DispatchSourceFileSystemObject?
-    var collectionPresetsWatcher: DispatchSourceFileSystemObject?
+    var presetsWatcher: DirectoryWatcher?
+    var knowledgeWatcher: DirectoryWatcher?
+    var collectionHeadphonesWatcher: DirectoryWatcher?
+    var collectionPresetsWatcher: DirectoryWatcher?
     var pendingPresetReload: Task<Void, Never>?
     var pendingKnowledgeReload: Task<Void, Never>?
     var recomputeTask: Task<Void, Never>?
@@ -200,27 +207,16 @@ final class AppModel: ObservableObject {
     let hardwareMonitor = AudioHardwareMonitor()
     var pendingHardwareRefresh: Task<Void, Never>?
     var pendingEngineRecovery: Task<Void, Never>?
-    /// Consecutive ~100 ms telemetry windows in which the engine looked dead.
-    var stalledTelemetryTicks = 0
-    /// Consecutive healthy windows; a long healthy stretch forgets past attempts.
-    var healthyTelemetryTicks = 0
+    /// Telemetry decisions stay testable independently of CoreAudio and focus.
+    var routingWatchdog = AudioRoutingWatchdog()
     /// Auto-restart attempts since the last healthy stretch or manual action.
     var autoRecoveryAttempts = 0
-    /// Consecutive windows whose capture peak sat pinned at full scale with
-    /// clipping lit — the signature of a routing feedback loop.
-    var feedbackSuspectTicks = 0
-    /// Telemetry ticks since the last output-binding check (checked ~1×/s).
-    var bindingCheckTicks = 0
     /// Consecutive binding checks that found (and tried to fix) a mismatch.
     var bindingMismatchStreak = 0
     static let maxAutoRecoveryAttempts = 3
     /// Coalesce live graph/table edits to roughly one display frame before
     /// rebuilding the realtime filter cascade.
     static let liveEditEngineApplyDelayNs: UInt64 = 16_000_000
-    /// ~3 s of continuous stall before the watchdog intervenes.
-    static let stallTicksBeforeRecovery = 30
-    /// ~10 s of continuous health clears the attempt counter.
-    static let healthyTicksToReset = 100
 
     /// Timestamped trail of audible/notable path incidents (underruns,
     /// resyncs, recovery restarts…), newest last, capped. Exposed via /debug

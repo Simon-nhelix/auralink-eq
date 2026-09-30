@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import SwiftUI
 import AppKit
 
@@ -10,10 +11,11 @@ struct MonitorWindowView: View {
 
     var body: some View {
         DiagnosticsPanelView()
-            .frame(minWidth: 480, minHeight: 380)
+            .frame(minWidth: Theme.Layout.Monitor.minWidth,
+                   minHeight: Theme.Layout.Monitor.minHeight)
             .overlay(alignment: .topTrailing) {
                 Toggle(isOn: $floatsOnTop) {
-                    Text("Float on top").font(Theme.Typo.caption)
+                    Text(L10n.text("Float on top")).font(Theme.Typo.caption)
                 }
                 .toggleStyle(.checkbox)
                 .foregroundStyle(Theme.Palette.textSecondary)
@@ -45,13 +47,13 @@ struct DiagnosticsPanelView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Metrics.gap) {
-                SectionLabel("Path Monitor")
+                SectionLabel(L10n.text("Path Monitor"))
                 SeismographView()
-                    .frame(height: 140)
+                    .frame(height: Theme.Layout.Monitor.traceHeight)
                 legend
                 statsRow
 
-                SectionLabel("Incidents")
+                SectionLabel(L10n.text("Incidents"))
                 incidentList
             }
             .padding(Theme.Metrics.pad)
@@ -62,11 +64,11 @@ struct DiagnosticsPanelView: View {
 
     private var legend: some View {
         HStack(spacing: 10) {
-            legendDot("underrun / clip", Theme.Palette.danger)
-            legendDot("resync / gap", Theme.Palette.warning)
-            legendDot("recovery", Theme.Palette.auraBlue)
+            legendDot(L10n.text("underrun / clip"), Theme.Palette.danger)
+            legendDot(L10n.text("resync / gap"), Theme.Palette.warning)
+            legendDot(L10n.text("recovery"), Theme.Palette.auraBlue)
             Spacer()
-            Text("last \(Int(Self.windowSeconds)) s")
+            Text(L10n.format("last %@ s", String(Int(Self.windowSeconds))))
                 .font(Theme.Typo.caption)
                 .foregroundStyle(Theme.Palette.textTertiary)
         }
@@ -83,15 +85,15 @@ struct DiagnosticsPanelView: View {
         let state = model.audioState
         let columns = Array(repeating: GridItem(.flexible(minimum: 96), spacing: Theme.Metrics.gap), count: 3)
         return LazyVGrid(columns: columns, alignment: .leading, spacing: Theme.Metrics.gap) {
-            statCell("Drift trim", String(format: "%+.0f ppm", model.diagSamples.last?.servoPpm ?? 0))
-            statCell("Latency", String(format: "%.0f ms", state.latencyMs))
-            statCell("Output", dbString(state.outputPeakDb))
-            statCell("Output true", dbString(state.estimatedTruePeakDb))
-            statCell("Pre true", dbString(state.preClipTruePeakDb ?? state.preClipPeakDb))
-            statCell("Pre sample", dbString(state.preClipPeakDb))
-            statCell("Clips", "\(state.clippingEventsTotal)")
-            statCell("Underruns", "\(state.underrunsTotal)")
-            statCell("Resyncs", "\(state.resyncsTotal)")
+            statCell(L10n.text("Drift trim"), String(format: "%+.0f ppm", model.diagSamples.last?.servoPpm ?? 0))
+            statCell(L10n.text("Latency"), String(format: "%.0f ms", state.latencyMs))
+            statCell(L10n.text("Output"), dbString(state.outputPeakDb))
+            statCell(L10n.text("Output true"), dbString(state.estimatedTruePeakDb))
+            statCell(L10n.text("Pre true"), dbString(state.preClipTruePeakDb ?? state.preClipPeakDb))
+            statCell(L10n.text("Pre sample"), dbString(state.preClipPeakDb))
+            statCell(L10n.text("Clips"), "\(state.clippingEventsTotal)")
+            statCell(L10n.text("Underruns"), "\(state.underrunsTotal)")
+            statCell(L10n.text("Resyncs"), "\(state.resyncsTotal)")
         }
     }
 
@@ -121,7 +123,7 @@ struct DiagnosticsPanelView: View {
     private var incidentList: some View {
         Group {
             if model.incidents.isEmpty {
-                Text("No incidents captured. When an event fires, ±10 s of context is saved here automatically — copy it and share it for analysis.")
+                Text(L10n.text("No incidents captured. When an event fires, ±10 s of context is saved here automatically — copy it and share it for analysis."))
                     .font(Theme.Typo.caption)
                     .foregroundStyle(Theme.Palette.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -157,7 +159,7 @@ struct DiagnosticsPanelView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(incident.report, forType: .string)
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                    Label(L10n.text("Copy"), systemImage: "doc.on.doc")
                         .font(Theme.Typo.caption)
                 }
                 .buttonStyle(.plain)

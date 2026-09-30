@@ -16,8 +16,8 @@
  *   person's taste on every user.
  *
  * Writes into the collection are deliberate: profiles go there because the user
- * registered them, and presets only via `addPresetToCollection`. Nothing
- * accumulates in the user's repository as a side effect.
+ * registered them. MCP tuning tools save requested tunings to both roots via
+ * `addPresetToCollection`; explicitly unsaved auditions remain transient.
  *
  * Everything degrades gracefully: a missing knowledge file yields an empty list
  * (or the built-in default `SafetyRules`), and a malformed preset file is skipped
@@ -29,6 +29,7 @@ import { execSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { persistedPresetSchema } from "./persisted-preset-schema.js";
 
 import {
   EQPreset,
@@ -455,6 +456,20 @@ function presetFilePath(id: string): string {
 
 // MARK: - Preset CRUD
 
+function decodeStoredPreset(value: unknown): EQPreset | null {
+  const parsed = persistedPresetSchema.safeParse(value);
+  if (!parsed.success || parseRecordId(parsed.data.id) !== parsed.data.id) return null;
+  return normalizePreset(parsed.data);
+}
+
+function decodeStoredPresetText(text: string): EQPreset | null {
+  try {
+    return decodeStoredPreset(JSON.parse(text));
+  } catch {
+    return null;
+  }
+}
+
 /** Every valid preset in one directory, keyed by id. Malformed files are skipped. */
 async function loadPresetsFromDir(dir: string): Promise<Map<string, EQPreset>> {
   const byId = new Map<string, EQPreset>();
@@ -466,9 +481,9 @@ async function loadPresetsFromDir(dir: string): Promise<Map<string, EQPreset>> {
   }
   for (const entry of entries) {
     if (!entry.toLowerCase().endsWith(".json")) continue;
-    const parsed = await readJson<EQPreset>(path.join(dir, entry));
-    if (parsed && typeof parsed.id === "string" && Array.isArray(parsed.bands)) {
-      byId.set(parsed.id, normalizePreset(parsed));
+    const preset = decodeStoredPreset(await readJson<unknown>(path.join(dir, entry)));
+    if (preset) {
+      byId.set(preset.id, preset);
     }
   }
   return byId;
@@ -498,10 +513,11 @@ export async function collectionPresetIds(): Promise<string[]> {
  * collection. Null if neither has it or the file is malformed.
  */
 export async function getPreset(id: string): Promise<EQPreset | null> {
+  const safeID = requireRecordId(id);
   for (const file of [presetFilePath(id), collectionPresetPath(id)]) {
-    const parsed = await readJson<EQPreset>(file);
-    if (parsed && typeof parsed.id === "string" && Array.isArray(parsed.bands)) {
-      return normalizePreset(parsed);
+    const preset = decodeStoredPreset(await readJson<unknown>(file));
+    if (preset?.id === safeID) {
+      return preset;
     }
   }
   return null;
@@ -529,10 +545,29 @@ export async function removePresetFromCollection(id: string): Promise<boolean> {
  * `updatedAt` (and `createdAt` for brand-new presets). Returns the saved preset.
  * The on-disk shape matches the Swift encoder so the app reads it without fuss.
  */
+const pendingPresetSaves = new Map<string, Promise<EQPreset>>();
+
 export async function savePreset(preset: EQPreset): Promise<EQPreset> {
+  const id = requireRecordId(preset.id);
+  const key = presetFilePath(id);
+  const persist = () => persistPreset({ ...preset, id });
+  // MCP requests can overlap. Keep each read/snapshot/write sequence ordered
+  // so two saves do not reuse the same version and destroy its revision.
+  const previous = pendingPresetSaves.get(key);
+  const pending = previous ? previous.then(persist, persist) : persist();
+  pendingPresetSaves.set(key, pending);
+  try {
+    return await pending;
+  } finally {
+    if (pendingPresetSaves.get(key) === pending) pendingPresetSaves.delete(key);
+  }
+}
+
+async function persistPreset(preset: EQPreset): Promise<EQPreset> {
   await ensureDir(presetsDir());
   const now = new Date().toISOString();
   const existing = await getPreset(preset.id);
+  const workingText = await readTextIfExists(presetFilePath(preset.id));
 
   const normalized = normalizePreset(preset);
   const saved: EQPreset = {
@@ -546,6 +581,26 @@ export async function savePreset(preset: EQPreset): Promise<EQPreset> {
           : now,
     updatedAt: now,
   };
+
+  if (workingText !== null && decodeStoredPresetText(workingText)?.id !== preset.id) {
+    // Match Swift's preservation of corrupt working files before replacement.
+    const revisionDirectory = path.join(revisionsDir(), requireRecordId(saved.id));
+    await ensureDir(revisionDirectory);
+    await atomicWriteFile(
+      path.join(revisionDirectory, `.corrupt-${Date.now()}-${Math.random().toString(36).slice(2)}.json`),
+      workingText
+    );
+  }
+  if (existing) {
+    // Same layout as Swift PresetStore: rollback reads revisions/<id>/vN.json.
+    // Preserve the old state before replacing it; a failed snapshot aborts save.
+    const revisionDirectory = path.join(revisionsDir(), requireRecordId(saved.id));
+    await ensureDir(revisionDirectory);
+    await atomicWriteFile(
+      path.join(revisionDirectory, `v${existing.version}.json`),
+      stableStringify(existing)
+    );
+  }
 
   // Working directory only. Getting into the user's collection takes an explicit
   // `addPresetToCollection`.
@@ -980,51 +1035,41 @@ export interface AgentEQGuide {
 
 const GENERATED_AGENT_GUIDE = `# Auralink Agent EQ Guide
 
-Auralink is the local audio engine, preset store, validator, and live apply endpoint. It is not an AI model. The AI client must read evidence, decide explicit EQ bands, then use Auralink tools to validate, audition, save, and apply.
+Auralink is the local EQ engine, validator and preset store; the AI client interprets requests.
 
-## Default Workflow
+## Device registration
 
-1. Read get_agent_eq_guide and get_current_audio_state before changing sound.
-2. If the user provides headphone or earphone data and says to add it, create or update a headphone profile, then create a saved baseline preset for that model.
-3. Use Harman Neutral as the default baseline target unless the user, evidence, or measurement source clearly says otherwise.
-4. For later preference changes, audition first. Do not save every experiment. Save only when the user says it is good, wants to keep it, or asks to save.
-5. If the user says something was added by mistake, use delete_headphone_profile or delete_preset, then re-add with a clean model name if needed.
-6. If the user explicitly asks to hear a change now, audition/apply with confirmed:true. Control acceptance is not audible proof: require audible:true or active/routed/enabled state with the expected preset and matching requested/committed DSP generations.
+Use register_headphone_baseline to save the profile and a separate pure baseline automatically.
+Omit bands for an AutoEq lookup, or provide explicit bands, type, provenance and credibility.
+Flat means correction toward the documented device target, not zero-gain bypass or guaranteed
+acoustic flatness. Do not invent measured correction when there is no evidence.
 
-## Preset Policy
+## Preference tuning
 
-- Model baseline: saved preset. Name it "<Brand> <Model> - Harman Baseline" or another clear model baseline name.
-- Preference tuning: audition-only first. Examples: warmer, more exciting, smoother treble, more vocal, less bass.
-- Save-on-like: when the user says "좋아", "맘에 들어", "저장해줘", or equivalent, save the currently auditioned preset with a descriptive name and tags.
-- Delete mistakes: remove mistaken visible model names/presets instead of leaving clutter in the library.
-- Default audition level policy: preserve volume and dynamics. Use preampDb:0 and autoGain:false unless the user asks for protected/safe mode or the EQ has extreme boosts.
-- The clipping meter and user's ears are feedback. Warnings are useful, but small positive boosts are acceptable for quick listening tests.
+Read get_tuning_brief and the user's recorded preferences first. Use create_preference_tuning
+with the baseline id and ONLY subjective bands. It preserves baseline PEQ and measured FIR,
+allocates unused slots, validates and automatically saves a separate tuning to library and
+collection. Omit id for a new variation; use a preference id to revise its full preference layer.
+Never overwrite the baseline. Generic tuning uses create_eq_preset and is also saved automatically.
+Do not ask separately whether to save. Record actual user reactions with record_tuning_feedback;
+a saved tuning alone does not mean the user liked it.
 
-## Link/Data Ingestion
+## Listening and deletion
 
-- If a measurement graph exists, use it as primary evidence and set credibility to measured or community.
-- If only review text/specs exist, infer carefully, set credibility to estimated, and keep the baseline conservative.
-- Store source URLs and caveats in the headphone profile source field.
-- Add harshRegionsHz only when the review/graph suggests likely fatigue or peaks.
+Verify the combined response with get_response_curve. Apply with apply_eq_preset when the user
+requested listening. Only report an audible change after audible:true or equivalent verified
+routing, preset and renderer state. Use audition_eq_preset only for explicitly unsaved trials.
+Use list_presets and delete_preset to remove user-selected tunings from working and collection
+copies plus revisions. Deletion does not cascade to other presets; live fallback is reported separately.
 
-## Output Shape The AI Should Produce
+## Permissions and band design
 
-For "add this model":
-- headphoneProfile: brand, model, type, signature, correctionNotes, harshRegionsHz, suggestedTargetCurveId:"harman-neutral", source, credibility.
-- baselinePreset: explicit bands, headphone display name, goal, tags including ai, baseline, harman-neutral, and the profile id.
-- Keep the visible model name clean; source aliases or translated subtitles belong in source/notes.
-
-For "tune this sound":
-- auditionPreset: explicit bands, headphone display name, goal, preampDb:0, autoGain:false, tags including ai and audition.
-- rationale: short explanation of audible intent and any risk/caveat.
-
-## Band Design Defaults
-
-- Prefer 3-8 meaningful parametric moves over filling all 20 bands.
-- Use broad shelves for tonal balance and narrower bell filters for peaks.
-- Start with +/-0.5 to 2 dB moves for subjective preference, larger only when evidence or user intent supports it.
-- For earbuds/open designs with limited bass, be realistic: a low shelf can add body, but cannot create sealed sub-bass.
-- Use cuts around harsh regions before adding treble elsewhere.
+Respect the running app's permission mode. In ask_before_write, a registration or tuning request
+includes its automatic save: pass confirmed:true without a redundant save question. Read Only
+still forbids writes and unavailable permissions fail closed. Saving does not authorize live audio.
+Prefer a few meaningful bands, start with small broad preference moves, and preserve the baseline's
+headroom. If feedback says a move is too subtle, scale that move rather than adding unrelated bands.
+Keep sources and caveats in the profile; identify estimated corrections honestly.
 `;
 
 export async function loadAgentEQGuide(): Promise<AgentEQGuide> {

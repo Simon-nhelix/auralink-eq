@@ -6,6 +6,8 @@ import SwiftUI
 /// for the audio signal, glassy elevated panels, and monospaced numeric
 /// readouts for the pro-audio feel. Every view should pull colors, type, and
 /// metrics from here so the menubar and the full editor feel like one product.
+/// These defaults preserve the current design. Change shared styling here,
+/// screen dimensions in `Layout`, and composition in the individual views.
 public enum Theme {
 
     // MARK: Palette
@@ -34,10 +36,18 @@ public enum Theme {
         public static let warning       = Color(hex: 0xFFC24B)
         public static let danger        = Color(hex: 0xFF5C72)
 
+        /// Foreground on filled route / AI action buttons.
+        public static let textOnAccent  = Color.black.opacity(0.9)
+        public static let aiButtonEnd   = Color(hex: 0x6C3ED7)
+        public static let modalScrim    = Color.black.opacity(0.55)
+        public static let modalShadow   = Color.black.opacity(0.5)
+
         /// Per-channel band node tints.
         public static let nodeStereo    = auraCyan
         public static let nodeLeft      = Color(hex: 0x5B8CFF)
         public static let nodeRight     = Color(hex: 0xFF7AC6)
+        public static let nodeOutline   = Color.black.opacity(0.35)
+        public static let nodeLabel     = Color.black.opacity(0.7)
     }
 
     // MARK: Gradients
@@ -45,6 +55,14 @@ public enum Theme {
         /// Left→right aura used for the accent stroke / active controls.
         public static let aura = LinearGradient(
             colors: [Palette.auraCyan, Palette.auraBlue, Palette.auraViolet],
+            startPoint: .leading, endPoint: .trailing
+        )
+        public static let routeButton = LinearGradient(
+            colors: [Palette.auraCyan, Palette.auraBlue],
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        )
+        public static let aiButton = LinearGradient(
+            colors: [Palette.auraViolet, Palette.aiButtonEnd],
             startPoint: .leading, endPoint: .trailing
         )
         /// Vertical fill under the EQ curve.
@@ -85,9 +103,56 @@ public enum Theme {
         public static let pad: CGFloat      = 14
         public static let padSm: CGFloat    = 8
         public static let gap: CGFloat      = 10
-        public static let popoverWidth: CGFloat = 380
-        public static let editorMinWidth: CGFloat = 1100
-        public static let editorMinHeight: CGFloat = 700
+        public static let buttonPadHorizontal: CGFloat = 14
+        public static let buttonPadVertical: CGFloat = 7
+    }
+
+    // MARK: Screen layout
+
+    /// Screen dimensions are independent of general spacing and DSP limits.
+    /// Keep a shared dimension here when multiple views must agree on it.
+    public enum Layout {
+        public enum MenuBar {
+            public static let width: CGFloat = 380
+            public static let responseHeight: CGFloat = 126
+            public static let pickerHeight: CGFloat = 190
+            public static let pickerCompactHeight: CGFloat = 138
+        }
+
+        public enum Editor {
+            public static let minWidth: CGFloat = 1100
+            public static let minHeight: CGFloat = 700
+            public static let rightRailWidth: CGFloat = 360
+            public static let graphMinHeight: CGFloat = 240
+            public static let bandTableMinHeight: CGFloat = 180
+            public static let bandTableMaxHeight: CGFloat = 320
+        }
+
+        /// Header and editable rows must use the same column widths.
+        public enum BandTable {
+            public static let enabled: CGFloat = 36
+            public static let index: CGFloat = 28
+            public static let type: CGFloat = 100
+            public static let freq: CGFloat = 96
+            public static let gain: CGFloat = 92
+            public static let q: CGFloat = 78
+            public static let channel: CGFloat = 84
+        }
+
+        public enum Monitor {
+            public static let minWidth: CGFloat = 480
+            public static let minHeight: CGFloat = 380
+            public static let defaultWidth: CGFloat = 540
+            public static let defaultHeight: CGFloat = 460
+            public static let traceHeight: CGFloat = 140
+        }
+
+        public enum Proposal {
+            public static let maxWidth: CGFloat = 540
+            public static let editorMaxWidth: CGFloat = 460
+            public static let permissionWidth: CGFloat = 420
+            public static let contentMaxHeight: CGFloat = 320
+        }
     }
 }
 

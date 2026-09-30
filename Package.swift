@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Auralink",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
@@ -31,11 +32,25 @@ let package = Package(
             name: "AuralinkRT"
         ),
 
+        // Signed GitHub release downloads and atomic app replacement; no audio/UI.
+        .target(
+            name: "AuralinkUpdates",
+            dependencies: ["AuralinkLocalization"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+
+        // UI copy only; core data, DSP, and API identifiers stay language-neutral.
+        .target(
+            name: "AuralinkLocalization",
+            resources: [.process("Resources")],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+
         // MARK: The menubar app — SwiftUI UI, AVFoundation audio routing,
         // and the local HTTP control server the MCP server talks to.
         .executableTarget(
             name: "AuralinkApp",
-            dependencies: ["AuralinkCore", "AuralinkRT"],
+            dependencies: ["AuralinkCore", "AuralinkRT", "AuralinkLocalization", "AuralinkUpdates"],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
                 // Work around macOS 26 / SwiftUI executor-check crashes where
@@ -74,6 +89,18 @@ let package = Package(
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
+        ),
+
+        .testTarget(
+            name: "AuralinkLocalizationTests",
+            dependencies: ["AuralinkLocalization"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+
+        .testTarget(
+            name: "AuralinkUpdatesTests",
+            dependencies: ["AuralinkUpdates"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]
 )

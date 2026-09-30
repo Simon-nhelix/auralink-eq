@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import AVFoundation
 import AuralinkCore
@@ -17,8 +18,8 @@ extension AppModel {
             audioState.routingActive = false
             audioState.outputPeakDb = -120
             statusMessage = loopbackDriverInstalled
-                ? "BlackHole is installed, but macOS has not exposed it yet. Restart your Mac, then refresh."
-                : "Install BlackHole, then refresh audio setup."
+                ? L10n.text("BlackHole is installed, but macOS has not exposed it yet. Restart your Mac, then refresh.")
+                : L10n.text("Install BlackHole, then refresh audio setup.")
             return false
         }
 
@@ -46,7 +47,7 @@ extension AppModel {
                 audioState.routingActive = false
                 audioState.outputPeakDb = -120
                 audioState.capturePeakDb = -120
-                lastError = "Audio engine did not start cleanly. Mac sound was not left routed through BlackHole."
+                lastError = L10n.text("Audio engine did not start cleanly. Mac sound was not left routed through BlackHole.")
                 return false
             }
             audioState.routingActive = true
@@ -54,13 +55,13 @@ extension AppModel {
             audioState.outputPeakDb = -120
             audioState.capturePeakDb = -120
             scheduleBindingSpotCheck()
-            statusMessage = "Audio routing started."
+            statusMessage = L10n.text("Audio routing started.")
             return true
         } catch {
             routingRequested = false
             audioState.routingActive = false
             audioState.outputPeakDb = -120
-            lastError = "Audio routing unavailable: \(error.localizedDescription)"
+            lastError = L10n.format("Audio routing unavailable: %@", String(error.localizedDescription))
             return false
         }
     }
@@ -88,7 +89,7 @@ extension AppModel {
         var restoreError: String?
         if systemOutputRoutedToAuralink {
             guard let target = restoreTarget else {
-                lastError = "No real output device is available to restore."
+                lastError = L10n.text("No real output device is available to restore.")
                 stopRouting()
                 refreshDevices()
                 return
@@ -98,7 +99,7 @@ extension AppModel {
                 restoredName = target.name
                 previousSystemOutputDeviceUID = nil
             } catch {
-                restoreError = "Couldn't restore Mac sound output: \(error.localizedDescription)"
+                restoreError = L10n.format("Couldn't restore Mac sound output: %@", String(error.localizedDescription))
             }
         }
 
@@ -107,9 +108,9 @@ extension AppModel {
         if let restoreError {
             lastError = restoreError
         } else if let restoredName {
-            statusMessage = "System EQ stopped. Mac sound restored to \(restoredName)."
+            statusMessage = L10n.format("System EQ stopped. Mac sound restored to %@.", String(restoredName))
         } else {
-            statusMessage = "System EQ stopped."
+            statusMessage = L10n.text("System EQ stopped.")
         }
     }
 
@@ -127,7 +128,7 @@ extension AppModel {
             ?? outputDevices.first(where: { !$0.isVirtual })
 
         guard let restoreTarget else {
-            lastError = "Mac sound is routed to BlackHole, but no real output device is available to restore."
+            lastError = L10n.text("Mac sound is routed to BlackHole, but no real output device is available to restore.")
             return nil
         }
 
@@ -135,9 +136,9 @@ extension AppModel {
             try devices.setDefaultOutputDevice(restoreTarget)
             previousSystemOutputDeviceUID = nil
             refreshDevices()
-            return "Auralink restored Mac sound to \(restoreTarget.name). System EQ is stopped."
+            return L10n.format("Auralink restored Mac sound to %@. System EQ is stopped.", String(restoreTarget.name))
         } catch {
-            lastError = "Couldn't restore Mac sound output: \(error.localizedDescription)"
+            lastError = L10n.format("Couldn't restore Mac sound output: %@", String(error.localizedDescription))
             return nil
         }
     }
@@ -148,8 +149,7 @@ extension AppModel {
         pendingEngineRecovery?.cancel()
         pendingEngineRecovery = nil
         autoRecoveryAttempts = 0
-        stalledTelemetryTicks = 0
-        healthyTelemetryTicks = 0
+        routingWatchdog.reset()
         routingRequested = false
         // Drop any background-deferred restart: the path is being torn down on
         // purpose, so it must not spring back to life on the next foreground.
@@ -173,7 +173,7 @@ extension AppModel {
         audioState.ringAvailableFrames = 0
         audioState.clippingDetected = false
         clippingEventCooldownTicks = 0
-        statusMessage = "Audio routing stopped."
+        statusMessage = L10n.text("Audio routing stopped.")
     }
 
     func toggleRouting() {
@@ -218,8 +218,8 @@ extension AppModel {
         guard let capture = devices.virtualCaptureDevice() else {
             refreshDevices()
             lastError = loopbackInstalled
-                ? "BlackHole is installed, but macOS has not exposed it yet. Restart your Mac, then refresh."
-                : "No supported loopback device is available. Install BlackHole, then refresh."
+                ? L10n.text("BlackHole is installed, but macOS has not exposed it yet. Restart your Mac, then refresh.")
+                : L10n.text("No supported loopback device is available. Install BlackHole, then refresh.")
             return false
         }
 
@@ -231,7 +231,7 @@ extension AppModel {
             ?? outputs.first(where: { $0.isDefault && !$0.isVirtual })
             ?? outputs.first(where: { !$0.isVirtual }) else {
             refreshDevices()
-            lastError = "Choose a real playback output before routing Mac sound through Auralink."
+            lastError = L10n.text("Choose a real playback output before routing Mac sound through Auralink.")
             return false
         }
 
@@ -252,13 +252,13 @@ extension AppModel {
             try devices.setDefaultOutputDevice(output)
             guard waitForDefaultOutput(uid: output.uid) else {
                 refreshDevices()
-                lastError = "CoreAudio did not settle on \(output.name)."
+                lastError = L10n.format("CoreAudio did not settle on %@.", String(output.name))
                 return false
             }
 
             guard engine.selectOutput(device: output) else {
                 refreshDevices()
-                lastError = "Couldn't move the audio path to \(output.name)."
+                lastError = L10n.format("Couldn't move the audio path to %@.", String(output.name))
                 return false
             }
 
@@ -280,7 +280,7 @@ extension AppModel {
                     // (device still settling). One automatic retry absorbs it.
                     return startSystemEQSilently(isRetry: true, outputOverride: outputOverride)
                 }
-                lastError = "Audio engine did not start cleanly. Mac sound stayed on \(output.name)."
+                lastError = L10n.format("Audio engine did not start cleanly. Mac sound stayed on %@.", String(output.name))
                 return false
             }
 
@@ -293,7 +293,7 @@ extension AppModel {
                 engine.stop()
                 try? devices.setDefaultOutputDevice(output)
                 refreshDevices()
-                lastError = "Couldn't route system output into \(capture.name)."
+                lastError = L10n.format("Couldn't route system output into %@.", String(capture.name))
                 return false
             }
             _ = engine.reassertOutputBinding()
@@ -302,7 +302,7 @@ extension AppModel {
                 engine.stop()
                 try? devices.setDefaultOutputDevice(output)
                 refreshDevices()
-                lastError = "Output drifted to the loopback after routing. Mac sound stayed on \(output.name)."
+                lastError = L10n.format("Output drifted to the loopback after routing. Mac sound stayed on %@.", String(output.name))
                 return false
             }
 
@@ -318,14 +318,14 @@ extension AppModel {
             commitOutputPickerSnapshot(outputs: outputs)
             scheduleBindingSpotCheck()
             scheduleRoutingHealthCheck(restoreTo: output)
-            statusMessage = "Mac sound is now routed into \(capture.name). Auralink outputs to \(output.name)."
+            statusMessage = L10n.format("Mac sound is now routed into %@. Auralink outputs to %@.", String(capture.name), String(output.name))
             return true
         } catch {
             routingRequested = false
             engine.stop()
             try? devices.setDefaultOutputDevice(output)
             refreshDevices()
-            lastError = "Couldn't route Mac sound through Auralink: \(error.localizedDescription)"
+            lastError = L10n.format("Couldn't route Mac sound through Auralink: %@", String(error.localizedDescription))
             return false
         }
     }
@@ -348,7 +348,7 @@ extension AppModel {
                 try? self.devices.setDefaultOutputDevice(output)
                 self.stopRouting()
                 self.refreshDevices()
-                self.lastError = "System EQ did not start cleanly, so Auralink restored Mac sound to \(output.name). Try Start System EQ again."
+                self.lastError = L10n.format("System EQ did not start cleanly, so Auralink restored Mac sound to %@. Try Start System EQ again.", String(output.name))
             }
         }
     }
@@ -372,7 +372,7 @@ extension AppModel {
         guard shouldResume else { return }
 
         stopSystemEQ()
-        statusMessage = "System sleep detected. Auralink paused System EQ and restored Mac sound."
+        statusMessage = L10n.text("System sleep detected. Auralink paused System EQ and restored Mac sound.")
     }
 
     func recoverFromSystemWake() {
@@ -387,11 +387,11 @@ extension AppModel {
                     _ = self.restoreDanglingSystemOutputIfNeeded()
                 }
                 guard self.resumeSystemEQAfterWake else {
-                    self.statusMessage = "System wake detected. Audio setup refreshed."
+                    self.statusMessage = L10n.text("System wake detected. Audio setup refreshed.")
                     return
                 }
                 self.resumeSystemEQAfterWake = false
-                self.statusMessage = "System wake detected. Restarting System EQ."
+                self.statusMessage = L10n.text("System wake detected. Restarting System EQ.")
                 self.routeMacSoundThroughAuralink()
             }
 
@@ -426,7 +426,7 @@ extension AppModel {
                 }
                 self.stopRouting()
                 self.refreshDevices()
-                self.lastError = "Auralink could not restart System EQ after wake, so Mac sound was restored to a real output."
+                self.lastError = L10n.text("Auralink could not restart System EQ after wake, so Mac sound was restored to a real output.")
             }
         }
     }

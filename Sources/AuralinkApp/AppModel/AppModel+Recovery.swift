@@ -1,3 +1,4 @@
+import AuralinkLocalization
 import Foundation
 import AVFoundation
 import AuralinkCore
@@ -8,7 +9,7 @@ extension AppModel {
         guard let input = devices.defaultInputDevice(), input.isVirtual else { return }
         guard let real = devices.firstRealInputDevice() else { return }
         try? devices.setDefaultInputDevice(real)
-        statusMessage = "Auralink restored the Mac microphone to \(real.name)."
+        statusMessage = L10n.format("Auralink restored the Mac microphone to %@.", String(real.name))
     }
 
     // MARK: App activation (background → foreground)
@@ -72,7 +73,7 @@ extension AppModel {
         // before the heavier recovery restart.
         if !engine.outputBindingHealthy() {
             if engine.reassertOutputBinding() {
-                statusMessage = "Auralink re-pinned the output device after returning to the foreground."
+                statusMessage = L10n.text("Auralink re-pinned the output device after returning to the foreground.")
                 noteAudioEvent(kind: "repin", detail: "output binding reasserted on app activation")
             }
         }
@@ -181,13 +182,13 @@ extension AppModel {
         if renderModeChanged {
             if next.hqCorrectionMode, let quality = engine.measuredFIRQuality() {
                 statusMessage = String(
-                    format: "Measured FIR active — %d taps, %.3f dB RMS (PEQ %.3f dB).",
+                    format: L10n.text("Measured FIR active — %d taps, %.3f dB RMS (PEQ %.3f dB)."),
                     quality.tapCount,
                     quality.rmsErrorDb,
                     quality.peqRmsErrorDb
                 )
             } else if next.hqCorrectionRequested != true {
-                statusMessage = "Standard IIR active."
+                statusMessage = L10n.text("Standard IIR active.")
             }
             recomputeResponse()
         }
@@ -249,23 +250,23 @@ extension AppModel {
     /// (`running == false`) and the zombie state where the engines claim to run
     /// but no frames flow, then triggers a recovery attempt.
     func updateWatchdog(with telemetry: AudioTelemetry) {
-        guard routingRequested else {
-            stalledTelemetryTicks = 0
-            healthyTelemetryTicks = 0
-            feedbackSuspectTicks = 0
-            return
-        }
+        let actions = routingWatchdog.update(
+            routingRequested: routingRequested,
+            isBackgrounded: isBackgrounded,
+            running: telemetry.running,
+            systemOutputRoutedToAuralink: systemOutputRoutedToAuralink,
+            clipping: telemetry.clipping,
+            capturePeakDb: telemetry.capturePeakDb,
+            renderCallbacks: telemetry.renderCallbacks,
+            captureCallbacks: telemetry.captureCallbacks,
+            recoveryPending: pendingEngineRecovery != nil
+        )
 
-        // While backgrounded, macOS throttles the capture device's I/O cadence
-        // (and can suspend render callbacks for the output engine), so zero
-        // capture/render callbacks in a window is *expected*, not a dead engine.
-        // Restarting into that throttle would only add a real glitch, so we hold
-        // the watchdog and let it re-evaluate once the app is active again.
-        // A genuine hard stop (`running == false`) is still surfaced, since that
-        // is a definite state, not a cadence artifact.
-        if isBackgrounded && telemetry.running {
-            stalledTelemetryTicks = 0
-            healthyTelemetryTicks = 0
+        // A feedback stop takes priority over attempting to repair the path.
+        if actions.stopFeedback {
+            noteAudioEvent(kind: "feedback-stop", detail: "sustained full-scale feedback signature; System EQ stopped")
+            stopSystemEQ()
+            lastError = L10n.text("Auralink detected a sustained full-scale feedback signature and stopped System EQ. Mac sound was restored to a real output. Try Start System EQ again.")
             return
         }
 
@@ -273,16 +274,14 @@ extension AppModel {
         // the system default when the default changes — and the default is the
         // loopback while System EQ is on, which turns our output into a
         // feedback loop. Re-pin in place; if it won't stick, rebuild the path.
-        bindingCheckTicks += 1
-        if telemetry.running, bindingCheckTicks >= 10 {
-            bindingCheckTicks = 0
+        if actions.checkOutputBinding {
             if engine.outputBindingHealthy() {
                 bindingMismatchStreak = 0
             } else {
                 bindingMismatchStreak += 1
                 let repinned = engine.reassertOutputBinding()
                 if repinned {
-                    statusMessage = "Auralink re-pinned the output device (it had reverted to the system default)."
+                    statusMessage = L10n.text("Auralink re-pinned the output device (it had reverted to the system default).")
                     noteAudioEvent(kind: "repin", detail: "output AU had reverted to the system default")
                 }
                 if !repinned || bindingMismatchStreak >= 2 {
@@ -292,45 +291,11 @@ extension AppModel {
             }
         }
 
-        // Feedback breaker. A mis-bound output feeds our own signal back into
-        // the loopback; the loop saturates to full scale within milliseconds
-        // and stays pinned there. Real program material can graze 0 dBFS, but
-        // not in every single 100 ms window for 5 s straight with clipping lit.
-        if telemetry.running && systemOutputRoutedToAuralink
-            && telemetry.clipping && telemetry.capturePeakDb >= -0.02 {
-            feedbackSuspectTicks += 1
-            if feedbackSuspectTicks >= 50 {
-                feedbackSuspectTicks = 0
-                noteAudioEvent(kind: "feedback-stop", detail: "sustained full-scale feedback signature; System EQ stopped")
-                stopSystemEQ()
-                lastError = "Auralink detected a sustained full-scale feedback signature and stopped System EQ. "
-                    + "Mac sound was restored to a real output. Try Start System EQ again."
-                return
-            }
-        } else {
-            feedbackSuspectTicks = 0
+        if actions.recoverStall {
+            scheduleEngineRecovery(reason: "audio engine stalled")
         }
-
-        // No render callbacks ⇒ the output side is dead. No capture callbacks
-        // while the system mix is supposed to flow into us ⇒ capture is dead.
-        let stalled = !telemetry.running
-            || telemetry.renderCallbacks == 0
-            || (systemOutputRoutedToAuralink && telemetry.captureCallbacks == 0)
-
-        if stalled {
-            healthyTelemetryTicks = 0
-            stalledTelemetryTicks += 1
-            if stalledTelemetryTicks >= Self.stallTicksBeforeRecovery, pendingEngineRecovery == nil {
-                stalledTelemetryTicks = 0
-                scheduleEngineRecovery(reason: "audio engine stalled")
-            }
-        } else {
-            stalledTelemetryTicks = 0
-            healthyTelemetryTicks += 1
-            if healthyTelemetryTicks >= Self.healthyTicksToReset {
-                healthyTelemetryTicks = 0
-                autoRecoveryAttempts = 0
-            }
+        if actions.resetRecoveryAttempts {
+            autoRecoveryAttempts = 0
         }
     }
 
@@ -375,8 +340,7 @@ extension AppModel {
                     // The user (or another app) moved the system output away
                     // from the loopback. Respect the choice, but say so instead
                     // of silently EQ-ing nothing.
-                    self.statusMessage = "Mac sound is no longer routed into "
-                        + "\(self.audioState.captureDeviceName ?? "the loopback device"). System EQ is bypassed."
+                    self.statusMessage = L10n.format("Mac sound is no longer routed into %@. System EQ is bypassed.", String(self.audioState.captureDeviceName ?? L10n.text("the loopback device")))
                 }
             }
         }
@@ -387,7 +351,7 @@ extension AppModel {
         if let name, !name.isEmpty {
             deviceName = name
         } else {
-            deviceName = "Selected output"
+            deviceName = L10n.text("Selected output")
         }
         noteAudioEvent(kind: "device-removed", detail: "\(deviceName) disappeared from CoreAudio")
 
@@ -399,29 +363,29 @@ extension AppModel {
                     try devices.setDefaultOutputDevice(fallback)
                     previousSystemOutputDeviceUID = nil
                 } catch {
-                    restoreError = "Couldn't restore Mac sound to \(fallback.name): \(error.localizedDescription)"
+                    restoreError = L10n.format("Couldn't restore Mac sound to %@: %@", String(fallback.name), String(error.localizedDescription))
                 }
                 refreshDevices()
                 selectOutputDevice(fallback)
                 if let restoreError {
-                    lastError = "Output device \(deviceName) disappeared. \(restoreError)"
+                    lastError = L10n.format("Output device %@ disappeared. %@", String(deviceName), String(restoreError))
                 } else {
-                    lastError = "Output device \(deviceName) disappeared. System EQ was stopped and Mac sound was restored to \(fallback.name)."
+                    lastError = L10n.format("Output device %@ disappeared. System EQ was stopped and Mac sound was restored to %@.", String(deviceName), String(fallback.name))
                 }
             } else {
                 clearOutputSelection()
                 refreshDevices()
-                lastError = "Output device \(deviceName) disappeared. System EQ was stopped, but no real output device is available yet."
+                lastError = L10n.format("Output device %@ disappeared. System EQ was stopped, but no real output device is available yet.", String(deviceName))
             }
             return
         }
 
         if let fallback = fallbackRealOutput(excluding: uid) {
             selectOutputDevice(fallback)
-            statusMessage = "Output device \(deviceName) disappeared. Auralink switched to \(fallback.name)."
+            statusMessage = L10n.format("Output device %@ disappeared. Auralink switched to %@.", String(deviceName), String(fallback.name))
         } else {
             clearOutputSelection()
-            statusMessage = "Output device \(deviceName) disappeared. Choose an output when one is available."
+            statusMessage = L10n.format("Output device %@ disappeared. Choose an output when one is available.", String(deviceName))
         }
     }
 
@@ -453,8 +417,7 @@ extension AppModel {
         autoRecoveryAttempts += 1
         let attempt = autoRecoveryAttempts
         let delayNs: UInt64 = 500_000_000 << UInt64(min(attempt - 1, 2))
-        statusMessage = "Audio engine needs a restart (\(reason)). "
-            + "Attempt \(attempt)/\(Self.maxAutoRecoveryAttempts)…"
+        statusMessage = L10n.format("Audio engine needs a restart (%@). Attempt %@/%@…", String(reason), String(attempt), String(Self.maxAutoRecoveryAttempts))
         noteAudioEvent(kind: "recovery", detail: "\(reason) — attempt \(attempt)")
 
         pendingEngineRecovery = Task { [weak self] in
@@ -471,9 +434,9 @@ extension AppModel {
                     self.deferredRecoveryReason = reason
                     return
                 }
-                self.stalledTelemetryTicks = 0
+                self.routingWatchdog.reset()
                 if self.startRouting() {
-                    self.statusMessage = "Audio engine recovered (\(reason))."
+                    self.statusMessage = L10n.format("Audio engine recovered (%@).", String(reason))
                 } else if self.autoRecoveryAttempts >= Self.maxAutoRecoveryAttempts {
                     self.giveUpAndRestoreAudio(reason: reason)
                 } else {
@@ -488,8 +451,7 @@ extension AppModel {
     func giveUpAndRestoreAudio(reason: String) {
         autoRecoveryAttempts = 0
         stopSystemEQ()
-        lastError = "Auralink couldn't restart the audio engine (\(reason)) after "
-            + "\(Self.maxAutoRecoveryAttempts) attempts, so Mac sound was restored to a real output device."
+        lastError = L10n.format("Auralink couldn't restart the audio engine (%@) after %@ attempts, so Mac sound was restored to a real output device.", String(reason), String(Self.maxAutoRecoveryAttempts))
     }
 
     func refreshAudioSetup() {
@@ -498,10 +460,10 @@ extension AppModel {
         if routingRequested { startRouting() }
         if needsVirtualDevice {
             statusMessage = loopbackDriverInstalled
-                ? "BlackHole is installed, but macOS has not exposed it yet. Restart your Mac, then refresh."
-                : "No BlackHole/loopback device found yet."
+                ? L10n.text("BlackHole is installed, but macOS has not exposed it yet. Restart your Mac, then refresh.")
+                : L10n.text("No BlackHole/loopback device found yet.")
         } else {
-            statusMessage = "Audio setup refreshed."
+            statusMessage = L10n.text("Audio setup refreshed.")
         }
     }
 
@@ -563,8 +525,8 @@ extension AppModel {
         case .notDetermined:
             pendingSystemEQStartAfterPermission = retryStartSystemEQ
             statusMessage = retryStartSystemEQ
-                ? "Auralink needs macOS audio input permission to capture BlackHole. Approve the prompt and System EQ will start."
-                : "Auralink needs macOS audio input permission to capture BlackHole."
+                ? L10n.text("Auralink needs macOS audio input permission to capture BlackHole. Approve the prompt and System EQ will start.")
+                : L10n.text("Auralink needs macOS audio input permission to capture BlackHole.")
             AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
                 Task { @MainActor in
                     guard let self else { return }
@@ -572,25 +534,25 @@ extension AppModel {
                     if granted {
                         if self.pendingSystemEQStartAfterPermission {
                             self.pendingSystemEQStartAfterPermission = false
-                            self.statusMessage = "Audio input permission granted. Starting System EQ."
+                            self.statusMessage = L10n.text("Audio input permission granted. Starting System EQ.")
                             self.startSystemEQ()
                         } else {
-                            self.statusMessage = "Audio input permission granted."
+                            self.statusMessage = L10n.text("Audio input permission granted.")
                         }
                     } else {
                         self.pendingSystemEQStartAfterPermission = false
-                        self.lastError = "Audio input permission was denied. Enable Microphone access for Auralink EQ in System Settings."
+                        self.lastError = L10n.text("Audio input permission was denied. Enable Microphone access for Auralink EQ in System Settings.")
                     }
                 }
             }
             return false
         case .denied, .restricted:
             pendingSystemEQStartAfterPermission = false
-            lastError = "Audio input permission is \(audioInputPermissionStatusText()). Enable Microphone access for Auralink EQ in System Settings."
+            lastError = L10n.format("Audio input permission is %@. Enable Microphone access for Auralink EQ in System Settings.", L10n.text(audioInputPermissionStatusText()))
             return false
         @unknown default:
             pendingSystemEQStartAfterPermission = false
-            lastError = "Audio input permission is unknown. Check Microphone access for Auralink EQ in System Settings."
+            lastError = L10n.text("Audio input permission is unknown. Check Microphone access for Auralink EQ in System Settings.")
             return false
         }
     }

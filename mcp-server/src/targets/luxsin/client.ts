@@ -103,9 +103,11 @@ export interface LuxsinDiscoveryOptions {
 
 export interface LuxsinClientOptions {
   baseUrl?: string;
+  /** X9 is read-only experimental; it must be explicitly addressed. */
+  model?: "luxsin-x8" | "luxsin-x9";
   /** Override the min inter-request gap (ms). Default 150. */
   minGapMs?: number;
-  /** Auto-discover a changed X8 IP when the configured/cached URL fails. Default true. */
+  /** Auto-discover X8 when no address is configured; explicit addresses default to no failover. */
   autoDiscover?: boolean;
   discovery?: Omit<LuxsinDiscoveryOptions, "preferredBaseUrl">;
 }
@@ -114,14 +116,21 @@ export class LuxsinClient {
   private currentBaseUrl: string;
   private readonly minGapMs: number;
   private readonly autoDiscover: boolean;
+  private pinned = false;
+  private pinnedMac?: string;
   private readonly discovery: Omit<LuxsinDiscoveryOptions, "preferredBaseUrl">;
   private lastRequestAt = 0;
+  readonly model: "luxsin-x8" | "luxsin-x9";
 
   constructor(opts: LuxsinClientOptions = {}) {
-    const env = process.env.X8_URL?.trim();
+    this.model = opts.model ?? "luxsin-x8";
+    const env = this.model === "luxsin-x8" ? process.env.X8_URL?.trim() : process.env.X9_URL?.trim();
+    if (this.model === "luxsin-x9" && !opts.baseUrl && !env) {
+      throw new Error("Set X9_URL to the X9 LAN address for experimental read-only access. X8 discovery is not used for X9.");
+    }
     this.currentBaseUrl = normalizeBaseUrl(opts.baseUrl ?? env ?? DEFAULT_BASE_URL);
     this.minGapMs = opts.minGapMs ?? MIN_GAP_MS;
-    this.autoDiscover = opts.autoDiscover ?? true;
+    this.autoDiscover = this.model === "luxsin-x8" && (opts.autoDiscover ?? (!opts.baseUrl && !env));
     this.discovery = opts.discovery ?? {};
   }
 
@@ -132,14 +141,18 @@ export class LuxsinClient {
   /** GET ?action=syncData → full device state. Auto-discovers if IP changed. */
   async getDeviceInfo(): Promise<X8DeviceState> {
     const state = await this.getJson<X8DeviceState>("?action=syncData");
-    if (!isLuxsinState(state)) throw new Error(`Response at ${this.baseUrl} is not a Luxsin X8`);
+    if (!isLuxsinState(state, this.model)) throw new Error(`Response at ${this.baseUrl} is not the requested ${this.model}`);
     return state;
   }
 
   /** GET ?action=syncPeq → the on-device headphone EQ database. */
   async getPeq(): Promise<X8PeqDb> {
     const db = await this.getJson<X8PeqDb>("?action=syncPeq");
-    return db && Array.isArray(db.peq) ? db : { peq: [] };
+    if (!db || !Array.isArray(db.peq) || db.peq.some((entry) =>
+      !entry || typeof entry.name !== "string" || !Number.isFinite(entry.preamp) || typeof entry.filters !== "string")) {
+      throw new Error("Invalid Luxsin PEQ database response; refusing to treat it as an empty library.");
+    }
+    return db;
   }
 
   /** POST {peqChange:{...}} — upsert a headphone entry by name. */
@@ -174,17 +187,31 @@ export class LuxsinClient {
     return this.discoverAndSwitch();
   }
 
+  /** Keep a multi-request mutation bound to the initially verified device. */
+  async withPinnedDevice<T>(operation: () => Promise<T>): Promise<T> {
+    const state = await this.getDeviceInfo();
+    this.pinned = true;
+    this.pinnedMac = typeof state.mac === "string" ? state.mac : undefined;
+    try { return await operation(); }
+    finally { this.pinned = false; this.pinnedMac = undefined; }
+  }
+
   // ---- internals ----
 
   private async ensureReachable(): Promise<void> {
-    await this.getDeviceInfo();
+    if (this.model !== "luxsin-x8") throw new Error("X9 device writes are not verified yet; only reads and local tuning are supported.");
+    // A write must never rediscover a different device mid-operation.
+    const state = await this.getJsonOnce<X8DeviceState>("?action=syncData");
+    if (!isLuxsinState(state, this.model) || (this.pinnedMac && state.mac !== this.pinnedMac)) {
+      throw new Error("Luxsin device identity changed; refusing write.");
+    }
   }
 
   private async getJson<T = unknown>(path: string): Promise<T> {
     try {
       return await this.getJsonOnce<T>(path);
     } catch (err) {
-      if (!this.autoDiscover) throw err;
+      if (!this.autoDiscover || this.pinned) throw err;
       const found = await this.discoverAndSwitch();
       if (!found) throw err;
       return await this.getJsonOnce<T>(path);
@@ -197,6 +224,7 @@ export class LuxsinClient {
   }
 
   private async discoverAndSwitch(): Promise<string | undefined> {
+    if (this.pinned || this.model !== "luxsin-x8") return undefined;
     const found = await discoverLuxsinX8BaseUrl({
       preferredBaseUrl: this.currentBaseUrl,
       ...this.discovery,
@@ -205,16 +233,27 @@ export class LuxsinClient {
     return found;
   }
 
+  private requestChain: Promise<unknown> = Promise.resolve();
+
   private async request(req: { method: string; path: string; body?: string }): Promise<string> {
-    await this.gate();
-    const url = `${this.currentBaseUrl}/dev/info.cgi${req.path}`;
-    const doFetch = (): Promise<string> => this.fetchOnce(url, req);
-    try {
-      return await doFetch();
-    } catch (err) {
-      await sleep(RETRY_BACKOFF_MS);
-      return await doFetch();
-    }
+    const run = this.requestChain.then(async () => {
+      const elapsed = Date.now() - this.lastRequestAt;
+      if (elapsed < this.minGapMs) await sleep(this.minGapMs - elapsed);
+      const url = `${this.currentBaseUrl}/dev/info.cgi${req.path}`;
+      try {
+        return await this.fetchOnce(url, req);
+      } catch (err) {
+        // A timeout may happen AFTER a write was accepted. Never replay POSTs
+        // or action=setting GETs; callers must inspect the state before retrying.
+        if (req.method !== "GET" || req.path.startsWith("?action=setting")) throw err;
+        await sleep(RETRY_BACKOFF_MS);
+        return await this.fetchOnce(url, req);
+      } finally {
+        this.lastRequestAt = Date.now();
+      }
+    });
+    this.requestChain = run.catch(() => {});
+    return run;
   }
 
   private async fetchOnce(url: string, req: { method: string; body?: string }): Promise<string> {
@@ -229,6 +268,7 @@ export class LuxsinClient {
         body: req.body,
         signal: controller.signal,
         keepalive: false,
+        redirect: "error",
       });
       if (!res.ok) throw new Error(`X8 HTTP ${res.status} for ${url}`);
       // Writes return a plain "<html><body>Settings updated</body></html>" ack;
@@ -237,18 +277,6 @@ export class LuxsinClient {
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  private gateChain: Promise<void> = Promise.resolve();
-
-  private async gate(): Promise<void> {
-    const run = this.gateChain.then(async () => {
-      const elapsed = Date.now() - this.lastRequestAt;
-      if (elapsed < this.minGapMs) await sleep(this.minGapMs - elapsed);
-      this.lastRequestAt = Date.now();
-    });
-    this.gateChain = run.catch(() => {});
-    await run;
   }
 }
 
@@ -303,8 +331,7 @@ async function discoveryCandidates(options: LuxsinDiscoveryOptions): Promise<str
 
 async function probeLuxsinBaseUrl(baseUrl: string, timeoutMs: number): Promise<boolean> {
   const base = normalizeBaseUrl(baseUrl);
-  if (await probeSyncData(base, timeoutMs)) return true;
-  return await probeRootRedirect(base, timeoutMs);
+  return await probeSyncData(base, timeoutMs);
 }
 
 async function probeSyncData(baseUrl: string, timeoutMs: number): Promise<boolean> {
@@ -323,22 +350,9 @@ async function probeSyncData(baseUrl: string, timeoutMs: number): Promise<boolea
   }
 }
 
-async function probeRootRedirect(baseUrl: string, timeoutMs: number): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${baseUrl}/`, { signal: controller.signal, redirect: "manual" });
-    const location = res.headers.get("location") ?? "";
-    return /luxsinaudio\.com\/x8\/i\.html/i.test(location);
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function isLuxsinState(value: unknown): value is X8DeviceState {
-  return typeof value === "object" && value !== null && String((value as X8DeviceState).device ?? "").toLowerCase().includes("luxsin-x8");
+export function isLuxsinState(value: unknown, model = "luxsin-x8"): value is X8DeviceState {
+  return typeof value === "object" && value !== null &&
+    String((value as X8DeviceState).device ?? "").trim().toLowerCase() === model;
 }
 
 async function arpBaseUrls(): Promise<string[]> {
