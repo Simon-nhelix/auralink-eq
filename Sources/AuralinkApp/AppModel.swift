@@ -90,7 +90,11 @@ final class AppModel: ObservableObject {
 
     // MARK: A/B compare
     /// Snapshot captured before an edit/AI change, for A/B comparison & rollback.
-    var beforeSnapshot: EQPreset? = nil { willSet { uiChanged() } }
+    var presetUndo = PresetUndoState() { willSet { uiChanged() } }
+    var beforeSnapshot: EQPreset? {
+        get { presetUndo.before }
+        set { presetUndo.before = newValue }
+    }
     /// When true the engine is auditioning the "before" snapshot.
     var comparingBefore: Bool = false { willSet { uiChanged() } }
     /// Temporary preamp cut applied only while auditioning the before snapshot.

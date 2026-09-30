@@ -227,8 +227,11 @@ extension AppModel {
 
     // MARK: Preset loading / editing
 
-    func load(preset: EQPreset, audition: Bool = true) {
+    func load(preset: EQPreset, audition: Bool = true, recordUndo: Bool = true) {
         let p = preset.normalized()
+        if audition && recordUndo {
+            presetUndo.captureBeforeApplying(current: currentPreset, next: p)
+        }
         measuredFIRRejectionReason = nil
         if measuredFIRRequested,
            !(p.correction?.sourceConfidence == .measured
@@ -426,17 +429,12 @@ extension AppModel {
     @discardableResult
     func rollback() -> EQPreset? {
         do {
-            if let prev = try store.previousRevision(of: currentPreset.id),
-               prev.normalized() != currentPreset.normalized() {
-                load(preset: prev)
-                statusMessage = "Rolled back to v\(prev.version)"
-                return currentPreset
-            }
-            if let before = beforeSnapshot,
-               before.normalized() != currentPreset.normalized() {
-                beforeSnapshot = nil
-                load(preset: before)
-                statusMessage = "Reverted unsaved changes"
+            let id = currentPreset.id
+            if let target = try presetUndo.rollbackTarget(current: currentPreset, previousRevision: {
+                try store.previousRevision(of: id)
+            }) {
+                load(preset: target, recordUndo: false)
+                statusMessage = "Reverted to \"\(target.name)\" (v\(target.version))"
                 return currentPreset
             }
             statusMessage = "Nothing to roll back."
