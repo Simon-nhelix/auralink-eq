@@ -100,50 +100,20 @@ extension AppModel {
         collectionHeadphonesWatcher?.cancel()
         collectionPresetsWatcher?.cancel()
 
-        presetsWatcher = makeDirectoryWatcher(url: AuralinkPaths.presetsDirectory) { [weak self] in
+        presetsWatcher = DirectoryWatcher(url: AuralinkPaths.presetsDirectory) { [weak self] in
             Task { @MainActor in self?.schedulePresetReloadFromDisk() }
         }
-        knowledgeWatcher = makeDirectoryWatcher(url: AuralinkPaths.dataDirectory) { [weak self] in
+        knowledgeWatcher = DirectoryWatcher(url: AuralinkPaths.dataDirectory) { [weak self] in
             Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
-        // Collection watchers are optional: a fresh install or a user who hasn't
-        // cloned their collection yet simply has no directory to watch. They are
-        // attached lazily by `ensureCollectionWatchers` once the directories appear.
-        ensureCollectionWatchers()
-    }
-
-    /// Like `makeDirectoryWatcher`, but returns nil silently when the directory
-    /// doesn't exist (fresh install / collection not cloned yet).
-    func makeOptionalDirectoryWatcher(
-        url: URL,
-        onChange: @escaping @Sendable () -> Void
-    ) -> DispatchSourceFileSystemObject? {
-        var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
-            return nil // Directory doesn't exist — no watcher, no error
+        // Observe missing collections without creating them, then reconnect
+        // automatically after a clone, checkout replacement, or deletion.
+        collectionHeadphonesWatcher = DirectoryWatcher(url: AuralinkPaths.collectionHeadphonesDirectory) { [weak self] in
+            Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
         }
-        return makeDirectoryWatcher(url: url, onChange: onChange)
-    }
-
-    func makeDirectoryWatcher(
-        url: URL,
-        onChange: @escaping @Sendable () -> Void
-    ) -> DispatchSourceFileSystemObject? {
-        let fd = open(url.path, O_EVTONLY)
-        guard fd >= 0 else {
-            lastError = "Couldn't watch \(url.lastPathComponent) for MCP changes."
-            return nil
+        collectionPresetsWatcher = DirectoryWatcher(url: AuralinkPaths.collectionPresetsDirectory) { [weak self] in
+            Task { @MainActor in self?.schedulePresetReloadFromDisk() }
         }
-
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .delete, .rename, .extend, .attrib, .link, .revoke],
-            queue: fileWatchQueue
-        )
-        source.setEventHandler(handler: onChange)
-        source.setCancelHandler { close(fd) }
-        source.resume()
-        return source
     }
 
     func schedulePresetReloadFromDisk() {
@@ -183,7 +153,6 @@ extension AppModel {
         self.tuner = TuningEngine(knowledge: kb, validator: val)
         self.headphoneProfiles = kb.headphoneProfiles
         self.targetCurves = kb.targetCurves
-        ensureCollectionWatchers()
         statusMessage = "Knowledge refreshed: \(kb.headphoneProfiles.count) headphones, \(kb.targetCurves.count) targets."
         return (kb.headphoneProfiles.count, kb.targetCurves.count)
     }
@@ -195,28 +164,6 @@ extension AppModel {
             refreshCollectionMembership()
         } catch {
             lastError = "Couldn't load presets: \(error.localizedDescription)"
-        }
-        ensureCollectionWatchers()
-    }
-
-    /// (Re)attaches collection watchers when the directories exist but aren't
-    /// watched — e.g. the user cloned their collection after launch, or replaced
-    /// the directory with a fresh checkout. A replaced directory invalidates the
-    /// old file descriptor, so a dead watcher is also re-created here.
-    func ensureCollectionWatchers() {
-        if collectionHeadphonesWatcher == nil {
-            collectionHeadphonesWatcher = makeOptionalDirectoryWatcher(
-                url: AuralinkPaths.collectionHeadphonesDirectory
-            ) { [weak self] in
-                Task { @MainActor in self?.scheduleKnowledgeReloadFromDisk() }
-            }
-        }
-        if collectionPresetsWatcher == nil {
-            collectionPresetsWatcher = makeOptionalDirectoryWatcher(
-                url: AuralinkPaths.collectionPresetsDirectory
-            ) { [weak self] in
-                Task { @MainActor in self?.schedulePresetReloadFromDisk() }
-            }
         }
     }
 

@@ -161,11 +161,10 @@ final class AppModel: ObservableObject {
     let devices: AudioDeviceManager
 
     let responseFrequencies = FrequencyResponse.logFrequencies(count: 240)
-    let fileWatchQueue = DispatchQueue(label: "com.auralink.eq.file-watch")
-    var presetsWatcher: DispatchSourceFileSystemObject?
-    var knowledgeWatcher: DispatchSourceFileSystemObject?
-    var collectionHeadphonesWatcher: DispatchSourceFileSystemObject?
-    var collectionPresetsWatcher: DispatchSourceFileSystemObject?
+    var presetsWatcher: DirectoryWatcher?
+    var knowledgeWatcher: DirectoryWatcher?
+    var collectionHeadphonesWatcher: DirectoryWatcher?
+    var collectionPresetsWatcher: DirectoryWatcher?
     var pendingPresetReload: Task<Void, Never>?
     var pendingKnowledgeReload: Task<Void, Never>?
     var recomputeTask: Task<Void, Never>?
