@@ -86,7 +86,7 @@ jobs:
       - name: Archive app with executable permissions and signatures
         run: ditto -c -k --sequesterRsrc --keepParent "build/Auralink EQ.app" build/Auralink-EQ-CI.zip
       - name: Upload app artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Auralink-EQ-app
           path: build/Auralink-EQ-CI.zip
